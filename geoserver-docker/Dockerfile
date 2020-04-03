@@ -1,7 +1,8 @@
-FROM debian:buster
+FROM conda/miniconda3
 
 RUN apt-get update
 RUN apt-get install -y \
+    build-essential \
     git \
     libspatialindex-c4v5 \
     openjdk-11-jdk \
