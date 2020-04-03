@@ -1,13 +1,13 @@
 FROM debian:buster
 
 RUN apt-get update
-apt-get install -y \
-    openjdk-11-jdk \
-    libspatialindex-c4v5 \
+RUN apt-get install -y \
     git \
+    libspatialindex-c4v5 \
+    openjdk-11-jdk \
     unzip
 
-echo export JAVA_OPTS=\"-Xmx4g\" >> /root/.bashrc
+RUN echo export JAVA_OPTS=\"-Xmx4g\" >> /root/.bashrc
 WORKDIR /usr/local/geoserver
 COPY geoserver-2.16.2-bin.zip .
 RUN unzip geoserver-2.16.2-bin.zip
