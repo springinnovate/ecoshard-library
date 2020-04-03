@@ -1,8 +1,10 @@
-FROM conda/miniconda3
+FROM ubuntu:18.04
 
+RUN add-apt-repository ppa:ubuntugis/ubuntugis-unstable
 RUN apt-get update
 RUN apt-get install -y \
     build-essential \
+    gdal=3.0.4+dfsg-1~bionic0 \
     git \
     libspatialindex-c4v5 \
     openjdk-11-jdk \
