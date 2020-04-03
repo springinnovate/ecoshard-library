@@ -1,5 +1,6 @@
 FROM ubuntu:18.04
 
+RUN apt-get update && apt-get upgrade -y
 RUN add-apt-repository ppa:ubuntugis/ubuntugis-unstable
 RUN apt-get update
 RUN apt-get install -y \
