@@ -17,11 +17,15 @@ RUN apt-get install -y \
     libgdal-java=3.0.4+dfsg-1~bionic0 \
     libspatialindex-c4v5
 
-RUN echo export JAVA_OPTS=\"-Xmx4g\" >> /root/.bashrc
-WORKDIR /usr/local/geoserver
+RUN mkdir -p /mnt/data_dir
+
+WORKDIR /usr/local
 COPY geoserver-2.16.2-bin.zip .
 RUN unzip geoserver-2.16.2-bin.zip
-WORKDIR /usr/local/geoserver/geoserver-2.16.2
+RUN rm geoserver-2.16.2-bin.zip
+RUN mv ./geoserver-2.16.2 ./geoserver
+COPY start_geoserver.sh /usr/local/geoserver/bin
 
-ENTRYPOINT ["/usr/local/geoserver/bin/startup.sh"]
-ENTRYPOINT bash
+WORKDIR /usr/local/geoserver
+
+ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]
