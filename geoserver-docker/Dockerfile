@@ -25,10 +25,9 @@ COPY geoserver-2.16.2-bin.zip .
 RUN unzip geoserver-2.16.2-bin.zip
 RUN rm geoserver-2.16.2-bin.zip
 RUN mv ./geoserver-2.16.2 ./geoserver
-COPY start_geoserver.sh /usr/local/geoserver/bin
-
-WORKDIR /usr/local/geoserver
 
 RUN apt-get install emacs -y
 
+COPY start_geoserver.sh /usr/local/geoserver/bin
+WORKDIR /usr/local/geoserver
 ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]
