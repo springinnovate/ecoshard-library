@@ -34,6 +34,7 @@ RUN apt-get install -y \
     build-essential \
     libspatialindex-c4v5 \
     emacs \
+    python3-pip \
     git
 
 RUN pip install --no-cache-dir \
