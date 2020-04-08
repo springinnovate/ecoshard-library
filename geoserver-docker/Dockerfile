@@ -53,6 +53,7 @@ RUN pip3 install --no-cache-dir \
     flask \
     matplotlib \
     numpy \
+    requests \
     rtree \
     scipy \
     shapely
