@@ -22,5 +22,5 @@ if __name__ == '__main__':
         auth=('admin', args.geoserver_admin_password))
     result = r.json()
     print(result)
-    for layer in result['layers']:
+    for layer in result['layers']['layer']:
         print(layer['name'])
