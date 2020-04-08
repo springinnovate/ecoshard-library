@@ -11,7 +11,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GeoServer manager')
     parser.add_argument(
         'geoserver_host', type=int, help='geoserver host/port to connect to')
-    parser.add_arugment(
+    parser.add_argument(
         'geoserver_admin_password', type=str, help='geoserver admin password')
 
     args = parser.parse_args()
