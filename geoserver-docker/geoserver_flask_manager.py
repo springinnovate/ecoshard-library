@@ -10,7 +10,7 @@ APP = flask.Flask(__name__)
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='GeoServer manager')
     parser.add_argument(
-        'geoserver_host', type=int, help='geoserver host/port to connect to')
+        'geoserver_host', type=str, help='geoserver host/port to connect to')
     parser.add_argument(
         'geoserver_admin_password', type=str, help='geoserver admin password')
 
