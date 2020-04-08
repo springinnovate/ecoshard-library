@@ -26,7 +26,35 @@ RUN unzip geoserver-2.16.2-bin.zip
 RUN rm geoserver-2.16.2-bin.zip
 RUN mv ./geoserver-2.16.2 ./geoserver
 
-RUN apt-get install emacs -y
+RUN apt-get update -y
+RUN apt-get install software-properties-common -y
+RUN add-apt-repository ppa:ubuntugis/ubuntugis-unstable
+RUN apt-get update -y
+RUN apt-get install -y \
+    build-essential \
+    libspatialindex-c4v5 \
+    emacs \
+    git
+
+RUN pip install --no-cache-dir \
+    Cython \
+    flask \
+    matplotlib \
+    numpy \
+    rtree \
+    scipy \
+    shapely
+
+RUN apt-get install -y \
+    gdal-bin \
+    libgdal-dev \
+    python3-gdal
+
+RUN apt install -y \
+    libffi-dev \
+    python3-setuptools \
+    gcc \
+    python3-dev
 
 COPY start_geoserver.sh /usr/local/geoserver/bin
 COPY geoserver_flask_manager.py /usr/local/geoserver/bin
