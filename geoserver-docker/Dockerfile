@@ -37,15 +37,6 @@ RUN apt-get install -y \
     python3-pip \
     git
 
-RUN pip install --no-cache-dir \
-    Cython \
-    flask \
-    matplotlib \
-    numpy \
-    rtree \
-    scipy \
-    shapely
-
 RUN apt-get install -y \
     gdal-bin \
     libgdal-dev \
@@ -61,3 +52,12 @@ COPY start_geoserver.sh /usr/local/geoserver/bin
 COPY geoserver_flask_manager.py /usr/local/geoserver/bin
 WORKDIR /usr/local/geoserver
 ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]
+
+#RUN pip install --no-cache-dir \
+#    Cython \
+#    flask \
+#    matplotlib \
+#    numpy \
+#    rtree \
+#    scipy \
+#    shapely
