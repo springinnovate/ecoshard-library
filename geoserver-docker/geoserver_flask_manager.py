@@ -115,20 +115,21 @@ def add_raster_worker(session_id, name, uri_path):
         _execute_sqlite(
             '''
             UPDATE work_status_table
-            SET work_status='copying local',
-            WHERE session_id=?, last_accessed=?;
-            ''', DATABASE_PATH, argument_list=[session_id, time.time()],
+            SET work_status='copying local', last_accessed=?
+            WHERE session_id=?;
+            ''', DATABASE_PATH, argument_list=[time.time(), session_id],
             mode='modify', execute='execute')
 
         subprocess.run(
-            ["gsutil cp %s %s" % (uri_path, local_path)], shell=True, check=True)
+            ["gsutil cp %s %s" % (uri_path, local_path)],
+            shell=True, check=True)
 
         _execute_sqlite(
             '''
             UPDATE work_status_table
-            SET work_status='updating geoserver',
-            WHERE session_id=?, last_accessed=?;
-            ''', DATABASE_PATH, argument_list=[session_id, time.time()],
+            SET work_status='updating geoserver', last_accessed=?
+            WHERE session_id=?;
+            ''', DATABASE_PATH, argument_list=[time.time(), session_id],
             mode='modify', execute='execute')
 
         session = requests.Session()
@@ -147,18 +148,18 @@ def add_raster_worker(session_id, name, uri_path):
         _execute_sqlite(
             '''
             UPDATE work_status_table
-            SET work_status='complete',
-            WHERE session_id=?, last_accessed=?;
-            ''', DATABASE_PATH, argument_list=[session_id, time.time()],
+            SET work_status='complete', last_accessed=?
+            WHERE session_id=?;
+            ''', DATABASE_PATH, argument_list=[time.time(), session_id],
             mode='modify', execute='execute')
     except Exception as e:
         _execute_sqlite(
             '''
             UPDATE work_status_table
-            SET work_status=?,
-            WHERE session_id=?, last_accessed=?;
+            SET work_status=?, last_accessed=?
+            WHERE session_id=?;
             ''', DATABASE_PATH, argument_list=[
-                str(e), session_id, time.time()],
+                str(e), time.time(), session_id],
             mode='modify', execute='execute')
 
 
@@ -194,8 +195,8 @@ def add_raster():
 
     _execute_sqlite(
         '''
-        INSERT INTO work_status_table
-        session_id=?, work_status='scheduled', last_accessed=?;
+        INSERT INTO work_status_table (session_id, work_status, last_accessed)
+        VALUES (?, ?, ?);
         ''', DATABASE_PATH, argument_list=[session_id, time.time()],
         mode='modify', execute='execute')
 
