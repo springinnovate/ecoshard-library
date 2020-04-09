@@ -63,5 +63,7 @@ RUN pip3 install -y \
 
 COPY start_geoserver.sh /usr/local/geoserver/bin
 COPY geoserver_flask_manager.py /usr/local/geoserver/bin
+COPY geoserver_tracer.py /usr/local/geoserver/bin
+
 WORKDIR /usr/local/geoserver
 ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]
