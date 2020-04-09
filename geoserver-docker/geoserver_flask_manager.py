@@ -9,6 +9,7 @@ import subprocess
 import urllib.parse
 import uuid
 import time
+import threading
 
 import flask
 import requests
@@ -18,7 +19,7 @@ import retrying
 APP = flask.Flask(__name__)
 DEFAULT_WORKSPACE = 'default_workspace'
 DATABASE_PATH = 'manager_status.db'
-DATA_DIR = 'data_dir/data'
+DATA_DIR = '../data_dir/data'
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -120,9 +121,9 @@ def add_raster_worker(session_id, name, uri_path):
             ''', DATABASE_PATH, argument_list=[time.time(), session_id],
             mode='modify', execute='execute')
 
+        LOGGER.debug('about to copy %s to %s', uri_path, local_path)
         subprocess.run(
-            ["gsutil cp %s %s" % (uri_path, local_path)],
-            shell=True, check=True)
+            ['gsutil', 'cp', uri_path, local_path], shell=True, check=True)
 
         _execute_sqlite(
             '''
@@ -173,7 +174,10 @@ def get_status(session_id):
         WHERE session_id=?;
         ''', DATABASE_PATH, argument_list=[session_id],
         mode='read_only', execute='execute', fetch='one')
-    return status[0]
+    return {
+        'session_id': session_id,
+        'status': status[0]
+        }
 
 
 @APP.route('/api/v1/add_raster', methods=['POST'])
@@ -193,6 +197,7 @@ def add_raster():
     LOGGER.debug(data)
     session_id = uuid.uuid4().hex
 
+    LOGGER.debug('new session entry')
     _execute_sqlite(
         '''
         INSERT INTO work_status_table (session_id, work_status, last_accessed)
@@ -205,6 +210,13 @@ def add_raster():
         callback_url = flask.url_for(
             'get_status', session_id=session_id, _external=True)
 
+    LOGGER.debug(callback_url)
+    raster_worker_thread = threading.Thread(
+        target=add_raster_worker, args=(
+            session_id, data['name'], data['uri_path']))
+    raster_worker_thread.start()
+
+    LOGGER.debug('raster worker started returning now')
     return json.dumps({'callback_url': callback_url})
 
 
