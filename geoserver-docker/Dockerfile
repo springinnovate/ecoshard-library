@@ -58,8 +58,7 @@ RUN pip3 install --no-cache-dir \
     scipy \
     shapely
 
-RUN pip3 install -y \
-    retrying
+RUN pip3 install retrying
 
 COPY start_geoserver.sh /usr/local/geoserver/bin
 COPY geoserver_flask_manager.py /usr/local/geoserver/bin
