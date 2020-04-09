@@ -191,12 +191,12 @@ def add_raster():
     """
     data = json.loads(flask.request.json)
     LOGGER.debug(data)
-    session_id = uuid.uuid4()
+    session_id = uuid.uuid4().hex
 
     _execute_sqlite(
         '''
         INSERT INTO work_status_table (session_id, work_status, last_accessed)
-        VALUES (?, ?, ?);
+        VALUES (?, 'scheduled', ?);
         ''', DATABASE_PATH, argument_list=[session_id, time.time()],
         mode='modify', execute='execute')
 
@@ -217,7 +217,7 @@ def build_schema(database_path):
         """
         CREATE TABLE work_status_table (
             session_id TEXT NOT NULL PRIMARY KEY,
-            status TEXT NOT NULL,
+            work_status TEXT NOT NULL,
             last_accessed REAL NOT NULL
             );
         """)
