@@ -3,8 +3,12 @@ FROM ubuntu:18.04
 
 RUN apt-get update
 RUN apt-get install -y \
+    gcc \
     git \
+    libffi-dev \
     openjdk-11-jdk \
+    python3-dev \
+    python3-setuptools \
     software-properties-common \
     unzip
 
@@ -17,8 +21,6 @@ RUN apt-get install -y \
     gdal-bin=3.0.4+dfsg-1~bionic0 \
     libgdal-java=3.0.4+dfsg-1~bionic0 \
     libspatialindex-c4v5
-
-RUN mkdir -p /mnt/data_dir
 
 WORKDIR /usr/local
 COPY geoserver-2.16.2-bin.zip .
@@ -42,23 +44,28 @@ RUN apt-get install -y \
     libgdal-dev \
     python3-gdal
 
-RUN apt install -y \
-    libffi-dev \
-    python3-setuptools \
-    gcc \
-    python3-dev
-
 RUN pip3 install --no-cache-dir \
     Cython \
     flask \
     matplotlib \
     numpy \
     requests \
+    retrying \
     rtree \
     scipy \
     shapely
 
-RUN pip3 install retrying
+WORKDIR /usr/local/gcloud-sdk
+RUN curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-284.0.0-linux-x86_64.tar.gz?hl=id | tar -xvzf -
+RUN ./google-cloud-sdk/install.sh
+RUN source /usr/local/gcloud-sdk/google-cloud-sdk/completion.bash.inc
+RUN source /usr/local/gcloud-sdk/google-cloud-sdk/path.bash.inc
+RUN echo "export PATH=$PATH:/usr/local/gcloud-sdk/google-cloud-sdk/bin" >> /root/.bashrc
+
+COPY natgeo-dams-6e7bc2912661.json /usr/local/natgeo-dams-6e7bc2912661.json
+RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=/usr/local/natgeo-dams-6e7bc2912661.json
+RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud config set project natgeo-dams
+RUN rm /usr/local/natgeo-dams-6e7bc2912661.json
 
 COPY start_geoserver.sh /usr/local/geoserver/bin
 COPY geoserver_flask_manager.py /usr/local/geoserver/bin
