@@ -1,6 +1,8 @@
 # This is stac-geoserver-api:1
 FROM ubuntu:18.04
 
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
+
 RUN apt-get update && apt-get upgrade -y
 RUN apt-get install -y \
     gcc \
