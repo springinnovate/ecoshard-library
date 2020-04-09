@@ -8,5 +8,5 @@ nohup $JAVA_BIN $JAVA_OPTS -DGEOSERVER_DATA_DIR=$GEOSERVER_DATA_DIR -Djava.awt.h
 touch geo_log.txt
 tail -n +0 --pid=$$ -f ./geo_log.txt | { sed "/Server:main: Started/ q" && kill $$ ;}
 cd bin
-python3 geoserver_flask_manager.py
+nohup python3 geoserver_flask_manager.py &
 bash
