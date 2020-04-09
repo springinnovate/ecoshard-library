@@ -62,10 +62,10 @@ RUN source /usr/local/gcloud-sdk/google-cloud-sdk/completion.bash.inc
 RUN source /usr/local/gcloud-sdk/google-cloud-sdk/path.bash.inc
 RUN echo "export PATH=$PATH:/usr/local/gcloud-sdk/google-cloud-sdk/bin" >> /root/.bashrc
 
-COPY natgeo-dams-6e7bc2912661.json /usr/local/natgeo-dams-6e7bc2912661.json
-RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=/usr/local/natgeo-dams-6e7bc2912661.json
+COPY salo-api-5de978810708.json /usr/local/salo-api-5de978810708.json
+RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=/usr/local/salo-api-5de978810708.json
 RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud config set project natgeo-dams
-RUN rm /usr/local/natgeo-dams-6e7bc2912661.json
+RUN rm /usr/local/salo-api-5de978810708.json
 
 COPY start_geoserver.sh /usr/local/geoserver/bin
 COPY geoserver_flask_manager.py /usr/local/geoserver/bin
