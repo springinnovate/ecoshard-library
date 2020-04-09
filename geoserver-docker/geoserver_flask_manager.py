@@ -124,7 +124,8 @@ def add_raster_worker(session_id, name, uri_path):
         LOGGER.debug('about to copy %s to %s', uri_path, local_path)
         subprocess.run(
             [f'gsutil cp {uri_path} {local_path}'], shell=True, check=True)
-
+        if not os.path.exists(local_path):
+            raise RuntimeError(f"{local_path} didn't copy")
         _execute_sqlite(
             '''
             UPDATE work_status_table
