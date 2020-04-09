@@ -31,7 +31,7 @@ RUN mv ./geoserver-2.16.2 ./geoserver
 RUN apt-get update -y
 RUN apt-get install software-properties-common -y
 RUN add-apt-repository ppa:ubuntugis/ubuntugis-unstable
-RUN apt-get update -y
+RUN apt-get update --fix-missing -y
 RUN apt-get install -y \
     build-essential \
     libspatialindex-c4v5 \
