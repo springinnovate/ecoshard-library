@@ -49,6 +49,8 @@ RUN pip3 install --no-cache-dir \
     scipy \
     shapely
 
+RUN apt install curl -y
+
 WORKDIR /usr/local/gcloud-sdk
 RUN curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-284.0.0-linux-x86_64.tar.gz?hl=id | tar -xvzf -
 RUN ./google-cloud-sdk/install.sh
