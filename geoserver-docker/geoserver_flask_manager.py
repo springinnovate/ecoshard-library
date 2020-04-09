@@ -413,4 +413,3 @@ if __name__ == '__main__':
         session.post, args.geoserver_host,
         'geoserver/rest/workspaces?default=true',
         data={'name': DEFAULT_WORKSPACE})
-
