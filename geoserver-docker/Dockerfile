@@ -1,21 +1,18 @@
 # This is stac-geoserver-api:1
 FROM ubuntu:18.04
 
-RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
-
 RUN apt-get update && apt-get upgrade -y
+RUN apt-get install -y software-properties-common -y
+RUN add-apt-repository ppa:ubuntugis/ubuntugis-unstable -y
+RUN wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | apt-key add -
+RUN apt-get update
+
 RUN apt-get install -y \
     gcc \
     git \
     libffi-dev \
     openjdk-11-jdk \
-    python3-dev \
-    python3-setuptools \
-    software-properties-common \
     unzip
-
-RUN add-apt-repository ppa:ubuntugis/ubuntugis-unstable -y
-RUN apt-get update
 
 RUN apt-get install -y \
     build-essential \
@@ -30,21 +27,14 @@ RUN unzip geoserver-2.16.2-bin.zip
 RUN rm geoserver-2.16.2-bin.zip
 RUN mv ./geoserver-2.16.2 ./geoserver
 
-RUN apt-get update -y
-RUN apt-get install software-properties-common -y
-RUN add-apt-repository ppa:ubuntugis/ubuntugis-unstable
-RUN apt-get update --fix-missing -y
 RUN apt-get install -y \
-    build-essential \
-    libspatialindex-c4v5 \
     emacs \
     python3-pip \
-    git
-
-RUN apt-get install -y \
     gdal-bin \
     libgdal-dev \
-    python3-gdal
+    python3-gdal \
+    python3-dev \
+    python3-setuptools
 
 RUN pip3 install --no-cache-dir \
     Cython \
