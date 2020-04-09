@@ -123,7 +123,7 @@ def add_raster_worker(session_id, name, uri_path):
 
         LOGGER.debug('about to copy %s to %s', uri_path, local_path)
         subprocess.run(
-            ['gsutil', 'cp', uri_path, local_path], shell=True, check=True)
+            [f'gsutil cp {uri_path} {local_path}'], shell=True, check=True)
 
         _execute_sqlite(
             '''
