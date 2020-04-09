@@ -39,4 +39,7 @@ if __name__ == '__main__':
     while True:
         time.sleep(1)
         r = requests.get(callback_url)
-        print(r.json())
+        payload = r.json()
+        print(payload)
+        if payload['status'] == 'complete':
+            break

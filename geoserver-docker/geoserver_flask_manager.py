@@ -11,7 +11,10 @@ import uuid
 import time
 import threading
 
+from osgeo import gdal
+from osgeo import osr
 import flask
+import pygeoprocessing
 import requests
 import retrying
 
@@ -108,7 +111,7 @@ def do_rest_action(session_fn, host, suburl, data=None):
         raise
 
 
-def add_raster_worker(session_id, name, uri_path):
+def add_raster_worker(session_id, cover_name, uri_path):
     """This is used to copy and update a coverage set asynchronously."""
     try:
         local_path = os.path.join(DATA_DIR, os.path.basename(uri_path))
@@ -129,7 +132,7 @@ def add_raster_worker(session_id, name, uri_path):
         _execute_sqlite(
             '''
             UPDATE work_status_table
-            SET work_status='updating geoserver', last_accessed=?
+            SET work_status='making coverstore', last_accessed=?
             WHERE session_id=?;
             ''', DATABASE_PATH, argument_list=[time.time(), session_id],
             mode='modify', execute='execute')
@@ -138,7 +141,7 @@ def add_raster_worker(session_id, name, uri_path):
         session.auth = ('admin', 'geoserver')
         coveragestore_payload = {
           "coverageStore": {
-            "name": name,
+            "name": cover_name,
             "url": local_path
           }
         }
@@ -147,6 +150,143 @@ def add_raster_worker(session_id, name, uri_path):
             'http://localhost:8080',
             f'geoserver/rest/workspaces/{DEFAULT_WORKSPACE}/coveragestores',
             data=coveragestore_payload)
+        _execute_sqlite(
+            '''
+            UPDATE work_status_table
+            SET work_status='making cover', last_accessed=?
+            WHERE session_id=?;
+            ''', DATABASE_PATH, argument_list=[time.time(), session_id],
+            mode='modify', execute='execute')
+
+        raster_info = pygeoprocessing.get_raster_info(local_path)
+        raster = gdal.OpenEx(local_path, gdal.OF_RASTER)
+        band = raster.GetRasterBand(1)
+        raster_min, raster_max, raster_mean, raster_stdev = \
+            band.GetStatistics(0, 1)
+        gt = raster_info['geotransform']
+
+        raster_srs = osr.SpatialReference()
+        raster_srs.ImportFromWkt(raster_info['projection'])
+
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromESPG(4326)
+        lat_lng_bounding_box = pygeoprocessing.transform_bounding_box(
+            raster_info['bounding_box'],
+            raster_info['projection'], wgs84_srs.ExportToWkt())
+
+        raster_info['projection']
+
+        epsg_crs = ':'.join(
+            [raster_srs.GetAttrValue('AUTHORITY', i) for i in [0, 1]])
+
+        cover_payload = {
+          "coverage": {
+            "abstract": "TODO: ABSTRACT GOES HERE",
+            "defaultInterpolationMethod": "nearest neighbor",
+            "description": "TODO: DESCRIPTION GOES HERE",
+            "dimensions": {
+              "coverageDimension": [
+                {
+                  "description": "GridSampleDimension[min, max]",
+                  "name": "GRAY_INDEX",
+                  "range": {
+                    "max": raster_min,
+                    "min": raster_max
+                  }
+                }
+              ]
+            },
+            "enabled": True,
+            "grid": {
+              "dimension": "2",
+              "crs": epsg_crs,
+              "range": {
+                "high": "%d %d" % raster_info['raster_size'],
+                "low": "0 0"
+              },
+              "transform": {
+                "scaleX": gt[1],
+                "scaleY": gt[5],
+                "shearX": gt[2],
+                "shearY": gt[4],
+                "translateX": gt[0],
+                "translateY": gt[3]
+              }
+            },
+            "interpolationMethods": {
+              "string": [
+                "nearest neighbor",
+                "bilinear",
+                "bicubic"
+              ]
+            },
+            "keywords": {
+              "string": [
+                "TODO: KEYWORDS", "GO", "HERE",
+              ]
+            },
+            "latLonBoundingBox": {
+              "crs": "EPSG:4326",
+              "maxx": lat_lng_bounding_box[2],
+              "maxy": lat_lng_bounding_box[3],
+              "minx": lat_lng_bounding_box[0],
+              "miny": lat_lng_bounding_box[1]
+            },
+            "name": cover_name,
+            "namespace": {
+              "href": f"http://localhost:8075/geoserver/restng/namespaces/{DEFAULT_WORKSPACE}.json",
+              "name": DEFAULT_WORKSPACE
+            },
+            "nativeBoundingBox": {
+              "crs": raster_info['projection'],
+              "maxx": raster_info['bounding_box'][2],
+              "maxy": raster_info['bounding_box'][3],
+              "minx": raster_info['bounding_box'][0],
+              "miny": raster_info['bounding_box'][1]
+            },
+            "nativeCRS": {
+              "$": raster_info['projection'],
+              "@class": (
+                "projected" if raster_srs.IsProjected() else "unprojected")
+            },
+            "nativeFormat": "GeoTIFF",
+            "nativeName": cover_name,
+            "requestSRS": {
+              "string": [
+                epsg_crs
+              ]
+            },
+            "responseSRS": {
+              "string": [
+                epsg_crs
+              ]
+            },
+            "srs": epsg_crs,
+            "store": {
+              "@class": "coverageStore",
+              "href": f"http://localhost:8075/geoserver/restng/workspaces/{DEFAULT_WORKSPACE}/coveragestores/{cover_name}.json",
+              "name": f"{DEFAULT_WORKSPACE}:{cover_name}"
+            },
+            "supportedFormats": {
+              "string": [
+                "ARCGRID",
+                "IMAGEMOSAIC",
+                "GTOPO30",
+                "GEOTIFF",
+                "GIF",
+                "PNG",
+                "JPEG",
+                "TIFF"
+              ]
+            },
+            "title": "TODO: put title here"
+          }
+        }
+        do_rest_action(
+            session.post,
+            'http://localhost:8080',
+            f'geoserver/workspaces/{DEFAULT_WORKSPACE}/'
+            f'coveragestores/{cover_name}/coverages', data=cover_payload)
         _execute_sqlite(
             '''
             UPDATE work_status_table
