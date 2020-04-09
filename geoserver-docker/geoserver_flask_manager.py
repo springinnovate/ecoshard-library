@@ -384,32 +384,25 @@ if __name__ == '__main__':
     LOGGER.debug('starting up!')
     build_schema(DATABASE_PATH)
 
-    APP.config.update(SERVER_NAME='localhost:8888')
-    APP.run(host='0.0.0.0', port=8888)
-
-    parser = argparse.ArgumentParser(description='GeoServer manager')
-    parser.add_argument(
-        'geoserver_host', type=str, help='geoserver host/port to connect to')
-    parser.add_argument(
-        'geoserver_admin_password', type=str, help='geoserver admin password')
-    args = parser.parse_args()
-
     session = requests.Session()
-    session.auth = ('admin', args.geoserver_admin_password)
+    session.auth = ('admin', 'geoserver')
 
     r = do_rest_action(
-        session.get, args.geoserver_host, 'geoserver/rest/workspaces.json')
+        session.get, 'http://localhost:8080', 'geoserver/rest/workspaces.json')
     result = r.json()
 
     for workspace in result['workspaces']['workspace']:
         workspace_name = workspace['name']
         r = do_rest_action(
-            session.delete, args.geoserver_host,
+            session.delete, 'http://localhost:8080',
             'geoserver/rest/workspaces/%s?recurse=true' % workspace_name)
         LOGGER.debug("delete result for %s: %s", workspace_name, str(r.json()))
 
     # Create empty workspace
     do_rest_action(
-        session.post, args.geoserver_host,
+        session.post, 'http://localhost:8080',
         'geoserver/rest/workspaces?default=true',
         data={'name': DEFAULT_WORKSPACE})
+
+    APP.config.update(SERVER_NAME='localhost:8888')
+    APP.run(host='0.0.0.0', port=8888)
