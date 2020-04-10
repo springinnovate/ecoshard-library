@@ -102,7 +102,8 @@ def _execute_sqlite(
 
 
 @retrying.retry(wait_exponential_multiplier=1000, wait_exponential_max=5000)
-def do_rest_action(session_fn, host, suburl, data=None, json=None):
+def do_rest_action(
+        session_fn, host, suburl, data=None, json=None):
     """Do a 'get' for the host/suburl."""
     try:
         return session_fn(
@@ -397,15 +398,16 @@ if __name__ == '__main__':
             workspace_name = workspace['name']
             r = do_rest_action(
                 session.delete, 'http://localhost:8080',
-                'geoserver/rest/workspaces/%s.json?recurse=true' % workspace_name)
+                'geoserver/rest/workspaces/%s.json?recurse=true' %
+                workspace_name)
             LOGGER.debug("delete result for %s: %s", workspace_name, str(r))
 
     # Create empty workspace
-    result = do_rest_action(
-        session.post, 'http://localhost:8080',
-        'geoserver/rest/workspaces?default=true',
-        json={'name': DEFAULT_WORKSPACE})
-    LOGGER.debug(str(result.read()))
+    # result = do_rest_action(
+    #     session.post, 'http://localhost:8080',
+    #     'geoserver/rest/workspaces?default=true',
+    #     json={'workspace': {'name': DEFAULT_WORKSPACE}})
+    # LOGGER.debug(str(result.read()))
 
     APP.config.update(SERVER_NAME='localhost:8888')
     APP.run(host='0.0.0.0', port=8888)
