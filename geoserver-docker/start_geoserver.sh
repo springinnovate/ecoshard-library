@@ -9,4 +9,5 @@ touch geo_log.txt
 tail -n +0 --pid=$$ -f ./geo_log.txt | { sed "/Server:main: Started/ q" && kill $$ ;}
 cd bin
 nohup python3 geoserver_flask_manager.py &
+python3 geoserver_tracer.py
 bash
