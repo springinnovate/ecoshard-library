@@ -107,7 +107,7 @@ def do_rest_action(
     """Do a 'get' for the host/suburl."""
     try:
         return session_fn(
-            urllib.parse.urljoin(host, suburl), data=data, json=None)
+            urllib.parse.urljoin(host, suburl), data=data, json=json)
     except Exception:
         LOGGER.exception('error in function')
         raise
@@ -284,11 +284,12 @@ def add_raster_worker(session_id, cover_name, uri_path):
             "title": "TODO: put title here"
           }
         }
-        do_rest_action(
+        result = do_rest_action(
             session.post,
             'http://localhost:8080',
             f'geoserver/workspaces/{DEFAULT_WORKSPACE}/'
-            f'coveragestores/{cover_name}/coverages', data=cover_payload)
+            f'coveragestores/{cover_name}/coverages', json=cover_payload)
+        LOGGER.debug(result.text)
         _execute_sqlite(
             '''
             UPDATE work_status_table
@@ -402,12 +403,12 @@ if __name__ == '__main__':
                 workspace_name)
             LOGGER.debug("delete result for %s: %s", workspace_name, str(r))
 
-    Create empty workspace
+    # Create empty workspace
     result = do_rest_action(
-        session.post, 'http://localhost:8080',
+        session, 'post', 'http://localhost:8080',
         'geoserver/rest/workspaces?default=true',
         json={'workspace': {'name': DEFAULT_WORKSPACE}})
-    LOGGER.debug(str(result.read()))
+    LOGGER.debug(result.text)
 
     APP.config.update(SERVER_NAME='localhost:8888')
     APP.run(host='0.0.0.0', port=8888)
