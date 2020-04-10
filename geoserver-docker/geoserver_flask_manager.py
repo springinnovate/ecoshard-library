@@ -20,7 +20,7 @@ import retrying
 
 
 APP = flask.Flask(__name__)
-DEFAULT_WORKSPACE = 'default'
+DEFAULT_WORKSPACE = 'salo'
 DATABASE_PATH = 'manager_status.db'
 DATA_DIR = '../data_dir/data'
 
@@ -402,12 +402,12 @@ if __name__ == '__main__':
                 workspace_name)
             LOGGER.debug("delete result for %s: %s", workspace_name, str(r))
 
-    # Create empty workspace
-    # result = do_rest_action(
-    #     session.post, 'http://localhost:8080',
-    #     'geoserver/rest/workspaces?default=true',
-    #     json={'workspace': {'name': DEFAULT_WORKSPACE}})
-    # LOGGER.debug(str(result.read()))
+    Create empty workspace
+    result = do_rest_action(
+        session.post, 'http://localhost:8080',
+        'geoserver/rest/workspaces?default=true',
+        json={'workspace': {'name': DEFAULT_WORKSPACE}})
+    LOGGER.debug(str(result.read()))
 
     APP.config.update(SERVER_NAME='localhost:8888')
     APP.run(host='0.0.0.0', port=8888)

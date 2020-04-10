@@ -63,11 +63,11 @@ RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud auth activate-service-acco
 RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud config set project natgeo-dams
 RUN rm /usr/local/salo-api-5de978810708.json
 
+RUN pip3 install git+https://github.com/natcap/pygeoprocessing.git@release/2.0
+
 COPY start_geoserver.sh /usr/local/geoserver/bin
 COPY geoserver_flask_manager.py /usr/local/geoserver/bin
 COPY geoserver_tracer.py /usr/local/geoserver/bin
-
-RUN pip3 install git+https://github.com/natcap/pygeoprocessing.git@release/2.0
 
 WORKDIR /usr/local/geoserver
 ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]
