@@ -128,7 +128,7 @@ def add_raster_worker(session_id, cover_name, uri_path):
 
         LOGGER.debug('about to copy %s to %s', uri_path, local_path)
         subprocess.run(
-            [f'gsutil cp {uri_path} {local_path}'], shell=True, check=True)
+            [f'gsutil cp "{uri_path}" "{local_path}"'], shell=True, check=True)
         if not os.path.exists(local_path):
             raise RuntimeError(f"{local_path} didn't copy")
         _execute_sqlite(
@@ -144,14 +144,17 @@ def add_raster_worker(session_id, cover_name, uri_path):
         coveragestore_payload = {
           "coverageStore": {
             "name": cover_name,
-            "url": local_path
+            "url": 'file:%s' % local_path
           }
         }
-        do_rest_action(
+
+        result = do_rest_action(
             session.post,
             'http://localhost:8080',
             f'geoserver/rest/workspaces/{DEFAULT_WORKSPACE}/coveragestores',
             data=coveragestore_payload)
+        LOGGER.debug(result.text)
+
         _execute_sqlite(
             '''
             UPDATE work_status_table
@@ -171,7 +174,7 @@ def add_raster_worker(session_id, cover_name, uri_path):
         raster_srs.ImportFromWkt(raster_info['projection'])
 
         wgs84_srs = osr.SpatialReference()
-        wgs84_srs.ImportFromESPG(4326)
+        wgs84_srs.ImportFromEPSG(4326)
         lat_lng_bounding_box = pygeoprocessing.transform_bounding_box(
             raster_info['bounding_box'],
             raster_info['projection'], wgs84_srs.ExportToWkt())
