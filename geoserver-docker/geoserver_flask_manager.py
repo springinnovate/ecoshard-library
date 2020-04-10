@@ -105,7 +105,7 @@ def _execute_sqlite(
 def do_rest_action(session_fn, host, suburl, data=None):
     """Do a 'get' for the host/suburl."""
     try:
-        return session_fn(urllib.parse.urljoin(host, suburl), data=None)
+        return session_fn(urllib.parse.urljoin(host, suburl), data=data)
     except Exception:
         LOGGER.exception('error in function')
         raise
@@ -391,18 +391,20 @@ if __name__ == '__main__':
         session.get, 'http://localhost:8080', 'geoserver/rest/workspaces.json')
     result = r.json()
 
-    for workspace in result['workspaces']['workspace']:
-        workspace_name = workspace['name']
-        r = do_rest_action(
-            session.delete, 'http://localhost:8080',
-            'geoserver/rest/workspaces/%s?recurse=true' % workspace_name)
-        LOGGER.debug("delete result for %s: %s", workspace_name, str(r.json()))
+    if 'workspace' in result['workspaces']:
+        for workspace in result['workspaces']['workspace']:
+            workspace_name = workspace['name']
+            r = do_rest_action(
+                session.delete, 'http://localhost:8080',
+                'geoserver/rest/workspaces/%s.json?recurse=true' % workspace_name)
+            LOGGER.debug("delete result for %s: %s", workspace_name, str(r))
 
     # Create empty workspace
-    do_rest_action(
+    result = do_rest_action(
         session.post, 'http://localhost:8080',
         'geoserver/rest/workspaces?default=true',
         data={'name': DEFAULT_WORKSPACE})
+    LOGGER.debug(str(result))
 
     APP.config.update(SERVER_NAME='localhost:8888')
     APP.run(host='0.0.0.0', port=8888)
