@@ -32,7 +32,7 @@ if __name__ == '__main__':
         'http://localhost:8888/api/v1/add_raster',
         json=json.dumps({
             'name': 'test_raster',
-            'uri_path': 'gs://salo-api/test_rasters/Copy of ca-2019-fall-canopy-cover-10m-salo.tif'
+            'uri_path': 'gs://salo-api/test_rasters/Copy of Mann-BurnProb-2001-2025-BAU.tif'
         }))
     print(result.json())
     callback_url = result.json()['callback_url']
