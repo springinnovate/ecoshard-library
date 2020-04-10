@@ -20,7 +20,7 @@ import retrying
 
 
 APP = flask.Flask(__name__)
-DEFAULT_WORKSPACE = 'default_workspace'
+DEFAULT_WORKSPACE = 'default'
 DATABASE_PATH = 'manager_status.db'
 DATA_DIR = '../data_dir/data'
 
@@ -102,10 +102,11 @@ def _execute_sqlite(
 
 
 @retrying.retry(wait_exponential_multiplier=1000, wait_exponential_max=5000)
-def do_rest_action(session_fn, host, suburl, data=None):
+def do_rest_action(session_fn, host, suburl, data=None, json=None):
     """Do a 'get' for the host/suburl."""
     try:
-        return session_fn(urllib.parse.urljoin(host, suburl), data=data)
+        return session_fn(
+            urllib.parse.urljoin(host, suburl), data=data, json=None)
     except Exception:
         LOGGER.exception('error in function')
         raise
@@ -403,8 +404,8 @@ if __name__ == '__main__':
     result = do_rest_action(
         session.post, 'http://localhost:8080',
         'geoserver/rest/workspaces?default=true',
-        data={'name': DEFAULT_WORKSPACE})
-    LOGGER.debug(str(result))
+        json={'name': DEFAULT_WORKSPACE})
+    LOGGER.debug(str(result.read()))
 
     APP.config.update(SERVER_NAME='localhost:8888')
     APP.run(host='0.0.0.0', port=8888)
