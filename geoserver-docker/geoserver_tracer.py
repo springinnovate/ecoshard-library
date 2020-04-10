@@ -29,23 +29,17 @@ def do_rest_action(session_fn, host, suburl, data=None):
 
 if __name__ == '__main__':
     result = requests.post(
-        'http://localhost:8080',
-        'geoserver/rest/workspaces?default=true',
-        json={'name': 'default'})
-    LOGGER.debug(str(result.text))
-
-    # result = requests.post(
-    #     'http://localhost:8888/api/v1/add_raster',
-    #     json=json.dumps({
-    #         'name': 'test_raster',
-    #         'uri_path': 'gs://salo-api/test_rasters/Copy of ca-2019-fall-canopy-cover-10m-salo.tif'
-    #     }))
-    # print(result.json())
-    # callback_url = result.json()['callback_url']
-    # while True:
-    #     time.sleep(1)
-    #     r = requests.get(callback_url)
-    #     payload = r.json()
-    #     print(payload)
-    #     if payload['status'] == 'complete':
-    #         break
+        'http://localhost:8888/api/v1/add_raster',
+        json=json.dumps({
+            'name': 'test_raster',
+            'uri_path': 'gs://salo-api/test_rasters/Copy of ca-2019-fall-canopy-cover-10m-salo.tif'
+        }))
+    print(result.json())
+    callback_url = result.json()['callback_url']
+    while True:
+        time.sleep(1)
+        r = requests.get(callback_url)
+        payload = r.json()
+        print(payload)
+        if payload['status'] == 'complete':
+            break
