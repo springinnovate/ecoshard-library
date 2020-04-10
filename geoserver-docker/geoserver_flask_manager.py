@@ -405,7 +405,7 @@ if __name__ == '__main__':
 
     # Create empty workspace
     result = do_rest_action(
-        session, 'post', 'http://localhost:8080',
+        session.post, 'http://localhost:8080',
         'geoserver/rest/workspaces?default=true',
         json={'workspace': {'name': DEFAULT_WORKSPACE}})
     LOGGER.debug(result.text)
