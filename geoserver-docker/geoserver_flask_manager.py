@@ -144,6 +144,9 @@ def add_raster_worker(session_id, cover_name, uri_path):
         coveragestore_payload = {
           "coverageStore": {
             "name": cover_name,
+            "type": 'GeoTIFF',
+            "workspace": DEFAULT_WORKSPACE,
+            "enabled": True,
             "url": 'file:%s' % local_path
           }
         }
@@ -152,7 +155,7 @@ def add_raster_worker(session_id, cover_name, uri_path):
             session.post,
             'http://localhost:8080',
             f'geoserver/rest/workspaces/{DEFAULT_WORKSPACE}/coveragestores',
-            data=coveragestore_payload)
+            json=coveragestore_payload)
         LOGGER.debug(result.text)
 
         _execute_sqlite(
