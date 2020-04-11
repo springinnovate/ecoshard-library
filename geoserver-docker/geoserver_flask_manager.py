@@ -323,7 +323,7 @@ def add_raster_worker(uri_path):
                 FROM global_variables
                 WHERE key='external_ip'
                 ''', DATABASE_PATH, mode='read_only', execute='execute',
-                argument_list=[])[0])
+                argument_list=[], fetch='one')[0])
 
         preview_url = (
             f"http://{external_ip}:{GEOSERVER_PORT}/geoserver/"
