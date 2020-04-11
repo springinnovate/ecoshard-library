@@ -210,7 +210,7 @@ def add_raster_worker(uri_path):
                     "namespace":
                         {
                             "name": DEFAULT_WORKSPACE,
-                            "href": urllib.parse.quote_plus(
+                            "href": (
                                 f"http://{external_ip}:8080/geoserver/"
                                 f"rest/namespaces/{DEFAULT_WORKSPACE}.json")
                         },
@@ -257,11 +257,11 @@ def add_raster_worker(uri_path):
                     "store": {
                         "@class": "coverageStore",
                         "name": f"{DEFAULT_WORKSPACE}:{raster_id}",
-                        "href": urllib.parse.quote_plus(
+                        "href": (
                             f"http://{external_ip}:{GEOSERVER_PORT}/"
                             "geoserver/rest",
                             f"/workspaces/{DEFAULT_WORKSPACE}/coveragestores/"
-                            f"{raster_id}.json")
+                            f"{urllib.parse.quote_plus(raster_id)}.json")
                         },
                     "serviceConfiguration": False,
                     "nativeFormat": "GeoTIFF",
@@ -298,8 +298,9 @@ def add_raster_worker(uri_path):
                             "description": (
                                 "GridSampleDimension[-Infinity,Infinity]"),
                             # TODO: set these to real values
-                            "range": {"min": 0, "max": 0.22},
-                            "nullValues": {"double": [-9999]},
+                            "range": {"min": raster_min, "max": raster_max},
+                            "nullValues": {"double": [
+                                raster_info['nodata'][0]]},
                             "dimensionType":{"name": "REAL_32BITS"}
                             }]
                         },
@@ -322,19 +323,19 @@ def add_raster_worker(uri_path):
             session.post,
             f'http://{external_ip}:{GEOSERVER_PORT}',
             f'geoserver/rest/workspaces/{DEFAULT_WORKSPACE}/'
-            f'coveragestores/{cover_id}/coverages/',
+            f'coveragestores/{urllib.parse.quote_plus(cover_id)}/coverages/',
             json=cover_payload)
         LOGGER.debug(result.text)
 
         LOGGER.debug('construct the preview url')
 
-        preview_url = urllib.parse.quote_plus(
+        preview_url = (
             f"http://{external_ip}:{GEOSERVER_PORT}/geoserver/"
             f"{DEFAULT_WORKSPACE}/"
             f"wms?service=WMS&version=1.3.0&request=GetMap&layers="
             f"{urllib.parse.quote_plus(cover_id)}/&bbox="
             f"{'%2C'.join([str(v) for v in raster_info['bounding_box']])}"
-            f"&width=1000&height=768&srs={epsg_crs}"
+            f"&width=1000&height=768&srs={urllib.parse.quote(epsg_crs)}"
             f"&format=application%2Fopenlayers3#toggle")
 
         LOGGER.debug('update database with complete and cover url')
