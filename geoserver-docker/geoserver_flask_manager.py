@@ -251,17 +251,17 @@ def add_raster_worker(uri_path):
                     "metadata": {
                         "entry": {
                             "@key": "dirName",
-                            "$": f"{cover_id}_cover_{cover_id}"
+                            "$": f"{cover_id}_{cover_id}"
                             }
                         },
                     "store": {
                         "@class": "coverageStore",
-                        "name": f"{DEFAULT_WORKSPACE}:{cover_id}_cover",
+                        "name": f"{DEFAULT_WORKSPACE}:{cover_id}",
                         "href": urllib.parse.quote_plus(
                             f"http://{external_ip}:{GEOSERVER_PORT}/"
                             "geoserver/rest",
                             f"/workspaces/{DEFAULT_WORKSPACE}/coveragestores/"
-                            f"{cover_id}_cover.json")
+                            f"{cover_id}.json")
                         },
                     "serviceConfiguration": False,
                     "nativeFormat": "GeoTIFF",
@@ -323,7 +323,7 @@ def add_raster_worker(uri_path):
             session.post,
             f'http://{external_ip}:{GEOSERVER_PORT}',
             f'geoserver/rest/workspaces/{DEFAULT_WORKSPACE}/'
-            f'coveragestores/{cover_id}_cover/coverages/{cover_id}.json',
+            f'coveragestores/{cover_id}/coverages/{cover_id}.json',
             json=cover_payload)
         LOGGER.debug(result.text)
 
