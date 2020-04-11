@@ -182,118 +182,113 @@ def add_raster_worker(session_id, cover_name, uri_path):
             raster_info['bounding_box'],
             raster_info['projection'], wgs84_srs.ExportToWkt())
 
-        raster_info['projection']
-
         epsg_crs = ':'.join(
             [raster_srs.GetAttrValue('AUTHORITY', i) for i in [0, 1]])
 
+        raster_basename = os.path.splitext(local_path)[0]
+
         cover_payload = {
-          "coverage": {
-            "abstract": "TODO: ABSTRACT GOES HERE",
-            "defaultInterpolationMethod": "nearest neighbor",
-            "description": "TODO: DESCRIPTION GOES HERE",
-            "dimensions": {
-              "coverageDimension": [
+            "coverage":
                 {
-                  "description": "GridSampleDimension[min, max]",
-                  "name": "GRAY_INDEX",
-                  "range": {
-                    "max": raster_min,
-                    "min": raster_max
-                  }
+                    "name": "Copy of Mann-BurnProb-2001-2025-BAU",
+                    "nativeName": "Copy of Mann-BurnProb-2001-2025-BAU",
+                    "namespace":
+                        {
+                            "name": DEFAULT_WORKSPACE,
+                            "href": f"http:localhost:8080/geoserver/rest/namespaces/{DEFAULT_WORKSPACE}.json"
+                        },
+                    "title": raster_basename,
+                    "description": "description here",
+                    "abstract": "abstract here",
+                    "keywords": {
+                        "string": ["Copy of Mann-BurnProb-2001-2025-BAU", "WCS", "GeoTIFF"]
+                        },
+                    "nativeCRS": {
+                        "@class": "projected" if raster_srs.IsProjected() else "unprojected",
+                        "$": raster_info['projection']
+                        },
+                    "srs": epsg_crs,
+                    "nativeBoundingBox": {
+                        "minx": raster_info['bounding_box'][0],
+                        "maxx": raster_info['bounding_box'][2],
+                        "miny": raster_info['bounding_box'][1],
+                        "maxy": raster_info['bounding_box'][3],
+                        "crs": {
+                            "@class": "projected" if raster_srs.IsProjected() else "unprojected",
+                            "$": raster_info['projection']
+                            },
+                        },
+                    "latLonBoundingBox": {
+                        "minx": lat_lng_bounding_box[0],
+                        "maxx": lat_lng_bounding_box[2],
+                        "miny": lat_lng_bounding_box[1],
+                        "maxy": lat_lng_bounding_box[3],
+                        "crs": "EPSG:4326"
+                        },
+                    "projectionPolicy": "NONE",
+                    "enabled": True,
+                    "metadata": {
+                        "entry": {
+                            "@key": "dirName",
+                            "$": f"{cover_name}_{raster_basename}"
+                            }
+                        },
+                    "store": {
+                        "@class": "coverageStore",
+                        "name": f"{DEFAULT_WORKSPACE}:{cover_name}",
+                        "href": f"http://localhost:8080/geoserver/rest/workspaces/{DEFAULT_WORKSPACE}/coveragestores/{cover_name}.json"
+                        },
+                    "serviceConfiguration": False,
+                    "nativeFormat": "GeoTIFF",
+                    "grid": {
+                        "@dimension": "2",
+                        "range": {
+                            "low": "0 0",
+                            "high": f"{raster_info['raster_size'][0]} {raster_info['raster_size'][1]}"
+                            },
+                        "transform": {
+                            "scaleX": gt[1],
+                            "scaleY": gt[5],
+                            "shearX": gt[2],
+                            "shearY": gt[4],
+                            "translateX": gt[0],
+                            "translateY": gt[3]
+                            },
+                        "crs": raster_info['projection']
+                        },
+                    "supportedFormats": {
+                        "string": ["GEOTIFF", "ImageMosaic", "ArcGrid", "GIF", "PNG", "JPEG", "TIFF", "GeoPackage (mosaic)"]
+                        },
+                    "interpolationMethods": {
+                        "string": ["nearest neighbor", "bilinear", "bicubic"]
+                        },
+                    "defaultInterpolationMethod": "nearest neighbor",
+                    "dimensions": {
+                        "coverageDimension": [{
+                            "name": "GRAY_INDEX",
+                            "description": "GridSampleDimension[-Infinity,Infinity]",
+                            "range": {"min": 0, "max": 0.22},
+                            "nullValues": {"double": [-9999]},
+                            "dimensionType":{"name": "REAL_32BITS"}
+                            }]
+                        },
+                    "parameters": {
+                        "entry": [
+                            {"string": "InputTransparentColor", "null": ""},
+                            {"string": ["SUGGESTED_TILE_SIZE", "512,512"]},
+                            {
+                                "string": "RescalePixels",
+                                "boolean": True
+                            }]
+                        },
+                    "nativeCoverageName": "Copy of Mann-BurnProb-2001-2025-BAU"
                 }
-              ]
-            },
-            "enabled": True,
-            "grid": {
-              "dimension": "2",
-              "crs": epsg_crs,
-              "range": {
-                "high": "%d %d" % raster_info['raster_size'],
-                "low": "0 0"
-              },
-              "transform": {
-                "scaleX": gt[1],
-                "scaleY": gt[5],
-                "shearX": gt[2],
-                "shearY": gt[4],
-                "translateX": gt[0],
-                "translateY": gt[3]
-              }
-            },
-            "interpolationMethods": {
-              "string": [
-                "nearest neighbor",
-                "bilinear",
-                "bicubic"
-              ]
-            },
-            "keywords": {
-              "string": [
-                "TODO: KEYWORDS", "GO", "HERE",
-              ]
-            },
-            "latLonBoundingBox": {
-              "crs": "EPSG:4326",
-              "maxx": lat_lng_bounding_box[2],
-              "maxy": lat_lng_bounding_box[3],
-              "minx": lat_lng_bounding_box[0],
-              "miny": lat_lng_bounding_box[1]
-            },
-            "name": cover_name,
-            "namespace": {
-              "href": f"http://localhost:8075/geoserver/restng/namespaces/{DEFAULT_WORKSPACE}.json",
-              "name": DEFAULT_WORKSPACE
-            },
-            "nativeBoundingBox": {
-              "crs": raster_info['projection'],
-              "maxx": raster_info['bounding_box'][2],
-              "maxy": raster_info['bounding_box'][3],
-              "minx": raster_info['bounding_box'][0],
-              "miny": raster_info['bounding_box'][1]
-            },
-            "nativeCRS": {
-              "$": raster_info['projection'],
-              "@class": (
-                "projected" if raster_srs.IsProjected() else "unprojected")
-            },
-            "nativeFormat": "GeoTIFF",
-            "nativeName": cover_name,
-            "requestSRS": {
-              "string": [
-                epsg_crs
-              ]
-            },
-            "responseSRS": {
-              "string": [
-                epsg_crs
-              ]
-            },
-            "srs": epsg_crs,
-            "store": {
-              "@class": "coverageStore",
-              "href": f"http://localhost:8075/geoserver/restng/workspaces/{DEFAULT_WORKSPACE}/coveragestores/{cover_name}.json",
-              "name": f"{DEFAULT_WORKSPACE}:{cover_name}"
-            },
-            "supportedFormats": {
-              "string": [
-                "ARCGRID",
-                "IMAGEMOSAIC",
-                "GTOPO30",
-                "GEOTIFF",
-                "GIF",
-                "PNG",
-                "JPEG",
-                "TIFF"
-              ]
-            },
-            "title": "TODO: put title here"
-          }
-        }
+            }
+
         result = do_rest_action(
             session.post,
             'http://localhost:8080',
-            f'geoserver/workspaces/{DEFAULT_WORKSPACE}/'
+            f'geoserver/rest/workspaces/{DEFAULT_WORKSPACE}/'
             f'coveragestores/{cover_name}/coverages', json=cover_payload)
         LOGGER.debug(result.text)
         _execute_sqlite(
