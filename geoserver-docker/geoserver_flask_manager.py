@@ -33,7 +33,7 @@ logging.basicConfig(
 LOGGER = logging.getLogger(__name__)
 
 
-@retrying.retry(wait_exponential_multiplier=1000, wait_exponential_max=5000)
+#@retrying.retry(wait_exponential_multiplier=1000, wait_exponential_max=5000)
 def _execute_sqlite(
         sqlite_command, database_path, argument_list=None,
         mode='read_only', execute='execute', fetch=None):
@@ -421,6 +421,7 @@ def add_raster():
         SELECT EXISTS(SELECT 1 FROM status_table WHERE raster_id=?)
         ''', mode='read_only', execute='execute', argument_list=[raster_id],
         fetch='one')
+
     if not exists:
         LOGGER.debug('new session entry')
         _execute_sqlite(
