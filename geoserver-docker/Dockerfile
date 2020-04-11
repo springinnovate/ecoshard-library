@@ -17,7 +17,7 @@ RUN apt-get install -y \
 WORKDIR /tmp
 
 # using gdal master
-ENV CPUS 1
+ENV CPUS 4
 ENV CURL_VERSION 7.61.1
 ENV GDAL_VERSION 3.0.4
 ENV GEOS_VERSION 3.8.0
