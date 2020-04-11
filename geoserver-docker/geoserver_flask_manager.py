@@ -460,7 +460,7 @@ def build_schema(database_path):
         CREATE TABLE status_table (
             raster_id TEXT NOT NULL PRIMARY KEY,
             work_status TEXT NOT NULL,
-            preview_url TEXT NOT NULL,
+            preview_url TEXT,
             last_accessed REAL NOT NULL
             );
 
