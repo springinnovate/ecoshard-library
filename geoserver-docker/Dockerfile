@@ -5,6 +5,8 @@ RUN apt-get install -y --no-install-recommends \
         cmake build-essential wget ca-certificates unzip pkg-config \
         zlib1g-dev libfreexl-dev libxml2-dev
 
+RUN apt-get install -y openjdk-11-jdk-headless
+
 RUN apt-get install -y \
     emacs \
     gcc \
