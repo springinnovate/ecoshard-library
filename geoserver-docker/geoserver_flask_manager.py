@@ -439,7 +439,7 @@ def build_schema(database_path):
             key TEXT NOT NULL PRIMARY KEY
             );
 
-        CREATE TABLE global_varaiables (
+        CREATE TABLE global_variables (
             key TEXT NOT NULL PRIMARY KEY,
             value BLOB)
         """)
