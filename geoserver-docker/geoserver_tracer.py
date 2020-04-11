@@ -36,8 +36,11 @@ if __name__ == '__main__':
         'uri_path', type=str, help='uri path to raster to push')
     args = parser.parse_args()
 
+    post_url = f'{args.host_port}/api/v1/add_raster'
+
+    print('posting to here: %s' % post_url)
     result = requests.post(
-        f'{args.host_port}/api/v1/add_raster',
+        post_url,
         params={'api_key': 'test_key'},
         json=json.dumps({
             'uri_path': args.uri_path
