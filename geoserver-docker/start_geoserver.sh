@@ -10,6 +10,6 @@ touch geo_log.txt
 tail -n +0 --pid=$$ -f ./geo_log.txt | { sed "/Server:main: Started/ q" && kill $$ ;}
 cd bin
 nohup python3 geoserver_flask_manager.py test_key $EXTERNAL_IP &
-echo python3 geoserver_tracer.py
+touch nohup.out
 tail -f nohup.out
 bash
