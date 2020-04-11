@@ -21,7 +21,7 @@ import retrying
 
 APP = flask.Flask(__name__)
 DEFAULT_WORKSPACE = 'salo'
-DATABASE_PATH = 'manager_status.db'
+DATABASE_PATH = 'manager.db'
 DATA_DIR = '../data_dir/data'
 
 logging.basicConfig(
@@ -376,6 +376,10 @@ def build_schema(database_path):
             session_id TEXT NOT NULL PRIMARY KEY,
             work_status TEXT NOT NULL,
             last_accessed REAL NOT NULL
+            );
+
+        CREATE TABLE api_keys (
+            key TEXT NOT NULL PRIMARY KEY
             );
         """)
 

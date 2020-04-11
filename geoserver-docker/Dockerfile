@@ -1,5 +1,5 @@
 # This is stac-geoserver-api:1
-FROM ubuntu:18.04
+FROM debian:10.3
 
 RUN apt-get update
 RUN apt-get install -y \
@@ -47,7 +47,8 @@ RUN pip3 install --no-cache-dir \
     retrying \
     rtree \
     scipy \
-    shapely
+    shapely \
+    git+https://github.com/natcap/pygeoprocessing.git@release/2.0
 
 RUN apt install curl -y
 SHELL ["/bin/bash", "-c"]
@@ -62,8 +63,6 @@ COPY salo-api-5de978810708.json /usr/local/salo-api-5de978810708.json
 RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=/usr/local/salo-api-5de978810708.json
 RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud config set project natgeo-dams
 RUN rm /usr/local/salo-api-5de978810708.json
-
-RUN pip3 install git+https://github.com/natcap/pygeoprocessing.git@release/2.0
 
 COPY start_geoserver.sh /usr/local/geoserver/bin
 COPY geoserver_flask_manager.py /usr/local/geoserver/bin
