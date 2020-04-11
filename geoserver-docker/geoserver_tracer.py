@@ -32,10 +32,12 @@ if __name__ == '__main__':
         'http://localhost:8888/api/v1/add_raster',
         json=json.dumps({
             'name': 'test_raster',
+            'api_key': 'test_key',
             'uri_path': 'gs://salo-api/test_rasters/Copy of Mann-BurnProb-2001-2025-BAU.tif'
         }))
     print(result.json())
     callback_url = result.json()['callback_url']
+    print(callback_url)
     while True:
         time.sleep(1)
         r = requests.get(callback_url)

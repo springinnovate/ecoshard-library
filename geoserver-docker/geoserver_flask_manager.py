@@ -376,7 +376,8 @@ def add_raster():
     with APP.app_context():
         LOGGER.debug('about to get url')
         callback_url = flask.url_for(
-            'get_status', session_id=session_id, _external=True)
+            'get_status', session_id=session_id,
+            api_key=flask.request.args['api_key'], _external=True)
 
     LOGGER.debug(callback_url)
     raster_worker_thread = threading.Thread(
@@ -426,9 +427,9 @@ if __name__ == '__main__':
         ''', DATABASE_PATH, argument_list=[args.api_key], mode='modify',
         execute='execute')
 
+    # First delete all the defaults off the geoserver
     session = requests.Session()
     session.auth = ('admin', 'geoserver')
-
     r = do_rest_action(
         session.get, 'http://localhost:8080', 'geoserver/rest/workspaces.json')
     result = r.json()
@@ -449,5 +450,6 @@ if __name__ == '__main__':
         json={'workspace': {'name': DEFAULT_WORKSPACE}})
     LOGGER.debug(result.text)
 
+    # wait for API calls
     APP.config.update(SERVER_NAME='localhost:8888')
     APP.run(host='0.0.0.0', port=8888)
