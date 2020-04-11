@@ -261,7 +261,7 @@ def add_raster_worker(uri_path):
                             f"http://{external_ip}:{GEOSERVER_PORT}/"
                             "geoserver/rest",
                             f"/workspaces/{DEFAULT_WORKSPACE}/coveragestores/"
-                            f"{urllib.parse.quote_plus(raster_id)}.json")
+                            f"{urllib.parse.quote(raster_id)}.json")
                         },
                     "serviceConfiguration": False,
                     "nativeFormat": "GeoTIFF",
@@ -323,7 +323,7 @@ def add_raster_worker(uri_path):
             session.post,
             f'http://{external_ip}:{GEOSERVER_PORT}',
             f'geoserver/rest/workspaces/{DEFAULT_WORKSPACE}/'
-            f'coveragestores/{urllib.parse.quote_plus(cover_id)}/coverages/',
+            f'coveragestores/{urllib.parse.quote(cover_id)}/coverages/',
             json=cover_payload)
         LOGGER.debug(result.text)
 
@@ -333,9 +333,10 @@ def add_raster_worker(uri_path):
             f"http://{external_ip}:{GEOSERVER_PORT}/geoserver/"
             f"{DEFAULT_WORKSPACE}/"
             f"wms?service=WMS&version=1.3.0&request=GetMap&layers="
-            f"{urllib.parse.quote_plus(cover_id)}/&bbox="
+            urllib.parse.quote(f"{DEFAULT_WORKSPACE}:{raster_id}") + "&bbox="
             f"{'%2C'.join([str(v) for v in raster_info['bounding_box']])}"
-            f"&width=1000&height=768&srs={urllib.parse.quote(epsg_crs)}"
+            #f"&width=1000&height=768&srs={urllib.parse.quote(epsg_crs)}"
+            f"&width=1000&height=768&srs={urllib.parse.quote('EPSG:4326')}"
             f"&format=application%2Fopenlayers3#toggle")
 
         LOGGER.debug('update database with complete and cover url')
@@ -367,7 +368,7 @@ def get_status(url_raster_id):
     if valid_check != 'valid':
         return valid_check
 
-    raster_id = urllib.parse.unquote_plus(url_raster_id)
+    raster_id = urllib.parse.unquote(url_raster_id)
     LOGGER.debug('getting status for %s', raster_id)
 
     status = _execute_sqlite(
