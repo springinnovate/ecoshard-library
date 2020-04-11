@@ -198,7 +198,9 @@ def add_raster_worker(uri_path):
                     "namespace":
                         {
                             "name": DEFAULT_WORKSPACE,
-                            "href": f"http:localhost:{GEOSERVER_PORT}/geoserver/rest/namespaces/{DEFAULT_WORKSPACE}.json"
+                            "href": (
+                                f"http:localhost:{GEOSERVER_PORT}/geoserver/"
+                                f"rest/namespaces/{DEFAULT_WORKSPACE}.json")
                         },
                     "title": raster_basename,
                     "description": "description here",
@@ -207,7 +209,9 @@ def add_raster_worker(uri_path):
                         "string": [raster_basename, "WCS", "GeoTIFF"]
                         },
                     "nativeCRS": {
-                        "@class": "projected" if raster_srs.IsProjected() else "unprojected",
+                        "@class": (
+                            "projected" if raster_srs.IsProjected() else
+                            "unprojected"),
                         "$": raster_info['projection']
                         },
                     "srs": epsg_crs,
@@ -217,7 +221,9 @@ def add_raster_worker(uri_path):
                         "miny": raster_info['bounding_box'][1],
                         "maxy": raster_info['bounding_box'][3],
                         "crs": {
-                            "@class": "projected" if raster_srs.IsProjected() else "unprojected",
+                            "@class": (
+                                "projected" if raster_srs.IsProjected() else
+                                "unprojected"),
                             "$": raster_info['projection']
                             },
                         },
@@ -239,7 +245,10 @@ def add_raster_worker(uri_path):
                     "store": {
                         "@class": "coverageStore",
                         "name": f"{DEFAULT_WORKSPACE}:{cover_id}",
-                        "href": f"http://localhost:{GEOSERVER_PORT}/geoserver/rest/workspaces/{DEFAULT_WORKSPACE}/coveragestores/{cover_id}.json"
+                        "href": (
+                            f"http://localhost:{GEOSERVER_PORT}/geoserver/rest"
+                            f"/workspaces/{DEFAULT_WORKSPACE}/coveragestores/"
+                            "{cover_id}.json")
                         },
                     "serviceConfiguration": False,
                     "nativeFormat": "GeoTIFF",
@@ -247,7 +256,9 @@ def add_raster_worker(uri_path):
                         "@dimension": "2",
                         "range": {
                             "low": "0 0",
-                            "high": f"{raster_info['raster_size'][0]} {raster_info['raster_size'][1]}"
+                            "high": (
+                                f"{raster_info['raster_size'][0]} "
+                                f"{raster_info['raster_size'][1]}")
                             },
                         "transform": {
                             "scaleX": gt[1],
@@ -260,7 +271,9 @@ def add_raster_worker(uri_path):
                         "crs": raster_info['projection']
                         },
                     "supportedFormats": {
-                        "string": ["GEOTIFF", "ImageMosaic", "ArcGrid", "GIF", "PNG", "JPEG", "TIFF", "GeoPackage (mosaic)"]
+                        "string": [
+                            "GEOTIFF", "ImageMosaic", "ArcGrid", "GIF", "PNG",
+                            "JPEG", "TIFF", "GeoPackage (mosaic)"]
                         },
                     "interpolationMethods": {
                         "string": ["nearest neighbor", "bilinear", "bicubic"]
@@ -269,9 +282,10 @@ def add_raster_worker(uri_path):
                     "dimensions": {
                         "coverageDimension": [{
                             "name": "GRAY_INDEX",
-                            "description": "GridSampleDimension[-Infinity,Infinity]",
-                            "range": {"min": 0, "max": 0.22},
+                            "description": (
+                                "GridSampleDimension[-Infinity,Infinity]"),
                             # TODO: set these to real values
+                            "range": {"min": 0, "max": 0.22},
                             "nullValues": {"double": [-9999]},
                             "dimensionType":{"name": "REAL_32BITS"}
                             }]
@@ -306,7 +320,8 @@ def add_raster_worker(uri_path):
                 argument_list=[])[0])
 
         preview_url = (
-            f"http://{external_ip}:{GEOSERVER_PORT}/geoserver/{DEFAULT_WORKSPACE}/"
+            f"http://{external_ip}:{GEOSERVER_PORT}/geoserver/"
+            f"{DEFAULT_WORKSPACE}/"
             f"wms?service=WMS&version=1.3.0&request=GetMap&layers="
             f"{urllib.parse.quote_plus(raster_basename)}/&bbox="
             f"{'%2C'.join([str(v) for v in raster_info['bounding_box']])}"
@@ -479,7 +494,8 @@ if __name__ == '__main__':
     session = requests.Session()
     session.auth = ('admin', 'geoserver')
     r = do_rest_action(
-        session.get, 'http://localhost:{GEOSERVER_PORT}', 'geoserver/rest/workspaces.json')
+        session.get, 'http://localhost:{GEOSERVER_PORT}',
+        'geoserver/rest/workspaces.json')
     result = r.json()
 
     if 'workspace' in result['workspaces']:
