@@ -132,7 +132,7 @@ RUN tar -xzf gdal-${GDAL_VERSION}.tar.gz && cd gdal-${GDAL_VERSION} && \
 
 RUN ldconfig
 
-RUN apt update
+RUN apt update && apt upgrade
 RUN apt install libspatialindex-dev -y
 
 RUN pip3 install --no-cache-dir \
@@ -147,10 +147,12 @@ RUN pip3 install --no-cache-dir \
     shapely \
     git+https://github.com/natcap/pygeoprocessing.git@release/2.0
 
-RUN apt install curl -y
+RUN apt install -y \
+    openssl \
+    curl
 SHELL ["/bin/bash", "-c"]
 WORKDIR /usr/local/gcloud-sdk
-RUN curl https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-284.0.0-linux-x86_64.tar.gz?hl=id | tar -xvzf -
+RUN curl "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-284.0.0-linux-x86_64.tar.gz?hl=id" | tar -xvzf -
 RUN ./google-cloud-sdk/install.sh
 RUN source /usr/local/gcloud-sdk/google-cloud-sdk/completion.bash.inc
 RUN source /usr/local/gcloud-sdk/google-cloud-sdk/path.bash.inc
