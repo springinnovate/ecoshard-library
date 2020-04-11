@@ -129,7 +129,7 @@ def add_raster_worker(uri_path):
                 time.time(), raster_id],
             mode='modify', execute='execute')
 
-        LOGGER.debug('about to copy %s to %s', uri_path, local_path)
+        LOGGER.debug(' to copy %s to %s', uri_path, local_path)
         subprocess.run(
             [f'gsutil cp "{uri_path}" "{local_path}"'], shell=True, check=True)
         if not os.path.exists(local_path):
@@ -398,9 +398,11 @@ def add_raster():
         200 if successful
 
     """
+    LOGGER.debug('checking key')
     valid_check = validate_api(flask.request.args)
     if valid_check != 'valid':
         return valid_check
+    LOGGER.debug('key valid')
 
     data = json.loads(flask.request.json)
     raster_id = os.path.splitext(os.path.basename(data['uri_path']))[0]
@@ -412,6 +414,7 @@ def add_raster():
             'get_status', raster_id=raster_id,
             api_key=flask.request.args['api_key'], _external=True)
 
+    LOGGER.debug('callback_url: %s', callback_url)
     # make sure it's not already processed/is processing
     exists = _execute_sqlite(
         '''
@@ -426,8 +429,7 @@ def add_raster():
             VALUES (?, 'scheduled', ?);
             ''', DATABASE_PATH, argument_list=[raster_id, time.time()],
             mode='modify', execute='execute')
-
-        LOGGER.debug(callback_url)
+        LOGGER.debug('start worker')
         raster_worker_thread = threading.Thread(
             target=add_raster_worker, args=(data['uri_path'],))
         raster_worker_thread.start()
