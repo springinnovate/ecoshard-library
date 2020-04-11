@@ -1,4 +1,5 @@
 """Tracer code to send data to GeoServer app."""
+import argparse
 import logging
 import json
 import urllib.parse
@@ -28,11 +29,18 @@ def do_rest_action(session_fn, host, suburl, data=None):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='push a raster to geoserver')
+    parser.add_argument('host-port', type=str, help='http[s]://host:port pair')
+    parser.add_argument(
+        'uri_path', type=str, help='uri path to raster to push')
+    args = parser.parse_args()
+
     result = requests.post(
-        'http://localhost:8888/api/v1/add_raster',
+        f'{args.host_port}/api/v1/add_raster',
         params={'api_key': 'test_key'},
         json=json.dumps({
-            'uri_path': 'gs://salo-api/test_rasters/Copy of Mann-BurnProb-2001-2025-BAU.tif'
+            'uri_path': args.uri_path
         }))
     print(result.text)
     print(result.json())
