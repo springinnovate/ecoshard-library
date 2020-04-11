@@ -5,6 +5,7 @@ RUN apt-get install -y --no-install-recommends \
         cmake build-essential wget ca-certificates unzip pkg-config \
         zlib1g-dev libfreexl-dev libxml2-dev
 
+# making directory to avoid this JDK installation bug: https://github.com/geerlingguy/ansible-role-java/issues/64
 RUN mkdir /usr/share/man/man1
 RUN apt-get install -y openjdk-11-jdk-headless
 
@@ -15,7 +16,6 @@ RUN apt-get install -y \
     libffi-dev \
     openjdk-11-jdk \
     unzip
-
 
 WORKDIR /tmp
 
@@ -117,6 +117,7 @@ RUN tar -xzf gdal-${GDAL_VERSION}.tar.gz && cd gdal-${GDAL_VERSION} && \
         --with-geotiff=internal \
         --with-hide-internal-symbols=yes \
         --with-libtiff=internal \
+        --with-python \
         --with-openjpeg \
         --with-sqlite3 \
         --with-spatialite \
