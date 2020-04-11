@@ -174,6 +174,4 @@ COPY geoserver_flask_manager.py /usr/local/geoserver/bin
 COPY geoserver_tracer.py /usr/local/geoserver/bin
 
 WORKDIR /usr/local/geoserver
-ARG EXTERNAL_IP
-RUN echo $EXTERNAL_IP > externalip.txt
-ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh", "${EXTERNAL_IP}"]
+ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]
