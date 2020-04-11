@@ -118,12 +118,21 @@ def add_raster_worker(session_id, cover_name, uri_path):
     try:
         local_path = os.path.join(DATA_DIR, os.path.basename(uri_path))
 
+        preview_url = (
+            f"http://{external_ip}:{port}/geoserver/{DEFAULT_WORKSPACE}/"
+            f"wms?service=WMS&version=1.3.0&request=GetMap&layers="
+            f"{urllib.parse.quote_plus(raster_basename)}/"
+            f"&bbox={xmin}%2C{ymin}%2C{xmax}%2C{ymax}"
+            f"&width=1000&height=768&srs=EPSG%3A{epsg_code}"
+            f"&format=application%2Fopenlayers3#toggle")
+
         _execute_sqlite(
             '''
             UPDATE work_status_table
-            SET work_status='copying local', last_accessed=?
+            SET work_status='copying local', preview_url=?, last_accessed=?
             WHERE session_id=?;
-            ''', DATABASE_PATH, argument_list=[time.time(), session_id],
+            ''', DATABASE_PATH, argument_list=[
+                time.time(), preview_url, session_id],
             mode='modify', execute='execute')
 
         LOGGER.debug('about to copy %s to %s', uri_path, local_path)
@@ -190,8 +199,8 @@ def add_raster_worker(session_id, cover_name, uri_path):
         cover_payload = {
             "coverage":
                 {
-                    "name": "Copy of Mann-BurnProb-2001-2025-BAU",
-                    "nativeName": "Copy of Mann-BurnProb-2001-2025-BAU",
+                    "name": raster_basename,
+                    "nativeName": raster_basename,
                     "namespace":
                         {
                             "name": DEFAULT_WORKSPACE,
@@ -201,7 +210,7 @@ def add_raster_worker(session_id, cover_name, uri_path):
                     "description": "description here",
                     "abstract": "abstract here",
                     "keywords": {
-                        "string": ["Copy of Mann-BurnProb-2001-2025-BAU", "WCS", "GeoTIFF"]
+                        "string": [raster_basename, "WCS", "GeoTIFF"]
                         },
                     "nativeCRS": {
                         "@class": "projected" if raster_srs.IsProjected() else "unprojected",
@@ -281,7 +290,7 @@ def add_raster_worker(session_id, cover_name, uri_path):
                                 "boolean": True
                             }]
                         },
-                    "nativeCoverageName": "Copy of Mann-BurnProb-2001-2025-BAU"
+                    "nativeCoverageName": raster_basename
                 }
             }
 
@@ -315,6 +324,14 @@ def get_status(session_id):
     result = validate_api(flask.request.args)
     if result != 'valid':
         return result
+
+    preview_url = (
+        f"http://{external_ip}:{port}/geoserver/{DEFAULT_WORKSPACE}/"
+        f"wms?service=WMS&version=1.3.0&request=GetMap&layers="
+        f"{urllib.parse.quote_plus(raster_basename)}/"
+        f"&bbox={xmin}%2C{ymin}%2C{xmax}%2C{ymax}"
+        f"&width=1000&height=768&srs=EPSG%3A{epsg_code}"
+        f"&format=application%2Fopenlayers3#toggle")
 
     status = _execute_sqlite(
         '''
@@ -401,6 +418,7 @@ def build_schema(database_path):
         CREATE TABLE work_status_table (
             session_id TEXT NOT NULL PRIMARY KEY,
             work_status TEXT NOT NULL,
+            preview_url TEXT NOT NULL,
             last_accessed REAL NOT NULL
             );
 
@@ -418,6 +436,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Create or delete an API key.')
     parser.add_argument('api_key', type=str, help='default api key')
+    parser.add_argument('external_ip', type=str, help='external ip address')
     args = parser.parse_args()
     LOGGER.debug('starting up!')
     build_schema(DATABASE_PATH)
@@ -452,5 +471,5 @@ if __name__ == '__main__':
     LOGGER.debug(result.text)
 
     # wait for API calls
-    APP.config.update(SERVER_NAME='localhost:8888')
+    APP.config.update(SERVER_NAME=f'{args.external_ip}:8888')
     APP.run(host='0.0.0.0', port=8888)
