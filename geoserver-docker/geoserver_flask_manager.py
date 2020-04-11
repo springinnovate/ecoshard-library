@@ -348,13 +348,14 @@ def add_raster_worker(uri_path):
             mode='modify', execute='execute')
 
 
-@APP.route('/api/v1/get_status/<raster_id>')
-def get_status(raster_id):
+@APP.route('/api/v1/get_status/<url_raster_id>')
+def get_status(url_raster_id):
     """Return the status of the session."""
     valid_check = validate_api(flask.request.args)
     if valid_check != 'valid':
         return valid_check
 
+    raster_id = urllib.parse.unquote_plus(url_raster_id)
     LOGGER.debug('getting status for %s', raster_id)
 
     status = _execute_sqlite(
