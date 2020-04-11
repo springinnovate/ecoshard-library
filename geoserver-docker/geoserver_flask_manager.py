@@ -205,8 +205,8 @@ def add_raster_worker(uri_path):
         cover_payload = {
             "coverage":
                 {
-                    "name": cover_id,
-                    "nativeName": cover_id,
+                    "name": raster_id,
+                    "nativeName": raster_id,
                     "namespace":
                         {
                             "name": DEFAULT_WORKSPACE,
@@ -214,11 +214,11 @@ def add_raster_worker(uri_path):
                                 f"http://{external_ip}:8080/geoserver/"
                                 f"rest/namespaces/{DEFAULT_WORKSPACE}.json")
                         },
-                    "title": cover_id,
+                    "title": raster_id,
                     "description": "description here",
                     "abstract": "abstract here",
                     "keywords": {
-                        "string": [cover_id, "WCS", "GeoTIFF"]
+                        "string": [raster_id, "WCS", "GeoTIFF"]
                         },
                     "nativeCRS": {
                         "@class": (
@@ -251,17 +251,17 @@ def add_raster_worker(uri_path):
                     "metadata": {
                         "entry": {
                             "@key": "dirName",
-                            "$": f"{cover_id}_{cover_id}"
+                            "$": f"{cover_id}_{raster_id}"
                             }
                         },
                     "store": {
                         "@class": "coverageStore",
-                        "name": f"{DEFAULT_WORKSPACE}:{cover_id}",
+                        "name": f"{DEFAULT_WORKSPACE}:{raster_id}",
                         "href": urllib.parse.quote_plus(
                             f"http://{external_ip}:{GEOSERVER_PORT}/"
                             "geoserver/rest",
                             f"/workspaces/{DEFAULT_WORKSPACE}/coveragestores/"
-                            f"{cover_id}.json")
+                            f"{raster_id}.json")
                         },
                     "serviceConfiguration": False,
                     "nativeFormat": "GeoTIFF",
@@ -312,30 +312,29 @@ def add_raster_worker(uri_path):
                                 "boolean": True
                             }]
                         },
-                    "nativeCoverageName": cover_id
+                    "nativeCoverageName": raster_id
                 }
             }
 
         LOGGER.debug('send cover request to GeoServer')
 
-        # I added the {cover_id}.json, that might be wrong
         result = do_rest_action(
             session.post,
             f'http://{external_ip}:{GEOSERVER_PORT}',
             f'geoserver/rest/workspaces/{DEFAULT_WORKSPACE}/'
-            f'coveragestores/{cover_id}/coverages/{cover_id}.json',
+            f'coveragestores/{cover_id}/coverages/',
             json=cover_payload)
         LOGGER.debug(result.text)
 
         LOGGER.debug('construct the preview url')
 
-        preview_url = (
+        preview_url = urllib.parse.quote_plus(
             f"http://{external_ip}:{GEOSERVER_PORT}/geoserver/"
             f"{DEFAULT_WORKSPACE}/"
             f"wms?service=WMS&version=1.3.0&request=GetMap&layers="
             f"{urllib.parse.quote_plus(cover_id)}/&bbox="
             f"{'%2C'.join([str(v) for v in raster_info['bounding_box']])}"
-            f"&width=1000&height=768&srs=EPSG%3A{epsg_crs}"
+            f"&width=1000&height=768&srs={epsg_crs}"
             f"&format=application%2Fopenlayers3#toggle")
 
         LOGGER.debug('update database with complete and cover url')
