@@ -152,7 +152,7 @@ RUN apt install -y \
     curl
 SHELL ["/bin/bash", "-c"]
 WORKDIR /usr/local/gcloud-sdk
-RUN curl "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-284.0.0-linux-x86_64.tar.gz?hl=id" | tar -xvzf -
+RUN wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-284.0.0-linux-x86_64.tar.gz" && tar -xvzf google-cloud-sdk-284.0.0-linux-x86_64.tar.gz
 RUN ./google-cloud-sdk/install.sh
 RUN source /usr/local/gcloud-sdk/google-cloud-sdk/completion.bash.inc
 RUN source /usr/local/gcloud-sdk/google-cloud-sdk/path.bash.inc
