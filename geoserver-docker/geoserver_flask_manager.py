@@ -330,6 +330,7 @@ def get_status(session_id):
 
 
 def validate_api(args):
+    LOGGER.debug('validating args: %s', str(args))
     if 'api_key' not in flask.request.args:
         return 'api key required', 401
     result = _execute_sqlite(
@@ -339,6 +340,7 @@ def validate_api(args):
         WHERE key=?
         ''', DATABASE_PATH, argument_list=[flask.request.args['api_key']],
         mode='read_only', execute='execute', fetch='one')
+    LOGGER.debug('query result: %s', str(result))
     if result[0] != 1:
         return 'api key not found: %d' % result[0], 401
     return 'valid'

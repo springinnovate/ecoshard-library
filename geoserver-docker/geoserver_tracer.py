@@ -35,6 +35,7 @@ if __name__ == '__main__':
             'api_key': 'test_key',
             'uri_path': 'gs://salo-api/test_rasters/Copy of Mann-BurnProb-2001-2025-BAU.tif'
         }))
+    print(result.text)
     print(result.json())
     callback_url = result.json()['callback_url']
     print(callback_url)
