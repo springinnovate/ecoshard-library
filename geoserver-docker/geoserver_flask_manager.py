@@ -440,7 +440,7 @@ def build_schema(database_path):
             );
 
         CREATE TABLE global_varaiables (
-            key TEXT NOT NULL PRIMARY KEY
+            key TEXT NOT NULL PRIMARY KEY,
             value BLOB)
         """)
 
