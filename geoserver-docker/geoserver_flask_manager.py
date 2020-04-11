@@ -316,7 +316,7 @@ def add_raster_worker(uri_path):
                 SELECT value
                 FROM global_variables
                 WHERE key='external_ip'
-                ''', mode='read_only', execute='execute',
+                ''', DATABASE_PATH, mode='read_only', execute='execute',
                 argument_list=[])[0])
 
         preview_url = (
