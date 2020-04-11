@@ -415,8 +415,7 @@ def build_schema(database_path):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Create or delete an API key.')
-    parser.add_argument(
-        'api_key', action='store_true', help='default api key')
+    parser.add_argument('api_key', type=str, help='default api key')
     args = parser.parse_args()
     LOGGER.debug('starting up!')
     build_schema(DATABASE_PATH)
