@@ -372,6 +372,10 @@ def get_status(url_raster_id):
             'preview_url': status[1]
             }
     else:
+        all_status = _execute_sqlite(
+            '''SELECT * FROM status_table''', DATABASE_PATH, argument_list=[],
+            mode='read_only', execute='execute', fetch='all')
+        LOGGER.debug('all status: %s', all_status)
         return f'no status for {raster_id}', 500
 
 
