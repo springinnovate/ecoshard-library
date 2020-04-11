@@ -142,6 +142,7 @@ def add_raster_worker(uri_path):
             ''', DATABASE_PATH, argument_list=[time.time(), raster_id],
             mode='modify', execute='execute')
 
+        LOGGER.debug('create coverstore on geoserver')
         session = requests.Session()
         session.auth = ('admin', 'geoserver')
         coveragestore_payload = {
@@ -161,6 +162,7 @@ def add_raster_worker(uri_path):
             json=coveragestore_payload)
         LOGGER.debug(result.text)
 
+        LOGGER.debug('update database with coverstore status')
         _execute_sqlite(
             '''
             UPDATE status_table
@@ -169,6 +171,7 @@ def add_raster_worker(uri_path):
             ''', DATABASE_PATH, argument_list=[time.time(), raster_id],
             mode='modify', execute='execute')
 
+        LOGGER.debug('get local raster info')
         raster_info = pygeoprocessing.get_raster_info(local_path)
         raster = gdal.OpenEx(local_path, gdal.OF_RASTER)
         band = raster.GetRasterBand(1)
@@ -190,6 +193,7 @@ def add_raster_worker(uri_path):
 
         raster_basename = os.path.splitext(local_path)[0]
 
+        LOGGER.debug('construct the cover_payload')
         cover_payload = {
             "coverage":
                 {
@@ -303,6 +307,7 @@ def add_raster_worker(uri_path):
                 }
             }
 
+        LOGGER.debug('send cover request to GeoServer')
         result = do_rest_action(
             session.post,
             f'http://localhost:{GEOSERVER_PORT}',
@@ -310,6 +315,7 @@ def add_raster_worker(uri_path):
             f'coveragestores/{cover_id}/coverages', json=cover_payload)
         LOGGER.debug(result.text)
 
+        LOGGER.debug('construct the preview url')
         external_ip = pickle.loads(
             _execute_sqlite(
                 '''
@@ -328,6 +334,7 @@ def add_raster_worker(uri_path):
             f"&width=1000&height=768&srs=EPSG%3A{epsg_crs}"
             f"&format=application%2Fopenlayers3#toggle")
 
+        LOGGER.debug('update database with complete and cover url')
         _execute_sqlite(
             '''
             UPDATE status_table
@@ -338,6 +345,7 @@ def add_raster_worker(uri_path):
             mode='modify', execute='execute')
 
     except Exception as e:
+        LOGGER.exception('something bad happened when doing raster worker')
         _execute_sqlite(
             '''
             UPDATE status_table
