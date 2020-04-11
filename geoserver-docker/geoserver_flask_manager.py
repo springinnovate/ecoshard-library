@@ -355,6 +355,8 @@ def get_status(raster_id):
     if valid_check != 'valid':
         return valid_check
 
+    LOGGER.debug('getting status for %s', raster_id)
+
     status = _execute_sqlite(
         '''
         SELECT work_status, preview_url
@@ -362,11 +364,14 @@ def get_status(raster_id):
         WHERE raster_id=?;
         ''', DATABASE_PATH, argument_list=[raster_id],
         mode='read_only', execute='execute', fetch='one')
-    return {
-        'raster_id': raster_id,
-        'status': status[0],
-        'preview_url': status[1]
-        }
+    if status:
+        return {
+            'raster_id': raster_id,
+            'status': status[0],
+            'preview_url': status[1]
+            }
+    else:
+        return f'no status for {raster_id}', 500
 
 
 def validate_api(args):
