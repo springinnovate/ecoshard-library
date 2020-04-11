@@ -132,6 +132,8 @@ RUN tar -xzf gdal-${GDAL_VERSION}.tar.gz && cd gdal-${GDAL_VERSION} && \
 
 RUN ldconfig
 
+RUN apt install libspatialindex-c4v5 -y
+
 RUN pip3 install --no-cache-dir \
     Cython \
     flask \
