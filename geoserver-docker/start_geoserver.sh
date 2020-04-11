@@ -12,4 +12,5 @@ cd bin
 nohup python3 geoserver_flask_manager.py test_key $EXTERNAL_IP &
 echo python3 geoserver_tracer.py
 echo $EXTERNAL_IP
+echo $@
 bash
