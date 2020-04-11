@@ -191,14 +191,12 @@ def add_raster_worker(uri_path):
         epsg_crs = ':'.join(
             [raster_srs.GetAttrValue('AUTHORITY', i) for i in [0, 1]])
 
-        raster_basename = os.path.splitext(local_path)[0]
-
         LOGGER.debug('construct the cover_payload')
         cover_payload = {
             "coverage":
                 {
-                    "name": raster_basename,
-                    "nativeName": raster_basename,
+                    "name": cover_id,
+                    "nativeName": cover_id,
                     "namespace":
                         {
                             "name": DEFAULT_WORKSPACE,
@@ -206,11 +204,11 @@ def add_raster_worker(uri_path):
                                 f"http:localhost:{GEOSERVER_PORT}/geoserver/"
                                 f"rest/namespaces/{DEFAULT_WORKSPACE}.json")
                         },
-                    "title": raster_basename,
+                    "title": cover_id,
                     "description": "description here",
                     "abstract": "abstract here",
                     "keywords": {
-                        "string": [raster_basename, "WCS", "GeoTIFF"]
+                        "string": [cover_id, "WCS", "GeoTIFF"]
                         },
                     "nativeCRS": {
                         "@class": (
@@ -243,7 +241,7 @@ def add_raster_worker(uri_path):
                     "metadata": {
                         "entry": {
                             "@key": "dirName",
-                            "$": f"{cover_id}_{raster_basename}"
+                            "$": f"{cover_id}_{cover_id}"
                             }
                         },
                     "store": {
@@ -303,7 +301,7 @@ def add_raster_worker(uri_path):
                                 "boolean": True
                             }]
                         },
-                    "nativeCoverageName": raster_basename
+                    "nativeCoverageName": cover_id
                 }
             }
 
@@ -329,7 +327,7 @@ def add_raster_worker(uri_path):
             f"http://{external_ip}:{GEOSERVER_PORT}/geoserver/"
             f"{DEFAULT_WORKSPACE}/"
             f"wms?service=WMS&version=1.3.0&request=GetMap&layers="
-            f"{urllib.parse.quote_plus(raster_basename)}/&bbox="
+            f"{urllib.parse.quote_plus(cover_id)}/&bbox="
             f"{'%2C'.join([str(v) for v in raster_info['bounding_box']])}"
             f"&width=1000&height=768&srs=EPSG%3A{epsg_crs}"
             f"&format=application%2Fopenlayers3#toggle")
