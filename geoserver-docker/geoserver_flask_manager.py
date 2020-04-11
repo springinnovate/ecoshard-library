@@ -431,7 +431,7 @@ def add_raster():
         SELECT EXISTS(SELECT 1 FROM status_table WHERE raster_id=?)
         ''', DATABASE_PATH,
         mode='read_only', execute='execute', argument_list=[raster_id],
-        fetch='one')
+        fetch='one')[0]
 
     if not exists:
         LOGGER.debug('new session entry')
