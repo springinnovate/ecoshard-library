@@ -30,9 +30,9 @@ def do_rest_action(session_fn, host, suburl, data=None):
 if __name__ == '__main__':
     result = requests.post(
         'http://localhost:8888/api/v1/add_raster',
+        params={'api_key': 'test_key'},
         json=json.dumps({
             'name': 'test_raster',
-            'api_key': 'test_key',
             'uri_path': 'gs://salo-api/test_rasters/Copy of Mann-BurnProb-2001-2025-BAU.tif'
         }))
     print(result.text)
