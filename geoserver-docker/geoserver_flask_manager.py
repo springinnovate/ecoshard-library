@@ -417,7 +417,7 @@ def add_raster():
     with APP.app_context():
         LOGGER.debug('about to get url')
         callback_url = flask.url_for(
-            'get_status', url_raster_id=url_raster_id,
+            'get_status', url_raster_id=raster_id,
             api_key=flask.request.args['api_key'], _external=True)
 
     LOGGER.debug('callback_url: %s', callback_url)
