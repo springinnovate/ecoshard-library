@@ -332,7 +332,7 @@ def add_raster_worker(uri_path):
         preview_url = (
             f"http://{external_ip}:{GEOSERVER_PORT}/geoserver/"
             f"{DEFAULT_WORKSPACE}/"
-            f"wms?service=WMS&version=1.3.0&request=GetMap&layers="
+            f"wms?service=WMS&version=1.3.0&request=GetMap&layers=" +
             urllib.parse.quote(f"{DEFAULT_WORKSPACE}:{raster_id}") + "&bbox="
             f"{'%2C'.join([str(v) for v in raster_info['bounding_box']])}"
             #f"&width=1000&height=768&srs={urllib.parse.quote(epsg_crs)}"
