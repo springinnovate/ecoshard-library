@@ -163,6 +163,12 @@ RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud auth activate-service-acco
 RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud config set project natgeo-dams
 RUN rm /usr/local/salo-api-5de978810708.json
 
+WORKDIR /usr/local
+COPY geoserver-2.16.2-bin.zip .
+RUN unzip geoserver-2.16.2-bin.zip
+RUN rm geoserver-2.16.2-bin.zip
+RUN mv ./geoserver-2.16.2 ./geoserver
+
 COPY start_geoserver.sh /usr/local/geoserver/bin
 COPY geoserver_flask_manager.py /usr/local/geoserver/bin
 COPY geoserver_tracer.py /usr/local/geoserver/bin
