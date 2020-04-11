@@ -3,6 +3,7 @@ FROM debian:10.3
 
 RUN apt-get update
 RUN apt-get install -y \
+    gnupg \
     software-properties-common \
     wget
 RUN add-apt-repository ppa:ubuntugis/ubuntugis-unstable -y
