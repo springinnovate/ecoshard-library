@@ -4,10 +4,10 @@ import json
 import logging
 import os
 import pathlib
+import pickle
 import sqlite3
 import subprocess
 import urllib.parse
-import uuid
 import time
 import threading
 
@@ -23,7 +23,8 @@ APP = flask.Flask(__name__)
 DEFAULT_WORKSPACE = 'salo'
 DATABASE_PATH = 'manager.db'
 DATA_DIR = '../data_dir/data'
-
+GEOSERVER_PORT = '8080'
+MANAGER_PORT = '8888'
 logging.basicConfig(
     level=logging.DEBUG,
     format=(
@@ -113,26 +114,19 @@ def do_rest_action(
         raise
 
 
-def add_raster_worker(session_id, cover_name, uri_path):
+def add_raster_worker(uri_path):
     """This is used to copy and update a coverage set asynchronously."""
     try:
         local_path = os.path.join(DATA_DIR, os.path.basename(uri_path))
-
-        preview_url = (
-            f"http://{external_ip}:{port}/geoserver/{DEFAULT_WORKSPACE}/"
-            f"wms?service=WMS&version=1.3.0&request=GetMap&layers="
-            f"{urllib.parse.quote_plus(raster_basename)}/"
-            f"&bbox={xmin}%2C{ymin}%2C{xmax}%2C{ymax}"
-            f"&width=1000&height=768&srs=EPSG%3A{epsg_code}"
-            f"&format=application%2Fopenlayers3#toggle")
-
+        raster_id = os.path.splitext(os.path.basename(uri_path))[0]
+        cover_id = f'{raster_id}_cover'
         _execute_sqlite(
             '''
-            UPDATE work_status_table
-            SET work_status='copying local', preview_url=?, last_accessed=?
-            WHERE session_id=?;
+            UPDATE status_table
+            SET work_status='copying local', last_accessed=?
+            WHERE raster_id=?;
             ''', DATABASE_PATH, argument_list=[
-                time.time(), preview_url, session_id],
+                time.time(), raster_id],
             mode='modify', execute='execute')
 
         LOGGER.debug('about to copy %s to %s', uri_path, local_path)
@@ -142,17 +136,17 @@ def add_raster_worker(session_id, cover_name, uri_path):
             raise RuntimeError(f"{local_path} didn't copy")
         _execute_sqlite(
             '''
-            UPDATE work_status_table
+            UPDATE status_table
             SET work_status='making coverstore', last_accessed=?
-            WHERE session_id=?;
-            ''', DATABASE_PATH, argument_list=[time.time(), session_id],
+            WHERE raster_id=?;
+            ''', DATABASE_PATH, argument_list=[time.time(), raster_id],
             mode='modify', execute='execute')
 
         session = requests.Session()
         session.auth = ('admin', 'geoserver')
         coveragestore_payload = {
           "coverageStore": {
-            "name": cover_name,
+            "name": cover_id,
             "type": 'GeoTIFF',
             "workspace": DEFAULT_WORKSPACE,
             "enabled": True,
@@ -162,17 +156,17 @@ def add_raster_worker(session_id, cover_name, uri_path):
 
         result = do_rest_action(
             session.post,
-            'http://localhost:8080',
+            f'http://localhost:{GEOSERVER_PORT}',
             f'geoserver/rest/workspaces/{DEFAULT_WORKSPACE}/coveragestores',
             json=coveragestore_payload)
         LOGGER.debug(result.text)
 
         _execute_sqlite(
             '''
-            UPDATE work_status_table
+            UPDATE status_table
             SET work_status='making cover', last_accessed=?
-            WHERE session_id=?;
-            ''', DATABASE_PATH, argument_list=[time.time(), session_id],
+            WHERE raster_id=?;
+            ''', DATABASE_PATH, argument_list=[time.time(), raster_id],
             mode='modify', execute='execute')
 
         raster_info = pygeoprocessing.get_raster_info(local_path)
@@ -204,7 +198,7 @@ def add_raster_worker(session_id, cover_name, uri_path):
                     "namespace":
                         {
                             "name": DEFAULT_WORKSPACE,
-                            "href": f"http:localhost:8080/geoserver/rest/namespaces/{DEFAULT_WORKSPACE}.json"
+                            "href": f"http:localhost:{GEOSERVER_PORT}/geoserver/rest/namespaces/{DEFAULT_WORKSPACE}.json"
                         },
                     "title": raster_basename,
                     "description": "description here",
@@ -239,13 +233,13 @@ def add_raster_worker(session_id, cover_name, uri_path):
                     "metadata": {
                         "entry": {
                             "@key": "dirName",
-                            "$": f"{cover_name}_{raster_basename}"
+                            "$": f"{cover_id}_{raster_basename}"
                             }
                         },
                     "store": {
                         "@class": "coverageStore",
-                        "name": f"{DEFAULT_WORKSPACE}:{cover_name}",
-                        "href": f"http://localhost:8080/geoserver/rest/workspaces/{DEFAULT_WORKSPACE}/coveragestores/{cover_name}.json"
+                        "name": f"{DEFAULT_WORKSPACE}:{cover_id}",
+                        "href": f"http://localhost:{GEOSERVER_PORT}/geoserver/rest/workspaces/{DEFAULT_WORKSPACE}/coveragestores/{cover_id}.json"
                         },
                     "serviceConfiguration": False,
                     "nativeFormat": "GeoTIFF",
@@ -277,6 +271,7 @@ def add_raster_worker(session_id, cover_name, uri_path):
                             "name": "GRAY_INDEX",
                             "description": "GridSampleDimension[-Infinity,Infinity]",
                             "range": {"min": 0, "max": 0.22},
+                            # TODO: set these to real values
                             "nullValues": {"double": [-9999]},
                             "dimensionType":{"name": "REAL_32BITS"}
                             }]
@@ -296,53 +291,66 @@ def add_raster_worker(session_id, cover_name, uri_path):
 
         result = do_rest_action(
             session.post,
-            'http://localhost:8080',
+            f'http://localhost:{GEOSERVER_PORT}',
             f'geoserver/rest/workspaces/{DEFAULT_WORKSPACE}/'
-            f'coveragestores/{cover_name}/coverages', json=cover_payload)
+            f'coveragestores/{cover_id}/coverages', json=cover_payload)
         LOGGER.debug(result.text)
+
+        external_ip = pickle.loads(
+            _execute_sqlite(
+                '''
+                SELECT value
+                FROM global_variables
+                WHERE key='external_ip'
+                ''', model='read_only', execute='execute',
+                argument_list=[])[0])
+
+        preview_url = (
+            f"http://{external_ip}:{GEOSERVER_PORT}/geoserver/{DEFAULT_WORKSPACE}/"
+            f"wms?service=WMS&version=1.3.0&request=GetMap&layers="
+            f"{urllib.parse.quote_plus(raster_basename)}/&bbox="
+            f"{'%2C'.join([str(v) for v in raster_info['bounding_box']])}"
+            f"&width=1000&height=768&srs=EPSG%3A{epsg_crs}"
+            f"&format=application%2Fopenlayers3#toggle")
+
         _execute_sqlite(
             '''
-            UPDATE work_status_table
-            SET work_status='complete', last_accessed=?
-            WHERE session_id=?;
-            ''', DATABASE_PATH, argument_list=[time.time(), session_id],
+            UPDATE status_table
+            SET work_status='complete', preview_url=?, last_accessed=?
+            WHERE raster_id=?;
+            ''', DATABASE_PATH, argument_list=[
+                preview_url, time.time(), raster_id],
             mode='modify', execute='execute')
+
     except Exception as e:
         _execute_sqlite(
             '''
-            UPDATE work_status_table
+            UPDATE status_table
             SET work_status=?, last_accessed=?
-            WHERE session_id=?;
+            WHERE raster_id=?;
             ''', DATABASE_PATH, argument_list=[
-                str(e), time.time(), session_id],
+                f'ERROR: {str(e)}', time.time(), raster_id],
             mode='modify', execute='execute')
 
 
-@APP.route('/api/v1/get_status/<session_id>')
-def get_status(session_id):
+@APP.route('/api/v1/get_status/<raster_id>')
+def get_status(raster_id):
     """Return the status of the session."""
-    result = validate_api(flask.request.args)
-    if result != 'valid':
-        return result
-
-    preview_url = (
-        f"http://{external_ip}:{port}/geoserver/{DEFAULT_WORKSPACE}/"
-        f"wms?service=WMS&version=1.3.0&request=GetMap&layers="
-        f"{urllib.parse.quote_plus(raster_basename)}/"
-        f"&bbox={xmin}%2C{ymin}%2C{xmax}%2C{ymax}"
-        f"&width=1000&height=768&srs=EPSG%3A{epsg_code}"
-        f"&format=application%2Fopenlayers3#toggle")
+    valid_check = validate_api(flask.request.args)
+    if valid_check != 'valid':
+        return valid_check
 
     status = _execute_sqlite(
         '''
-        SELECT work_status
-        FROM work_status_table
-        WHERE session_id=?;
-        ''', DATABASE_PATH, argument_list=[session_id],
+        SELECT work_status, preview_url
+        FROM status_table
+        WHERE raster_id=?;
+        ''', DATABASE_PATH, argument_list=[raster_id],
         mode='read_only', execute='execute', fetch='one')
     return {
-        'session_id': session_id,
-        'status': status[0]
+        'raster_id': raster_id,
+        'status': status[0],
+        'preview_url': status[1]
         }
 
 
@@ -368,7 +376,6 @@ def add_raster():
     """Adds a raster to the GeoServer from a local storage.
 
     Request parameters:
-        name (str) -- name of raster
         uri_path (str) -- uri to copy locally in the form:
             file:[/path/to/file.tif]
 
@@ -376,33 +383,39 @@ def add_raster():
         200 if successful
 
     """
-    result = validate_api(flask.request.args)
-    if result != 'valid':
-        return result
+    valid_check = validate_api(flask.request.args)
+    if valid_check != 'valid':
+        return valid_check
 
     data = json.loads(flask.request.json)
+    raster_id = os.path.splitext(os.path.basename(data['uri_path']))[0]
     LOGGER.debug(data)
-    session_id = uuid.uuid4().hex
-
-    LOGGER.debug('new session entry')
-    _execute_sqlite(
-        '''
-        INSERT INTO work_status_table (session_id, work_status, last_accessed)
-        VALUES (?, 'scheduled', ?);
-        ''', DATABASE_PATH, argument_list=[session_id, time.time()],
-        mode='modify', execute='execute')
 
     with APP.app_context():
         LOGGER.debug('about to get url')
         callback_url = flask.url_for(
-            'get_status', session_id=session_id,
+            'get_status', raster_id=raster_id,
             api_key=flask.request.args['api_key'], _external=True)
 
-    LOGGER.debug(callback_url)
-    raster_worker_thread = threading.Thread(
-        target=add_raster_worker, args=(
-            session_id, data['name'], data['uri_path']))
-    raster_worker_thread.start()
+    # make sure it's not already processed/is processing
+    exists = _execute_sqlite(
+        '''
+        SELECT EXISTS(SELECT 1 FROM status_table WHERE raster_id=?)
+        ''', mode='read_only', execute='execute', argument_list=[raster_id],
+        fetch='one')
+    if not exists:
+        LOGGER.debug('new session entry')
+        _execute_sqlite(
+            '''
+            INSERT INTO status_table (raster_id, work_status, last_accessed)
+            VALUES (?, 'scheduled', ?);
+            ''', DATABASE_PATH, argument_list=[raster_id, time.time()],
+            mode='modify', execute='execute')
+
+        LOGGER.debug(callback_url)
+        raster_worker_thread = threading.Thread(
+            target=add_raster_worker, args=(data['uri_path'],))
+        raster_worker_thread.start()
 
     LOGGER.debug('raster worker started returning now')
     return json.dumps({'callback_url': callback_url})
@@ -415,8 +428,8 @@ def build_schema(database_path):
 
     create_database_sql = (
         """
-        CREATE TABLE work_status_table (
-            session_id TEXT NOT NULL PRIMARY KEY,
+        CREATE TABLE status_table (
+            raster_id TEXT NOT NULL PRIMARY KEY,
             work_status TEXT NOT NULL,
             preview_url TEXT NOT NULL,
             last_accessed REAL NOT NULL
@@ -425,6 +438,10 @@ def build_schema(database_path):
         CREATE TABLE api_keys (
             key TEXT NOT NULL PRIMARY KEY
             );
+
+        CREATE TABLE global_varaiables (
+            key TEXT NOT NULL PRIMARY KEY
+            value BLOB)
         """)
 
     _execute_sqlite(
@@ -436,10 +453,21 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Create or delete an API key.')
     parser.add_argument('api_key', type=str, help='default api key')
-    parser.add_argument('external_ip', type=str, help='external ip address')
+    parser.add_argument(
+        'external_ip', type=str,
+        help='external ip of this host')
     args = parser.parse_args()
     LOGGER.debug('starting up!')
     build_schema(DATABASE_PATH)
+    _execute_sqlite(
+        '''
+        INSERT INTO global_variables (key, value)
+        VALUES (?, ?)
+        ''', DATABASE_PATH, argument_list=[
+            'external_ip',
+            pickle.dumps(args.external_ip)],
+        mode='modify', execute='execute')
+
     _execute_sqlite(
         '''
         INSERT INTO api_keys (key)
@@ -451,25 +479,25 @@ if __name__ == '__main__':
     session = requests.Session()
     session.auth = ('admin', 'geoserver')
     r = do_rest_action(
-        session.get, 'http://localhost:8080', 'geoserver/rest/workspaces.json')
+        session.get, 'http://localhost:{GEOSERVER_PORT}', 'geoserver/rest/workspaces.json')
     result = r.json()
 
     if 'workspace' in result['workspaces']:
         for workspace in result['workspaces']['workspace']:
             workspace_name = workspace['name']
             r = do_rest_action(
-                session.delete, 'http://localhost:8080',
+                session.delete, 'http://localhost:{GEOSERVER_PORT}',
                 'geoserver/rest/workspaces/%s.json?recurse=true' %
                 workspace_name)
             LOGGER.debug("delete result for %s: %s", workspace_name, str(r))
 
     # Create empty workspace
     result = do_rest_action(
-        session.post, 'http://localhost:8080',
+        session.post, 'http://localhost:{GEOSERVER_PORT}',
         'geoserver/rest/workspaces?default=true',
         json={'workspace': {'name': DEFAULT_WORKSPACE}})
     LOGGER.debug(result.text)
 
     # wait for API calls
-    APP.config.update(SERVER_NAME=f'{args.external_ip}:8888')
-    APP.run(host='0.0.0.0', port=8888)
+    APP.config.update(SERVER_NAME=f'{args.external_ip}:{MANAGER_PORT}')
+    APP.run(host='0.0.0.0', port=MANAGER_PORT)
