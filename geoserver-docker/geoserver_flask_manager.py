@@ -312,6 +312,10 @@ def add_raster_worker(session_id, cover_name, uri_path):
 @APP.route('/api/v1/get_status/<session_id>')
 def get_status(session_id):
     """Return the status of the session."""
+    result = validate_api(flask.request.args)
+    if result != 'valid':
+        return result
+
     status = _execute_sqlite(
         '''
         SELECT work_status
@@ -323,6 +327,21 @@ def get_status(session_id):
         'session_id': session_id,
         'status': status[0]
         }
+
+
+def validate_api(args):
+    if 'api_key' not in flask.request.args:
+        return 'api key required', 401
+    result = _execute_sqlite(
+        '''
+        SELECT count(*)
+        FROM api_keys
+        WHERE key=?
+        ''', DATABASE_PATH, argument_list=[flask.request.args['api_key']],
+        mode='read_only', execute='execute', fetch='one')
+    if result[0] != 1:
+        return 'api key not found: %d' % result[0], 401
+    return 'valid'
 
 
 @APP.route('/api/v1/add_raster', methods=['POST'])
@@ -338,6 +357,10 @@ def add_raster():
         200 if successful
 
     """
+    result = validate_api(flask.request.args)
+    if result != 'valid':
+        return result
+
     data = json.loads(flask.request.json)
     LOGGER.debug(data)
     session_id = uuid.uuid4().hex
@@ -389,8 +412,19 @@ def build_schema(database_path):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Create or delete an API key.')
+    parser.add_argument(
+        'api_key', action='store_true', help='default api key')
+    args = parser.parse_args()
     LOGGER.debug('starting up!')
     build_schema(DATABASE_PATH)
+    _execute_sqlite(
+        '''
+        INSERT INTO api_keys (key)
+        VALUES (?)
+        ''', DATABASE_PATH, argument_list=[args.api_key], mode='modify',
+        execute='execute')
 
     session = requests.Session()
     session.auth = ('admin', 'geoserver')
