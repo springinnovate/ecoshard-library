@@ -494,7 +494,8 @@ if __name__ == '__main__':
     session = requests.Session()
     session.auth = ('admin', 'geoserver')
     r = do_rest_action(
-        session.get, 'http://localhost:{GEOSERVER_PORT}',
+        session.get,
+        f'http://localhost:{GEOSERVER_PORT}',
         'geoserver/rest/workspaces.json')
     result = r.json()
 
@@ -502,14 +503,16 @@ if __name__ == '__main__':
         for workspace in result['workspaces']['workspace']:
             workspace_name = workspace['name']
             r = do_rest_action(
-                session.delete, 'http://localhost:{GEOSERVER_PORT}',
+                session.delete,
+                f'http://localhost:{GEOSERVER_PORT}',
                 'geoserver/rest/workspaces/%s.json?recurse=true' %
                 workspace_name)
             LOGGER.debug("delete result for %s: %s", workspace_name, str(r))
 
     # Create empty workspace
     result = do_rest_action(
-        session.post, 'http://localhost:{GEOSERVER_PORT}',
+        session.post,
+        f'http://localhost:{GEOSERVER_PORT}',
         'geoserver/rest/workspaces?default=true',
         json={'workspace': {'name': DEFAULT_WORKSPACE}})
     LOGGER.debug(result.text)
