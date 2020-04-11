@@ -192,6 +192,16 @@ def add_raster_worker(uri_path):
             [raster_srs.GetAttrValue('AUTHORITY', i) for i in [0, 1]])
 
         LOGGER.debug('construct the cover_payload')
+
+        external_ip = pickle.loads(
+            _execute_sqlite(
+                '''
+                SELECT value
+                FROM global_variables
+                WHERE key='external_ip'
+                ''', DATABASE_PATH, mode='read_only', execute='execute',
+                argument_list=[], fetch='one')[0])
+
         cover_payload = {
             "coverage":
                 {
@@ -200,8 +210,8 @@ def add_raster_worker(uri_path):
                     "namespace":
                         {
                             "name": DEFAULT_WORKSPACE,
-                            "href": (
-                                f"http:localhost:{GEOSERVER_PORT}/geoserver/"
+                            "href": urllib.parse.quote_plus(
+                                f"http://{external_ip}:8080/geoserver/"
                                 f"rest/namespaces/{DEFAULT_WORKSPACE}.json")
                         },
                     "title": cover_id,
@@ -241,16 +251,17 @@ def add_raster_worker(uri_path):
                     "metadata": {
                         "entry": {
                             "@key": "dirName",
-                            "$": f"{cover_id}_{cover_id}"
+                            "$": f"{cover_id}_cover_{cover_id}"
                             }
                         },
                     "store": {
                         "@class": "coverageStore",
-                        "name": f"{DEFAULT_WORKSPACE}:{cover_id}",
-                        "href": (
-                            f"http://localhost:{GEOSERVER_PORT}/geoserver/rest"
+                        "name": f"{DEFAULT_WORKSPACE}:{cover_id}_cover",
+                        "href": urllib.parse.quote_plus(
+                            f"http://{external_ip}:{GEOSERVER_PORT}/"
+                            "geoserver/rest",
                             f"/workspaces/{DEFAULT_WORKSPACE}/coveragestores/"
-                            "{cover_id}.json")
+                            f"{cover_id}_cover.json")
                         },
                     "serviceConfiguration": False,
                     "nativeFormat": "GeoTIFF",
@@ -306,22 +317,17 @@ def add_raster_worker(uri_path):
             }
 
         LOGGER.debug('send cover request to GeoServer')
+
+        # I added the {cover_id}.json, that might be wrong
         result = do_rest_action(
             session.post,
-            f'http://localhost:{GEOSERVER_PORT}',
+            f'http://{external_ip}:{GEOSERVER_PORT}',
             f'geoserver/rest/workspaces/{DEFAULT_WORKSPACE}/'
-            f'coveragestores/{cover_id}/coverages', json=cover_payload)
+            f'coveragestores/{cover_id}_cover/coverages/{cover_id}.json',
+            json=cover_payload)
         LOGGER.debug(result.text)
 
         LOGGER.debug('construct the preview url')
-        external_ip = pickle.loads(
-            _execute_sqlite(
-                '''
-                SELECT value
-                FROM global_variables
-                WHERE key='external_ip'
-                ''', DATABASE_PATH, mode='read_only', execute='execute',
-                argument_list=[], fetch='one')[0])
 
         preview_url = (
             f"http://{external_ip}:{GEOSERVER_PORT}/geoserver/"
