@@ -31,7 +31,7 @@ def do_rest_action(session_fn, host, suburl, data=None):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='push a raster to geoserver')
-    parser.add_argument('host-port', type=str, help='http[s]://host:port pair')
+    parser.add_argument('host_port', type=str, help='http[s]://host:port pair')
     parser.add_argument(
         'uri_path', type=str, help='uri path to raster to push')
     args = parser.parse_args()
