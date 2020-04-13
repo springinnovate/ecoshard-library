@@ -45,6 +45,7 @@ if __name__ == '__main__':
         json=json.dumps({
             'uri_path': args.uri_path
         }))
+
     print(result.text)
     print(result.json())
     callback_url = result.json()['callback_url']

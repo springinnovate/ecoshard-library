@@ -14,6 +14,7 @@ import threading
 from osgeo import gdal
 from osgeo import osr
 import flask
+import ecoshard
 import pygeoprocessing
 import requests
 import retrying
@@ -134,6 +135,20 @@ def add_raster_worker(uri_path):
             [f'gsutil cp "{uri_path}" "{local_path}"'], shell=True, check=True)
         if not os.path.exists(local_path):
             raise RuntimeError(f"{local_path} didn't copy")
+
+        _execute_sqlite(
+            '''
+            UPDATE status_table
+            SET work_status='building overviews (can take some time)',
+                last_accessed=?
+            WHERE raster_id=?;
+            ''', DATABASE_PATH, argument_list=[time.time(), raster_id],
+            mode='modify', execute='execute')
+
+        ecoshard.build_overviews(
+            local_path, interpolation_method='near', overview_type='internal',
+            rebuild_if_exists=False)
+
         _execute_sqlite(
             '''
             UPDATE status_table
