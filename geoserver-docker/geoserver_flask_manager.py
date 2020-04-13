@@ -136,6 +136,29 @@ def add_raster_worker(uri_path):
         if not os.path.exists(local_path):
             raise RuntimeError(f"{local_path} didn't copy")
 
+        raster = gdal.OpenEx(local_path, gdal.OF_RASTER)
+        compression_alg = raster.GetMetadata(
+            'IMAGE_STRUCTURE').get('COMPRESSION', None)
+        if compression_alg in [None, 'ZSTD']:
+            _execute_sqlite(
+                '''
+                UPDATE status_table
+                SET work_status=?,
+                    last_accessed=?
+                WHERE raster_id=?;
+                ''', DATABASE_PATH, argument_list=[
+                    f'(re)compressing image from {compression_alg}, this can '
+                    'take some time',
+                    time.time(), raster_id],
+                mode='modify', execute='execute')
+            compressed_tmp_file = os.path.join(
+                os.path.dirname(local_path),
+                f'COMPRESSION_{os.path.basename(local_path)}')
+            os.rename(local_path, compressed_tmp_file)
+            ecoshard.compress_raster(
+                compressed_tmp_file, local_path,
+                compression_algorithm='LZW', compression_predictor=None)
+
         _execute_sqlite(
             '''
             UPDATE status_table
@@ -146,8 +169,8 @@ def add_raster_worker(uri_path):
             mode='modify', execute='execute')
 
         ecoshard.build_overviews(
-            local_path, interpolation_method='near', overview_type='internal',
-            rebuild_if_exists=False)
+            local_path, interpolation_method='average',
+            overview_type='internal', rebuild_if_exists=False)
 
         _execute_sqlite(
             '''
