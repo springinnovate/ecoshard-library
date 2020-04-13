@@ -242,12 +242,7 @@ def add_raster_worker(uri_path):
                         "maxx": raster_info['bounding_box'][2],
                         "miny": raster_info['bounding_box'][1],
                         "maxy": raster_info['bounding_box'][3],
-                        "crs": {
-                            "@class": (
-                                "projected" if raster_srs.IsProjected() else
-                                "unprojected"),
-                            "$": raster_info['projection']
-                            },
+                        "crs": raster_info['projection'],
                         },
                     "latLonBoundingBox": {
                         "minx": lat_lng_bounding_box[0],
