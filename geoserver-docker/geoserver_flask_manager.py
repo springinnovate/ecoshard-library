@@ -235,12 +235,7 @@ def add_raster_worker(uri_path):
                     "keywords": {
                         "string": [raster_id, "WCS", "GeoTIFF"]
                         },
-                    "nativeCRS": {
-                        "@class": (
-                            "projected" if raster_srs.IsProjected() else
-                            "unprojected"),
-                        "$": raster_info['projection']
-                        },
+                    "nativeCRS": raster_info['projection'],
                     "srs": epsg_crs,
                     "nativeBoundingBox": {
                         "minx": raster_info['bounding_box'][0],
