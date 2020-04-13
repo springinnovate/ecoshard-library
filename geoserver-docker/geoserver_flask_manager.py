@@ -34,7 +34,9 @@ logging.basicConfig(
 LOGGER = logging.getLogger(__name__)
 
 
-#@retrying.retry(wait_exponential_multiplier=1000, wait_exponential_max=5000)
+@retrying.retry(
+    wait_exponential_multiplier=1000, wait_exponential_max=5000,
+    stop_max_attempt_number=5)
 def _execute_sqlite(
         sqlite_command, database_path, argument_list=None,
         mode='read_only', execute='execute', fetch=None):
@@ -103,7 +105,9 @@ def _execute_sqlite(
         raise
 
 
-#@retrying.retry(wait_exponential_multiplier=1000, wait_exponential_max=5000)
+@retrying.retry(
+    wait_exponential_multiplier=1000, wait_exponential_max=5000,
+    stop_max_attempt_number=5)
 def do_rest_action(
         session_fn, host, suburl, data=None, json=None):
     """Do a 'get' for the host/suburl."""
@@ -325,8 +329,8 @@ def add_raster_worker(uri_path):
                             "name": "GRAY_INDEX",
                             "description": (
                                 "GridSampleDimension[-Infinity,Infinity]"),
-                            # TODO: set these to real values
                             "range": {"min": raster_min, "max": raster_max},
+                            # TODO: set these to real values
                             "nullValues": {"double": [
                                 raster_info['nodata'][0]]},
                             "dimensionType":{"name": "REAL_32BITS"}
