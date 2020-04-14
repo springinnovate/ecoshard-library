@@ -484,7 +484,7 @@ def add_raster():
     raster_bucket_hash.update(data['uri_path'].encode('utf-8'))
 
     raster_basename = f'''{raster_bucket_hash.hexdigest()}_{
-        os.path.basename(data['uri_path'])[0]}'''
+        os.path.basename(data['uri_path'])}'''
     LOGGER.debug(data)
 
     with APP.app_context():
