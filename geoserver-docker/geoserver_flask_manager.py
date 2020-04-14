@@ -135,8 +135,7 @@ def add_raster_worker(uri_path, raster_basename):
     """
     try:
         raster_data_dir_path = os.path.join(INTER_DATA_DIR, raster_basename)
-        local_path = os.path.join(
-            REALTIVE_DATA_DIR, INTER_DATA_DIR, raster_data_dir_path)
+        local_path = os.path.join(REALTIVE_DATA_DIR, raster_data_dir_path)
         cover_id = f'{os.path.splitext(raster_basename)[0]}_cover'
         _execute_sqlite(
             '''
