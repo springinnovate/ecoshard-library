@@ -1,5 +1,6 @@
 """Flask APP to manage the GeoServer."""
 import argparse
+import hashlib
 import json
 import logging
 import os
@@ -460,7 +461,9 @@ def add_raster():
     LOGGER.debug('key valid')
 
     data = json.loads(flask.request.json)
-    raster_id = os.path.splitext(os.path.basename(data['uri_path']))[0]
+    raster_bucket_hash = hashlib.md5()
+    raster_id = f'''{raster_bucket_hash}_{
+        os.path.splitext(os.path.basename(data['uri_path']))[0]}'''
     LOGGER.debug(data)
 
     with APP.app_context():
