@@ -386,9 +386,9 @@ def add_raster_worker(uri_path, raster_basename):
             '''
             UPDATE status_table
             SET work_status='complete', preview_url=?, last_accessed=?
-            WHERE raster_id=?;
+            WHERE raster_basename=?;
             ''', DATABASE_PATH, argument_list=[
-                preview_url, time.time(), raster_id],
+                preview_url, time.time(), raster_basename],
             mode='modify', execute='execute')
 
     except Exception as e:
@@ -397,32 +397,32 @@ def add_raster_worker(uri_path, raster_basename):
             '''
             UPDATE status_table
             SET work_status=?, last_accessed=?
-            WHERE raster_id=?;
+            WHERE raster_basename=?;
             ''', DATABASE_PATH, argument_list=[
-                f'ERROR: {str(e)}', time.time(), raster_id],
+                f'ERROR: {str(e)}', time.time(), raster_basename],
             mode='modify', execute='execute')
 
 
-@APP.route('/api/v1/get_status/<url_raster_id>')
-def get_status(url_raster_id):
+@APP.route('/api/v1/get_status/<url_raster_basename>')
+def get_status(url_raster_basename):
     """Return the status of the session."""
     valid_check = validate_api(flask.request.args)
     if valid_check != 'valid':
         return valid_check
 
-    raster_id = urllib.parse.unquote(url_raster_id)
-    LOGGER.debug('getting status for %s', raster_id)
+    raster_basename = urllib.parse.unquote(url_raster_basename)
+    LOGGER.debug('getting status for %s', raster_basename)
 
     status = _execute_sqlite(
         '''
         SELECT work_status, preview_url
         FROM status_table
-        WHERE raster_id=?;
-        ''', DATABASE_PATH, argument_list=[raster_id],
+        WHERE raster_basename=?;
+        ''', DATABASE_PATH, argument_list=[raster_basename],
         mode='read_only', execute='execute', fetch='one')
     if status:
         return {
-            'raster_id': raster_id,
+            'raster_basename': raster_basename,
             'status': status[0],
             'preview_url': status[1]
             }
@@ -431,7 +431,7 @@ def get_status(url_raster_id):
             '''SELECT * FROM status_table''', DATABASE_PATH, argument_list=[],
             mode='read_only', execute='execute', fetch='all')
         LOGGER.debug('all status: %s', all_status)
-        return f'no status for {raster_id}', 500
+        return f'no status for {raster_basename}', 500
 
 
 def validate_api(args):
@@ -481,36 +481,39 @@ def add_raster():
 
     data = json.loads(flask.request.json)
     raster_bucket_hash = hashlib.md5()
-    raster_id = f'''{raster_bucket_hash}_{
+    raster_bucket_hash.update(data['uri_path'].encode('utf-8'))
+
+    raster_basename = f'''{raster_bucket_hash.hexdigest()}_{
         os.path.basename(data['uri_path'])[0]}'''
     LOGGER.debug(data)
 
     with APP.app_context():
         LOGGER.debug('about to get url')
         callback_url = flask.url_for(
-            'get_status', url_raster_id=raster_id,
+            'get_status', url_raster_basename=raster_basename,
             api_key=flask.request.args['api_key'], _external=True)
 
     LOGGER.debug('callback_url: %s', callback_url)
     # make sure it's not already processed/is processing
     exists = _execute_sqlite(
         '''
-        SELECT EXISTS(SELECT 1 FROM status_table WHERE raster_id=?)
+        SELECT EXISTS(SELECT 1 FROM status_table WHERE raster_basename=?)
         ''', DATABASE_PATH,
-        mode='read_only', execute='execute', argument_list=[raster_id],
+        mode='read_only', execute='execute', argument_list=[raster_basename],
         fetch='one')[0]
 
     if not exists:
         LOGGER.debug('new session entry')
         _execute_sqlite(
             '''
-            INSERT INTO status_table (raster_id, work_status, last_accessed)
+            INSERT INTO status_table
+                (raster_basename, work_status, last_accessed)
             VALUES (?, 'scheduled', ?);
-            ''', DATABASE_PATH, argument_list=[raster_id, time.time()],
+            ''', DATABASE_PATH, argument_list=[raster_basename, time.time()],
             mode='modify', execute='execute')
         LOGGER.debug('start worker')
         raster_worker_thread = threading.Thread(
-            target=add_raster_worker, args=(data['uri_path'], raster_id))
+            target=add_raster_worker, args=(data['uri_path'], raster_basename))
         raster_worker_thread.start()
 
     LOGGER.debug('raster worker started returning now')
@@ -518,14 +521,14 @@ def add_raster():
 
 
 def build_schema(database_path):
-    """Build the database schema."""
+    """Build the database schema to `database_path`."""
     if os.path.exists(database_path):
         os.remove(database_path)
 
     create_database_sql = (
         """
         CREATE TABLE status_table (
-            raster_id TEXT NOT NULL PRIMARY KEY,
+            raster_basename TEXT NOT NULL PRIMARY KEY,
             work_status TEXT NOT NULL,
             preview_url TEXT,
             last_accessed REAL NOT NULL
