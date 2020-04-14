@@ -24,7 +24,7 @@ import retrying
 APP = flask.Flask(__name__)
 DEFAULT_WORKSPACE = 'salo'
 DATABASE_PATH = 'manager.db'
-DATA_DIR = '../data_dir/data'
+DATA_DIR = 'data'  # relative to the geoserver 'data_dir'
 GEOSERVER_PORT = '8080'
 MANAGER_PORT = '8888'
 logging.basicConfig(
@@ -43,7 +43,7 @@ def _execute_sqlite(
         mode='read_only', execute='execute', fetch=None):
     """Execute SQLite command and attempt retries on a failure.
 
-    Parameters:
+    Args:
         sqlite_command (str): a well formatted SQLite command.
         database_path (str): path to the SQLite database to operate on.
         argument_list (list): `execute == 'execute` then this list is passed to
@@ -120,19 +120,28 @@ def do_rest_action(
         raise
 
 
-def add_raster_worker(uri_path):
-    """This is used to copy and update a coverage set asynchronously."""
+def add_raster_worker(uri_path, raster_basename):
+    """This is used to copy and update a coverage set asynchronously.
+
+    Args:
+        uri_path (str): path to base gs:// bucket to copy from.
+        raster_basename (str): local basename used to identify the raster,
+            if it's not a .tif everything will break.
+
+    Returns:
+        None.
+
+    """
     try:
-        local_path = os.path.join(DATA_DIR, os.path.basename(uri_path))
-        raster_id = os.path.splitext(os.path.basename(uri_path))[0]
-        cover_id = f'{raster_id}_cover'
+        local_path = os.path.join(DATA_DIR, raster_basename)
+        cover_id = f'{os.path.splitext(raster_basename)[0]}_cover'
         _execute_sqlite(
             '''
             UPDATE status_table
             SET work_status='copying local', last_accessed=?
-            WHERE raster_id=?;
+            WHERE raster_basename=?;
             ''', DATABASE_PATH, argument_list=[
-                time.time(), raster_id],
+                time.time(), raster_basename],
             mode='modify', execute='execute')
 
         LOGGER.debug(' to copy %s to %s', uri_path, local_path)
@@ -150,15 +159,15 @@ def add_raster_worker(uri_path):
                 UPDATE status_table
                 SET work_status=?,
                     last_accessed=?
-                WHERE raster_id=?;
+                WHERE raster_basename=?;
                 ''', DATABASE_PATH, argument_list=[
                     f'(re)compressing image from {compression_alg}, this can '
                     'take some time',
-                    time.time(), raster_id],
+                    time.time(), raster_basename],
                 mode='modify', execute='execute')
             compressed_tmp_file = os.path.join(
                 os.path.dirname(local_path),
-                f'COMPRESSION_{os.path.basename(local_path)}')
+                f'COMPRESSION_{raster_basename}')
             os.rename(local_path, compressed_tmp_file)
             ecoshard.compress_raster(
                 compressed_tmp_file, local_path,
@@ -169,8 +178,8 @@ def add_raster_worker(uri_path):
             UPDATE status_table
             SET work_status='building overviews (can take some time)',
                 last_accessed=?
-            WHERE raster_id=?;
-            ''', DATABASE_PATH, argument_list=[time.time(), raster_id],
+            WHERE raster_basename=?;
+            ''', DATABASE_PATH, argument_list=[time.time(), raster_basename],
             mode='modify', execute='execute')
 
         ecoshard.build_overviews(
@@ -181,8 +190,8 @@ def add_raster_worker(uri_path):
             '''
             UPDATE status_table
             SET work_status='making coverstore', last_accessed=?
-            WHERE raster_id=?;
-            ''', DATABASE_PATH, argument_list=[time.time(), raster_id],
+            WHERE raster_basename=?;
+            ''', DATABASE_PATH, argument_list=[time.time(), raster_basename],
             mode='modify', execute='execute')
 
         LOGGER.debug('create coverstore on geoserver')
@@ -210,8 +219,8 @@ def add_raster_worker(uri_path):
             '''
             UPDATE status_table
             SET work_status='making cover', last_accessed=?
-            WHERE raster_id=?;
-            ''', DATABASE_PATH, argument_list=[time.time(), raster_id],
+            WHERE raster_basename=?;
+            ''', DATABASE_PATH, argument_list=[time.time(), raster_basename],
             mode='modify', execute='execute')
 
         LOGGER.debug('get local raster info')
@@ -245,6 +254,7 @@ def add_raster_worker(uri_path):
                 ''', DATABASE_PATH, mode='read_only', execute='execute',
                 argument_list=[], fetch='one')[0])
 
+        raster_id = os.path.splitext(raster_basename)[0]
         cover_payload = {
             "coverage":
                 {
@@ -368,7 +378,6 @@ def add_raster_worker(uri_path):
             f"wms?service=WMS&version=1.1.1&request=GetMap&layers=" +
             urllib.parse.quote(f"{DEFAULT_WORKSPACE}:{raster_id}") + "&bbox="
             f"{'%2C'.join([str(v) for v in lat_lng_bounding_box])}"
-            #f"&width=1000&height=768&srs={urllib.parse.quote(epsg_crs)}"
             f"&width=1000&height=768&srs={urllib.parse.quote('EPSG:4326')}"
             f"&format=application%2Fopenlayers")
 
@@ -426,15 +435,25 @@ def get_status(url_raster_id):
 
 
 def validate_api(args):
+    """Take raw flask args and ensure 'api_key' exists and is valid.
+
+    Args:
+        args (dict-like object): comes from flask.request.args.
+
+    Returns:
+        str: 'valid' if api key is valid.
+        tuple: ([error message str], 401) if invalid.
+
+    """
     LOGGER.debug('validating args: %s', str(args))
-    if 'api_key' not in flask.request.args:
+    if 'api_key' not in args:
         return 'api key required', 401
     result = _execute_sqlite(
         '''
         SELECT count(*)
         FROM api_keys
         WHERE key=?
-        ''', DATABASE_PATH, argument_list=[flask.request.args['api_key']],
+        ''', DATABASE_PATH, argument_list=[args['api_key']],
         mode='read_only', execute='execute', fetch='one')
     LOGGER.debug('query result: %s', str(result))
     if result[0] != 1:
@@ -463,7 +482,7 @@ def add_raster():
     data = json.loads(flask.request.json)
     raster_bucket_hash = hashlib.md5()
     raster_id = f'''{raster_bucket_hash}_{
-        os.path.splitext(os.path.basename(data['uri_path']))[0]}'''
+        os.path.basename(data['uri_path'])[0]}'''
     LOGGER.debug(data)
 
     with APP.app_context():
@@ -491,7 +510,7 @@ def add_raster():
             mode='modify', execute='execute')
         LOGGER.debug('start worker')
         raster_worker_thread = threading.Thread(
-            target=add_raster_worker, args=(data['uri_path'],))
+            target=add_raster_worker, args=(data['uri_path'], raster_id))
         raster_worker_thread.start()
 
     LOGGER.debug('raster worker started returning now')
