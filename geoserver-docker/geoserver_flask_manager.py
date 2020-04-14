@@ -24,7 +24,8 @@ import retrying
 APP = flask.Flask(__name__)
 DEFAULT_WORKSPACE = 'salo'
 DATABASE_PATH = 'manager.db'
-DATA_DIR = 'data'  # relative to the geoserver 'data_dir'
+INTER_DATA_DIR = 'data'  # relative to the geoserver 'data_dir'
+REALTIVE_DATA_DIR = '../data_dir'
 GEOSERVER_PORT = '8080'
 MANAGER_PORT = '8888'
 logging.basicConfig(
@@ -133,7 +134,9 @@ def add_raster_worker(uri_path, raster_basename):
 
     """
     try:
-        local_path = os.path.join(DATA_DIR, raster_basename)
+        raster_data_dir_path = os.path.join(INTER_DATA_DIR, raster_basename)
+        local_path = os.path.join(
+            REALTIVE_DATA_DIR, INTER_DATA_DIR, raster_data_dir_path)
         cover_id = f'{os.path.splitext(raster_basename)[0]}_cover'
         _execute_sqlite(
             '''
@@ -145,8 +148,9 @@ def add_raster_worker(uri_path, raster_basename):
             mode='modify', execute='execute')
 
         LOGGER.debug(' to copy %s to %s', uri_path, local_path)
-        subprocess.run(
-            [f'gsutil cp "{uri_path}" "{local_path}"'], shell=True, check=True)
+        subprocess.run([
+            f'gsutil cp "{uri_path}" "{local_path}"'],
+            shell=True, check=True)
         if not os.path.exists(local_path):
             raise RuntimeError(f"{local_path} didn't copy")
 
@@ -203,7 +207,8 @@ def add_raster_worker(uri_path, raster_basename):
             "type": 'GeoTIFF',
             "workspace": DEFAULT_WORKSPACE,
             "enabled": True,
-            "url": 'file:%s' % local_path
+            # this one is relative to the data_dir
+            "url": f'file:{raster_data_dir_path}'
           }
         }
 
