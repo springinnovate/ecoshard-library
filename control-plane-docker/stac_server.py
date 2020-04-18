@@ -3,6 +3,7 @@ import argparse
 import urllib.parse
 
 import flask
+import pystac
 
 APP = flask.Flask(__name__)
 TITLE = 'SALO API'
@@ -35,7 +36,7 @@ def capabilities():
                 },
             ],
         'stac_version': '0.9.0',
-        'id': 'naip',
+        'id': '',
         }
     return response_json
 
