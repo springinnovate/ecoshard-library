@@ -25,7 +25,7 @@ import retrying
 APP = flask.Flask(__name__)
 DATABASE_PATH = 'manager.db'
 INTER_DATA_DIR = 'data'  # relative to the geoserver 'data_dir'
-REALTIVE_DATA_DIR = '../data_dir'
+REALTIVE_DATA_DIR = '../data_dir/data'
 GEOSERVER_PORT = '8080'
 MANAGER_PORT = '8888'
 logging.basicConfig(
