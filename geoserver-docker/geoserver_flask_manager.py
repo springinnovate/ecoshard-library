@@ -261,7 +261,9 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
             f'http://localhost:{GEOSERVER_PORT}',
             f'geoserver/rest/workspaces/{catalog}/coveragestores',
             json=coveragestore_payload)
-        LOGGER.debug(result.text)
+        if not result:
+            LOGGER.error(result.text)
+            raise RuntimeError(result.text)
 
         LOGGER.debug('update database with coverstore status')
         _execute_sqlite(
@@ -599,7 +601,7 @@ def publish():
         if catalog_id_present and catalog_id_present[0] > 0:
             if 'force' not in asset_args or not asset_args['force']:
                 return (
-                    f'{asset_args["catalog"]}:{asset_args["id"]} '
+                    f'{asset_args["catalog"]}:{asset_args["asset_id"]} '
                     'already published, use force:True to overwrite.'), 403
 
         # build job
