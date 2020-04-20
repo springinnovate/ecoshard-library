@@ -500,7 +500,7 @@ def validate_api(api_key, permission):
 
     Args:
         api_key (str): an api key
-        permission (str): one of READ:{catalog}, WRITE:{catalog}, or CREATE.
+        permission (str): one of READ:{catalog}, WRITE:{catalog}.
 
     Returns:
         str: 'valid' if api key is valid.
@@ -508,7 +508,7 @@ def validate_api(api_key, permission):
 
     """
     # ensure that the permission is well formed and doesn't contain
-    if not re.match(r"^(READ:|WRITE:|CREATE)[a-z0-9]+$", permission):
+    if not re.match(r"^(READ:|WRITE:)([a-z0-9]+|\*)$", permission):
         return f'invalid permission: "{permission}"', 401
 
     allowed_permissions = _execute_sqlite(
@@ -521,10 +521,10 @@ def validate_api(api_key, permission):
 
     LOGGER.debug(
         f'allowed permissions for {api_key}: {str(allowed_permissions)}')
-    if permission not in result[0]:
-        return 'api does not not have permission', 401
-
-    return 'valid'
+    # either permission is directly in there or a wildcard is allowed
+    if permission in result[0] or f'{permission.split(":")[0]}:*' in result[0]:
+        return 'valid'
+    return 'api key does not not have permission', 401
 
 
 def build_job_hash(asset_args):
@@ -687,8 +687,8 @@ def build_schema(database_path):
         CREATE TABLE api_keys (
             key TEXT NOT NULL PRIMARY KEY,
             /* permissions is string of READ:catalog WRITE:catalog CREATE
-               where READ/WRITE:catalog allow acces to read and write the
-               catalong and CREATE allows creation of a new catalog.
+               where READ/WRITE:catalog allow access to read and write the
+               catalog and CREATE allows creation of a new catalog.
             */
             permissions TEXT NOT NULL
             );
@@ -705,8 +705,7 @@ def build_schema(database_path):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description='Create or delete an API key.')
-    parser.add_argument('api_key', type=str, help='default api key')
+        description='Start GeoServer REST API server.')
     parser.add_argument(
         'external_ip', type=str,
         help='external ip of this host')
@@ -721,13 +720,6 @@ if __name__ == '__main__':
             'external_ip',
             pickle.dumps(args.external_ip)],
         mode='modify', execute='execute')
-
-    _execute_sqlite(
-        '''
-        INSERT INTO api_keys (key)
-        VALUES (?)
-        ''', DATABASE_PATH, argument_list=[args.api_key], mode='modify',
-        execute='execute')
 
     # First delete all the defaults off the geoserver
     session = requests.Session()

@@ -100,7 +100,18 @@ def _execute_sqlite(
 
 
 if __name__ == '__main__':
-    args = parse_args()
+    parser = argparse.ArgumentParser(description='GeoServer API key manager')
+    parser.add_argument(
+        '--api_key', type=str, help='base api_key, required unless --create')
+    parser.add_argument(
+        '--create', action='store_true',
+        help='create a new api key, will print to stdout')
+    parser.add_argument(
+        '--add_permission', type=str, nargs='+', help=(
+            'list of permissions to add ex.: WRITE:myworkspace '
+            'READ:*'))
+    args = parser.parse_args()
+
     if args.create:
         key = uuid.uuid4().hex
         _execute_sqlite(
