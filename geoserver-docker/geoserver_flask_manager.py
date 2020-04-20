@@ -172,33 +172,6 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
             ''', DATABASE_PATH, argument_list=[utc_now(), job_id],
             mode='modify', execute='execute')
 
-        # CREATE TABLE job_table (
-        #     -- a unique hash of the job based on the raster id
-        #     job_id TEXT NOT NULL PRIMARY KEY,
-        #     uri TEXT NOT NULL,
-        #     work_status TEXT NOT NULL,
-        #     active INT NOT NULL, -- 0 if complete, error no not
-        #     preview_url TEXT,
-        #     last_accessed_utc TEXT NOT NULL
-        #     );
-
-        # CREATE INDEX last_accessed_index ON status_table(last_accessed_utc);
-        # CREATE INDEX job_id_index ON status_table(job_id);
-
-        # -- we may search by partial `id` so set NOCASE so we can use the index
-        # CREATE TABLE catalog_table (
-        #     id TEXT NOT NULL COLLATE NOCASE,
-        #     catalog TEXT NOT NULL,
-        #     xmin REAL NOT NULL,
-        #     xmax REAL NOT NULL,
-        #     ymin REAL NOT NULL,
-        #     ymax REAL NOT NULL,
-        #     utc_datetime TEXT NOT NULL,
-        #     mediatype TEXT NOT NULL,
-        #     uri TEXT NOT NULL,
-        #     PRIMARY KEY (id, catalog)
-        #     );
-
         LOGGER.debug('copy %s to %s', uri_path, local_raster_path)
         subprocess.run([
             f'gsutil cp "{uri_path}" "{local_raster_path}"'],
@@ -213,8 +186,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
             _execute_sqlite(
                 '''
                 UPDATE job_table
-                SET work_status=?,
-                    last_accessed=?
+                SET work_status=?, last_accessed_utc=?
                 WHERE job_id=?;
                 ''', DATABASE_PATH, argument_list=[
                     f'(re)compressing image from {compression_alg}, this can '
@@ -233,7 +205,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
             '''
             UPDATE job_table
             SET work_status='building overviews (can take some time)',
-                last_accessed=?
+                last_accessed_utc=?
             WHERE job_id=?;
             ''', DATABASE_PATH, argument_list=[
                 utc_now(), job_id],
@@ -246,15 +218,16 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
         _execute_sqlite(
             '''
             UPDATE job_table
-            SET work_status='making coverstore', last_accessed=?
+            SET work_status='making coverstore', last_accessed_utc=?
             WHERE job_id=?;
             ''', DATABASE_PATH, argument_list=[utc_now(), job_id],
             mode='modify', execute='execute')
 
         session = requests.Session()
         session.auth = ('admin', 'geoserver')
-        LOGGER.debug('create workspace if it does not exist')
 
+        # make workspace
+        LOGGER.debug('create workspace if it does not exist')
         workspace_exists_result = do_rest_action(
             session.get,
             f'http://localhost:{GEOSERVER_PORT}',
@@ -270,6 +243,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
                 # must be an error
                 raise RuntimeError(create_workspace_result.text)
 
+        # create coverstore
         LOGGER.debug('create coverstore on geoserver')
         coveragestore_payload = {
           "coverageStore": {
@@ -293,14 +267,14 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
         _execute_sqlite(
             '''
             UPDATE status_table
-            SET work_status='making cover', last_accessed=?
-            WHERE raster_basename=?;
-            ''', DATABASE_PATH, argument_list=[time.time(), raster_basename],
+            SET work_status='making cover', last_accessed_utc=?
+            WHERE job_id=?;
+            ''', DATABASE_PATH, argument_list=[utc_now(), job_id],
             mode='modify', execute='execute')
 
         LOGGER.debug('get local raster info')
-        raster_info = pygeoprocessing.get_raster_info(local_path)
-        raster = gdal.OpenEx(local_path, gdal.OF_RASTER)
+        raster_info = pygeoprocessing.get_raster_info(local_raster_path)
+        raster = gdal.OpenEx(local_raster_path, gdal.OF_RASTER)
         band = raster.GetRasterBand(1)
         raster_min, raster_max, raster_mean, raster_stdev = \
             band.GetStatistics(0, 1)
@@ -329,7 +303,6 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
                 ''', DATABASE_PATH, mode='read_only', execute='execute',
                 argument_list=[], fetch='one')[0])
 
-        raster_id = os.path.splitext(raster_basename)[0]
         cover_payload = {
             "coverage":
                 {
@@ -416,7 +389,6 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
                             "description": (
                                 "GridSampleDimension[-Infinity,Infinity]"),
                             "range": {"min": raster_min, "max": raster_max},
-                            # TODO: set these to real values
                             "nullValues": {"double": [
                                 raster_info['nodata'][0]]},
                             "dimensionType":{"name": "REAL_32BITS"}
@@ -436,7 +408,6 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
             }
 
         LOGGER.debug('send cover request to GeoServer')
-
         result = do_rest_action(
             session.post,
             f'http://{external_ip}:{GEOSERVER_PORT}',
@@ -460,10 +431,26 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
         _execute_sqlite(
             '''
             UPDATE status_table
-            SET work_status='complete', preview_url=?, last_accessed=?
-            WHERE raster_basename=?;
+            SET
+                work_status=?, preview_url=?, last_accessed_utc=?,
+                active=?
+            WHERE job_id=?;
             ''', DATABASE_PATH, argument_list=[
-                preview_url, time.time(), raster_basename],
+                'complete', preview_url, utc_now(), job_id, 0],
+            mode='modify', execute='execute')
+
+        _execute_sqlite(
+            '''
+            INSERT OR REPLACE INTO UPDATE catalog_table
+            VALUES (id=?, catalog=?, xmin=?, ymin=?, xmax=?, ymax=?,
+                    utc_datetime=?, mediatype=?, uri=?);
+            ''', DATABASE_PATH, argument_list=[
+                raster_id, catalog,
+                lat_lng_bounding_box[0],
+                lat_lng_bounding_box[1],
+                lat_lng_bounding_box[2],
+                lat_lng_bounding_box[3],
+                utc_now(), mediatype, uri_path],
             mode='modify', execute='execute')
 
     except Exception as e:
@@ -471,10 +458,10 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
         _execute_sqlite(
             '''
             UPDATE status_table
-            SET work_status=?, last_accessed=?
-            WHERE raster_basename=?;
+            SET work_status=?, last_accessed_utc=?, active=?
+            WHERE job_id=?;
             ''', DATABASE_PATH, argument_list=[
-                f'ERROR: {str(e)}', time.time(), raster_basename],
+                f'ERROR: {str(e)}', time.time(), 0, job_id],
             mode='modify', execute='execute')
 
 
@@ -548,7 +535,7 @@ def build_job_hash(asset_args):
         asset_args (dict): dictionary of asset arguments valid for this schema
             contains at least:
                 'catalog' -- catalog name
-                'id' -- unique id for the asset
+                'asset_id' -- unique id for the asset
     Returns:
         a unique hex hash that can be used to identify this job.
 
@@ -556,7 +543,7 @@ def build_job_hash(asset_args):
     data = json.loads(flask.request.json)
     job_id_hash = hashlib.sha256()
     job_id_hash.update(data['catalog'].encode('utf-8'))
-    job_id_hash.update(data['id'].encode('utf-8'))
+    job_id_hash.update(data['asset_id'].encode('utf-8'))
     return job_id_hash.hexdigest()
 
 
@@ -602,7 +589,7 @@ def publish():
         FROM catalog_table
         WHERE catalog=?, id=?
         ''', DATABASE_PATH, argument_list=[
-            asset_args['catalog'], asset_args['id']],
+            asset_args['catalog'], asset_args['asset_id']],
         mode='read_only', execute='execute', fetch='one')
 
     if catalog_id_present and catalog_id_present[0] > 0:
@@ -641,7 +628,7 @@ def publish():
     _execute_sqlite(
         '''
         INSERT OR REPLACE INTO job_table
-            (job_id, uri, work_status, active, last_accessed)
+            (job_id, uri, work_status, active, last_accessed_utc)
         VALUES (?, ?, 'scheduled', 1, ?);
         ''', DATABASE_PATH, argument_list=[
             job_id, asset_args['uri'],
@@ -651,7 +638,7 @@ def publish():
     raster_worker_thread = threading.Thread(
         target=add_raster_worker,
         args=(asset_args['uri'], asset_args['mediatype'],
-              asset_args['catalog'], asset_args['id'], job_id))
+              asset_args['catalog'], asset_args['asset_id'], job_id))
     raster_worker_thread.start()
     return callback_payload
 
