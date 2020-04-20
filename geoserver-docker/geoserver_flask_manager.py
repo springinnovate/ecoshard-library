@@ -613,23 +613,18 @@ def publish():
         # see if job already running
         job_payload = _execute_sqlite(
             '''
-            SELECT uri, active
+            SELECT active
             FROM job_table
             WHERE job_id=?
             ''', DATABASE_PATH, argument_list=[job_id],
             mode='read_only', execute='execute', fetch='one')
 
-        if job_payload:
-            job_uri, job_active = job_payload[0]
-            if job_uri == asset_args['uri']:
-                # if same uri, return callback
-                return callback_payload
-            elif job_active:
-                # if different and still running return 40x
-                return (
-                    f'{args["catalog"]}:{args["id"]} actively processing from '
-                    f'{job_uri}, wait until finished before sending new uri',
-                    400)
+        # if there's job and it's active...
+        if job_payload and job_payload[0]:
+            return (
+                f'{args["catalog"]}:{args["id"]} actively processing from '
+                f'{job_uri}, wait until finished before sending new uri',
+                400)
 
         # new job
         _execute_sqlite(
