@@ -266,7 +266,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
         LOGGER.debug('update database with coverstore status')
         _execute_sqlite(
             '''
-            UPDATE status_table
+            UPDATE job_table
             SET work_status='making cover', last_accessed_utc=?
             WHERE job_id=?;
             ''', DATABASE_PATH, argument_list=[utc_now(), job_id],
@@ -430,7 +430,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
         LOGGER.debug('update database with complete and cover url')
         _execute_sqlite(
             '''
-            UPDATE status_table
+            UPDATE job_table
             SET
                 work_status=?, preview_url=?, last_accessed_utc=?,
                 active=?
@@ -457,7 +457,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
         LOGGER.exception('something bad happened when doing raster worker')
         _execute_sqlite(
             '''
-            UPDATE status_table
+            UPDATE job_table
             SET work_status=?, last_accessed_utc=?, active=?
             WHERE job_id=?;
             ''', DATABASE_PATH, argument_list=[
@@ -478,7 +478,7 @@ def get_status(job_id):
     status = _execute_sqlite(
         '''
         SELECT work_status, preview_url
-        FROM status_table
+        FROM job_table
         WHERE raster_basename=?;
         ''', DATABASE_PATH, argument_list=[raster_basename],
         mode='read_only', execute='execute', fetch='one')
@@ -490,7 +490,7 @@ def get_status(job_id):
             }
     else:
         all_status = _execute_sqlite(
-            '''SELECT * FROM status_table''', DATABASE_PATH, argument_list=[],
+            '''SELECT * FROM job_table''', DATABASE_PATH, argument_list=[],
             mode='read_only', execute='execute', fetch='all')
         LOGGER.debug('all status: %s', all_status)
         return f'no status for {raster_basename}', 500
@@ -660,8 +660,8 @@ def build_schema(database_path):
             last_accessed_utc TEXT NOT NULL
             );
 
-        CREATE INDEX last_accessed_index ON status_table(last_accessed_utc);
-        CREATE INDEX job_id_index ON status_table(job_id);
+        CREATE INDEX last_accessed_index ON job_table(last_accessed_utc);
+        CREATE INDEX job_id_index ON job_table(job_id);
 
         -- we may search by partial `id` so set NOCASE so we can use the index
         CREATE TABLE catalog_table (
