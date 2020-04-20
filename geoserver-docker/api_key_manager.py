@@ -12,15 +12,9 @@ import retrying
 
 DATABASE_PATH = 'manager.db'
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format=(
-        '%(asctime)s (%(relativeCreated)d) %(processName)s %(levelname)s '
-        '%(name)s [%(funcName)s:%(lineno)d] %(message)s'))
-LOGGER = logging.getLogger(__name__)
-
-
-@retrying.retry(wait_exponential_multiplier=1000, wait_exponential_max=5000)
+@retrying.retry(
+    wait_exponential_multiplier=100, wait_exponential_max=500,
+    stop_max_attempt_number=5)
 def _execute_sqlite(
         sqlite_command, database_path, argument_list=None,
         mode='read_only', execute='execute', fetch=None):
@@ -47,9 +41,6 @@ def _execute_sqlite(
         if mode == 'read_only':
             ro_uri = r'%s?mode=ro' % pathlib.Path(
                 os.path.abspath(database_path)).as_uri()
-            LOGGER.debug(
-                '%s exists: %s', ro_uri, os.path.exists(os.path.abspath(
-                    database_path)))
             connection = sqlite3.connect(ro_uri, uri=True)
         elif mode == 'modify':
             connection = sqlite3.connect(database_path)
@@ -80,7 +71,7 @@ def _execute_sqlite(
         connection.close()
         return result
     except Exception:
-        LOGGER.exception('Exception on _execute_sqlite: %s', sqlite_command)
+        print(f'Exception on _execute_sqlite: {sqlite_command}')
         if cursor is not None:
             cursor.close()
         if connection is not None:
@@ -104,9 +95,9 @@ if __name__ == '__main__':
         '--delete', action='store_true', help='delete the api key')
     args = parser.parse_args()
 
-    # XOR api_key or create
-    if bool(args.api_key) != args.create:
-        raise ValueError('only --api_key or --create must be set.')
+    # not XOR api_key or create
+    if bool(args.api_key) == args.create:
+        raise ValueError('one of --api_key or --create only must be set.')
 
     if args.create and args.delete:
         raise ValueError('cannot delete and create')
@@ -123,12 +114,21 @@ if __name__ == '__main__':
     if args.create:
         _execute_sqlite(
             '''
-            INSERT INTO api_keys (key, permissions)
+            INSERT INTO api_keys (api_key, permissions)
             VALUES (?, ?)
             ''', DATABASE_PATH, argument_list=[
                 api_key, ' '.join(args.add_permission)],
             mode='modify', execute='execute')
-    elif args.add_permission:
+        print(f'new key: {api_key}')
+    elif args.delete:
+        _execute_sqlite(
+            '''
+            DELETE FROM api_keys
+            WHERE api_key=?
+            ''', DATABASE_PATH, argument_list=[api_key],
+            mode='modify', execute='execute')
+
+    if args.add_permission:
         # get old permissions to add onto
         original_permissions = _execute_sqlite(
             '''
@@ -139,8 +139,14 @@ if __name__ == '__main__':
             argument_list=[api_key], fetch='one')
         if original_permissions is None:
             raise ValueError(f'{api_key} not valid')
-        new_permissions = ' '.join(
-            set(original_permissions[0].split(' ')) + set(args.add_permission))
+        print(f'debug permissions to add: {args.add_permission}')
+        print(f'debug permissions to add: {set(args.add_permission)}')
+        new_set = set(original_permissions[0].split(' ')).union(
+            set(args.add_permission))
+        new_set.remove('')  # drop the empty string if it's in there
+        print(f'debug permissions to add: {new_set}')
+        new_permissions = ' '.join(new_set)
+        print(f'debug permissions to add: {new_permissions}')
         _execute_sqlite(
             '''
             UPDATE api_keys
@@ -148,10 +154,18 @@ if __name__ == '__main__':
             WHERE api_key=?
             ''', DATABASE_PATH, argument_list=[new_permissions, api_key],
             mode='modify', execute='execute')
-    elif args.delete:
-        _execute_sqlite(
-            '''
-            DELETE FROM api_keys
-            WHERE api_key=?
-            ''', DATABASE_PATH, argument_list=[api_key],
-            mode='modify', execute='execute')
+
+    permissions = _execute_sqlite(
+        '''
+        SELECT permissions
+        FROM api_keys
+        WHERE api_key=?
+        ''', DATABASE_PATH, mode='read_only', execute='execute',
+        argument_list=[api_key], fetch='one')
+    if permissions:
+        print(f'{api_key} permissions: "{permissions[0]}"')
+    else:
+        if args.delete:
+            print(f'{api_key} deleted')
+        else:
+            print(f'{api_key} not found')
