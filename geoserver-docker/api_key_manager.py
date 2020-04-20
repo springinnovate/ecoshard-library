@@ -143,7 +143,7 @@ if __name__ == '__main__':
         print(f'debug permissions to add: {set(args.add_permission)}')
         new_set = set(original_permissions[0].split(' ')).union(
             set(args.add_permission))
-        new_set.remove('')  # drop the empty string if it's in there
+        new_set.discard('')  # drop the empty string if it's in there
         print(f'debug permissions to add: {new_set}')
         new_permissions = ' '.join(new_set)
         print(f'debug permissions to add: {new_permissions}')
