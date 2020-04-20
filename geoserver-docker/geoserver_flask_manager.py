@@ -572,12 +572,12 @@ def publish():
     """
     try:
         api_key = flask.request.args['api_key']
+        asset_args = json.loads(flask.request.json)
         valid_check = validate_api(
-            api_key, f"WRITE:{flask.request.args['catalog']}")
+            api_key, f"WRITE:{asset_args['catalog']}")
         if valid_check != 'valid':
             return valid_check
 
-        asset_args = json.loads(flask.request.json)
         if asset_args['mediatype'] != 'GeoTIFF':
             return 'invalid mediatype, only "GeoTIFF" supported', 400
 
