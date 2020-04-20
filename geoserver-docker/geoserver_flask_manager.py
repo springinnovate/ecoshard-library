@@ -42,7 +42,7 @@ def utc_now():
 
 
 @retrying.retry(
-    wait_exponential_multiplier=1000, wait_exponential_max=5000,
+    wait_exponential_multiplier=100, wait_exponential_max=2000,
     stop_max_attempt_number=5)
 def _execute_sqlite(
         sqlite_command, database_path, argument_list=None,
@@ -436,11 +436,10 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
             '''
             UPDATE job_table
             SET
-                job_status=?, preview_url=?, last_accessed_utc=?,
-                active=?
+                job_status='complete', preview_url=?, last_accessed_utc=?,
+                active=0
             WHERE job_id=?;
-            ''', DATABASE_PATH, argument_list=[
-                'complete', preview_url, utc_now(), job_id, 0],
+            ''', DATABASE_PATH, argument_list=[preview_url, utc_now(), job_id],
             mode='modify', execute='execute')
 
         _execute_sqlite(
