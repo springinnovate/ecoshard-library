@@ -690,7 +690,7 @@ def build_schema(database_path):
                where READ/WRITE:catalog allow acces to read and write the
                catalong and CREATE allows creation of a new catalog.
             */
-            permissions TEXT NOT NULL,
+            permissions TEXT NOT NULL
             );
 
         CREATE TABLE global_variables (
