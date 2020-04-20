@@ -12,3 +12,4 @@ cd bin
 nohup python3 geoserver_flask_manager.py $EXTERNAL_IP &
 sleep 2
 python3 api_key_manager.py --create --add_permission WRITE:salo READ:salo >> api_key
+bash
