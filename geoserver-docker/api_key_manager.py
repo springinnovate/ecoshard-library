@@ -138,14 +138,10 @@ if __name__ == '__main__':
             argument_list=[api_key], fetch='one')
         if original_permissions is None:
             raise ValueError(f'{api_key} not valid')
-        print(f'debug permissions to add: {args.add_permission}')
-        print(f'debug permissions to add: {set(args.add_permission)}')
         new_set = set(original_permissions[0].split(' ')).union(
             set(args.add_permission))
         new_set.discard('')  # drop the empty string if it's in there
-        print(f'debug permissions to add: {new_set}')
         new_permissions = ' '.join(new_set)
-        print(f'debug permissions to add: {new_permissions}')
         _execute_sqlite(
             '''
             UPDATE api_keys
