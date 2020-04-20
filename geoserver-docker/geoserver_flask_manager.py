@@ -1,11 +1,13 @@
 """Flask APP to manage the GeoServer."""
 import argparse
+import datetime
 import hashlib
 import json
 import logging
 import os
 import pathlib
 import pickle
+import re
 import sqlite3
 import subprocess
 import urllib.parse
@@ -19,7 +21,6 @@ import ecoshard
 import pygeoprocessing
 import requests
 import retrying
-
 
 APP = flask.Flask(__name__)
 DEFAULT_WORKSPACE = 'salo'
@@ -112,7 +113,16 @@ def _execute_sqlite(
     stop_max_attempt_number=5)
 def do_rest_action(
         session_fn, host, suburl, data=None, json=None):
-    """Do a 'get' for the host/suburl."""
+    """A wrapper around HTML functions to make for easy retry.
+
+    Args:
+        sesson_fn (function): takes a url, optional data parameter, and
+            optional json parameter.
+
+    Returns:
+        result of `session_fn` on arguments.
+
+    """
     try:
         return session_fn(
             urllib.parse.urljoin(host, suburl), data=data, json=json)
@@ -121,7 +131,7 @@ def do_rest_action(
         raise
 
 
-def add_raster_worker(uri_path, raster_basename):
+def add_raster_worker(uri_path, workspace, raster_id):
     """This is used to copy and update a coverage set asynchronously.
 
     Args:
@@ -407,14 +417,14 @@ def add_raster_worker(uri_path, raster_basename):
             mode='modify', execute='execute')
 
 
-@APP.route('/api/v1/get_status/<url_raster_basename>')
-def get_status(url_raster_basename):
+@APP.route('/api/v1/get_status/<job_id>')
+def get_status(job_id):
     """Return the status of the session."""
     valid_check = validate_api(flask.request.args)
     if valid_check != 'valid':
         return valid_check
 
-    raster_basename = urllib.parse.unquote(url_raster_basename)
+    raster_basename = urllib.parse.unquote(job_id)
     LOGGER.debug('getting status for %s', raster_basename)
 
     status = _execute_sqlite(
@@ -438,90 +448,153 @@ def get_status(url_raster_basename):
         return f'no status for {raster_basename}', 500
 
 
-def validate_api(args):
+def validate_api(api_key, permission):
     """Take raw flask args and ensure 'api_key' exists and is valid.
 
     Args:
-        args (dict-like object): comes from flask.request.args.
+        api_key (str): an api key
+        permission (str): one of READ:{catalog}, WRITE:{catalog}, or CREATE.
 
     Returns:
         str: 'valid' if api key is valid.
         tuple: ([error message str], 401) if invalid.
 
     """
-    LOGGER.debug('validating args: %s', str(args))
-    if 'api_key' not in args:
-        return 'api key required', 401
-    result = _execute_sqlite(
+    # ensure that the permission is well formed and doesn't contain
+    if not re.match(r"^(READ:|WRITE:|CREATE)[a-z0-9]+$", permission):
+        return f'invalid permission: "{permission}"', 401
+
+    allowed_permissions = _execute_sqlite(
         '''
-        SELECT count(*)
+        SELECT permissions
         FROM api_keys
         WHERE key=?
-        ''', DATABASE_PATH, argument_list=[args['api_key']],
+        ''', DATABASE_PATH, argument_list=[api_key],
         mode='read_only', execute='execute', fetch='one')
-    LOGGER.debug('query result: %s', str(result))
-    if result[0] != 1:
-        return 'api key not found: %d' % result[0], 401
+
+    LOGGER.debug(
+        f'allowed permissions for {api_key}: {str(allowed_permissions)}')
+    if permission not in result[0]:
+        return 'api does not not have permission', 401
+
     return 'valid'
 
 
-@APP.route('/api/v1/add_raster', methods=['POST'])
-def add_raster():
+def build_job_hash(asset_args):
+    """Build a unique job hash given the asset arguments.
+
+    Args:
+        asset_args (dict): dictionary of asset arguments valid for this schema
+            contains at least:
+                'catalog' -- catalog name
+                'id' -- unique id for the asset
+    Returns:
+        a unique hex hash that can be used to identify this job.
+
+    """
+    data = json.loads(flask.request.json)
+    job_id_hash = hashlib.sha256()
+    job_id_hash.update(data['catalog'].encode('utf-8'))
+    job_id_hash.update(data['id'].encode('utf-8'))
+    return job_id_hash.hexdigest()
+
+
+@APP.route('/api/v1/publish', methods=['POST'])
+def publish():
     """Adds a raster to the GeoServer from a local storage.
 
     Request parameters:
-        uri_path (str) -- uri to copy locally in the form:
-            file:[/path/to/file.tif]
+        query parameters:
+            api_key (str): api key that has WRITE:catalog access.
+
+        body parameters in json format:
+            catalog (str): catalog to publish to.
+            id (str): raster ID, must be unique to the catalog.
+            mediatype (str): mediatype of the raster. Currently only 'geotiff'
+                is supported.
+            uri (str): uri to the asset that is accessable by this server.
+                Currently supports only `gs://`.
+            force (bool): (optional) if True, will overwrite existing
+                catalog:id asset
 
     Returns:
-        200 if successful
+        {'callback_uri': ...}, 200 if successful. The `callback_uri` can be
+            queried for when the asset is published.
+        401 if api key is not authorized for this service
 
     """
     LOGGER.debug('checking key')
-    valid_check = validate_api(flask.request.args)
+    api_key = flask.request.args['api_key']
+    # TODO: check the valid api key for the operation on this catalog!
+    valid_check = validate_api(
+        api_key, f"WRITE:{flask.request.args['catalog']}")
     if valid_check != 'valid':
         return valid_check
-    LOGGER.debug('key valid')
 
-    data = json.loads(flask.request.json)
-    raster_bucket_hash = hashlib.md5()
-    raster_bucket_hash.update(data['uri_path'].encode('utf-8'))
+    asset_args = json.loads(flask.request.json)
 
-    raster_basename = f'''{raster_bucket_hash.hexdigest()}_{
-        os.path.basename(data['uri_path'])}'''
-    LOGGER.debug(data)
-
-    with APP.app_context():
-        LOGGER.debug('about to get url')
-        callback_url = flask.url_for(
-            'get_status', url_raster_basename=raster_basename,
-            api_key=flask.request.args['api_key'], _external=True)
-
-    LOGGER.debug('callback_url: %s', callback_url)
-    # make sure it's not already processed/is processing
-    exists = _execute_sqlite(
+    # see if catalog/id are already in db
+    #   if not --force, then return 40x
+    catalog_id_present = _execute_sqlite(
         '''
-        SELECT EXISTS(SELECT 1 FROM status_table WHERE raster_basename=?)
-        ''', DATABASE_PATH,
-        mode='read_only', execute='execute', argument_list=[raster_basename],
-        fetch='one')[0]
+        SELECT count(*)
+        FROM catalog_table
+        WHERE catalog=?, id=?
+        ''', DATABASE_PATH, argument_list=[
+            asset_args['catalog'], asset_args['id']],
+        mode='read_only', execute='execute', fetch='one')
 
-    if not exists:
-        LOGGER.debug('new session entry')
-        _execute_sqlite(
-            '''
-            INSERT INTO status_table
-                (raster_basename, work_status, last_accessed)
-            VALUES (?, 'scheduled', ?);
-            ''', DATABASE_PATH, argument_list=[raster_basename, time.time()],
-            mode='modify', execute='execute')
-        LOGGER.debug('start worker')
-        raster_worker_thread = threading.Thread(
-            target=add_raster_worker, args=(data['uri_path'], raster_basename))
-        raster_worker_thread.start()
+    if catalog_id_present and catalog_id_present[0] > 0:
+        if 'force' not in asset_args or not asset_args['force']:
+            return (
+                f'{asset_args["catalog"]}:{asset_args["id"]} '
+                'already published, use force:True to overwrite.'), 403
+
+    # build job
+    job_id = build_job_hash(asset_args)
+    callback_payload = json.dumps({
+        'callback_url': flask.url_for(
+            'get_status', job_id=job_id, api_key=api_key, _external=True)})
+
+    # see if job already running
+    job_payload = _execute_sqlite(
+        '''
+        SELECT uri, active
+        FROM job_table
+        WHERE job_id=?
+        ''', DATABASE_PATH, argument_list=[job_id],
+        mode='read_only', execute='execute', fetch='one')
+
+    if job_payload:
+        job_uri, job_active = job_payload[0]
+        if job_uri == asset_args['uri']:
+            # if same uri, return callback
+            return callback_payload
+        elif job_active:
+            # if different and still running return 40x
+            return (
+                f'{args["catalog"]}:{args["id"]} actively processing from '
+                f'{job_uri}, wait until finished before sending new uri', 400)
+
+    # new job
+    _execute_sqlite(
+        '''
+        INSERT OR REPLACE INTO job_table
+            (job_id, uri, work_status, active, last_accessed)
+        VALUES (?, ?, 'scheduled', 1, ?);
+        ''', DATABASE_PATH, argument_list=[
+            job_id, asset_args['uri'],
+            str(datetime.datetime.now(datetime.timezone.utc))],
+        mode='modify', execute='execute')
+
+    LOGGER.debug('start worker')
+    raster_worker_thread = threading.Thread(
+        target=add_raster_worker,
+        args=(asset_args['uri'], asset_args['catalog'], asset_args['id']))
+    raster_worker_thread.start()
 
     LOGGER.debug('raster worker started returning now')
-    return json.dumps({'callback_url': callback_url})
+    return callback_payload
 
 
 def build_schema(database_path):
@@ -531,15 +604,48 @@ def build_schema(database_path):
 
     create_database_sql = (
         """
-        CREATE TABLE status_table (
-            raster_basename TEXT NOT NULL PRIMARY KEY,
+        CREATE TABLE job_table (
+            -- a unique hash of the job based on the raster id
+            job_id TEXT NOT NULL PRIMARY KEY,
+            uri TEXT NOT NULL,
             work_status TEXT NOT NULL,
+            active INT NOT NULL, -- 0 if complete, error no not
             preview_url TEXT,
-            last_accessed REAL NOT NULL
+            last_accessed_utc TEXT NOT NULL
             );
 
+        CREATE INDEX last_accessed_index ON status_table(last_accessed_utc);
+        CREATE INDEX job_id_index ON status_table(job_id);
+
+        -- we may search by partial `id` so set NOCASE so we can use the index
+        CREATE TABLE catalog_table (
+            id TEXT NOT NULL COLLATE NOCASE,
+            catalog TEXT NOT NULL,
+            xmin REAL NOT NULL,
+            xmax REAL NOT NULL,
+            ymin REAL NOT NULL,
+            ymax REAL NOT NULL,
+            utc_datetime TEXT NOT NULL,
+            mediatype TEXT NOT NULL,
+            uri TEXT NOT NULL,
+            PRIMARY KEY (id, catalog)
+            );
+        CREATE INDEX id_index ON catalog_table(id);
+        CREATE INDEX catalog_index ON catalog_table(catalog);
+        CREATE INDEX xmin_index ON catalog_table(xmin);
+        CREATE INDEX xmax_index ON catalog_table(xmax);
+        CREATE INDEX ymin_index ON catalog_table(ymin);
+        CREATE INDEX ymax_index ON catalog_table(ymax);
+        CREATE INDEX utctime_index ON catalog_table(utc_datetime);
+        CREATE INDEX mediatype_index ON catalog_table(mediatype);
+
         CREATE TABLE api_keys (
-            key TEXT NOT NULL PRIMARY KEY
+            key TEXT NOT NULL PRIMARY KEY,
+            /* permissions is string of READ:catalog WRITE:catalog CREATE
+               where READ/WRITE:catalog allow acces to read and write the
+               catalong and CREATE allows creation of a new catalog.
+            */
+            permissions TEXT NOT NULL,
             );
 
         CREATE TABLE global_variables (

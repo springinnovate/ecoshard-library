@@ -144,8 +144,7 @@ RUN pip3 install --no-cache-dir \
     retrying \
     rtree \
     scipy \
-    shapely \
-    git+https://github.com/natcap/pygeoprocessing.git@release/2.0
+    shapely
 
 RUN apt install -y \
     openssl \
@@ -169,11 +168,12 @@ RUN unzip geoserver-2.16.2-bin.zip
 RUN rm geoserver-2.16.2-bin.zip
 RUN mv ./geoserver-2.16.2 ./geoserver
 
+RUN pip3 install git+https://github.com/natcap/pygeoprocessing.git@release/2.0
+RUN pip3 install ecoshard==0.4.0
+
 COPY start_geoserver.sh /usr/local/geoserver/bin
 COPY geoserver_flask_manager.py /usr/local/geoserver/bin
 COPY geoserver_tracer.py /usr/local/geoserver/bin
-
-RUN pip3 install ecoshard==0.4.0
 
 WORKDIR /usr/local/geoserver
 ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]
