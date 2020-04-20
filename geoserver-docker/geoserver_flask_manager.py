@@ -522,7 +522,8 @@ def validate_api(api_key, permission):
     LOGGER.debug(
         f'allowed permissions for {api_key}: {str(allowed_permissions)}')
     # either permission is directly in there or a wildcard is allowed
-    if permission in result[0] or f'{permission.split(":")[0]}:*' in result[0]:
+    if permission in allowed_permissions[0] or \
+            f'{permission.split(":")[0]}:*' in allowed_permissions[0]:
         return 'valid'
     return 'api key does not not have permission', 401
 
@@ -622,7 +623,8 @@ def publish():
                 # if different and still running return 40x
                 return (
                     f'{args["catalog"]}:{args["id"]} actively processing from '
-                    f'{job_uri}, wait until finished before sending new uri', 400)
+                    f'{job_uri}, wait until finished before sending new uri',
+                    400)
 
         # new job
         _execute_sqlite(
@@ -728,14 +730,13 @@ if __name__ == '__main__':
     # First delete all the defaults off the geoserver
     session = requests.Session()
     session.auth = ('admin', 'geoserver')
-    r = do_rest_action(
+    workspaces_result = do_rest_action(
         session.get,
         f'http://localhost:{GEOSERVER_PORT}',
-        'geoserver/rest/workspaces.json')
-    result = r.json()
+        'geoserver/rest/workspaces.json').json()
 
-    if 'workspace' in result['workspaces']:
-        for workspace in result['workspaces']['workspace']:
+    if 'workspace' in workspaces_result['workspaces']:
+        for workspace in workspaces_result['workspaces']['workspace']:
             workspace_name = workspace['name']
             r = do_rest_action(
                 session.delete,
