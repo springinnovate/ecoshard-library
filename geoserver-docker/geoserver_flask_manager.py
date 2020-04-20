@@ -591,7 +591,7 @@ def publish():
             '''
             SELECT count(*)
             FROM catalog_table
-            WHERE catalog=?, id=?
+            WHERE catalog=? AND id=?
             ''', DATABASE_PATH, argument_list=[
                 asset_args['catalog'], asset_args['asset_id']],
             mode='read_only', execute='execute', fetch='one')
