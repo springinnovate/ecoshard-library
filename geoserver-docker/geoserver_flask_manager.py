@@ -152,7 +152,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
     try:
         # geoserver raster path is for it's local data dir
         geoserver_raster_path = os.path.join(
-            INTER_DATA_DIR, catalog, f'{raster_id}')
+            INTER_DATA_DIR, catalog, f'{raster_id}.tif')
         # local data dir is for path to copy to from working directory
         local_data_dir = os.path.join(REALTIVE_DATA_DIR, catalog)
         try:
@@ -414,7 +414,9 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
             f'geoserver/rest/workspaces/{catalog}/'
             f'coveragestores/{urllib.parse.quote(cover_id)}/coverages/',
             json=cover_payload)
-        LOGGER.debug(result.text)
+        if not result:
+            LOGGER.error(result.text)
+            raise RuntimeError(result.text)
 
         LOGGER.debug('construct the preview url')
 
