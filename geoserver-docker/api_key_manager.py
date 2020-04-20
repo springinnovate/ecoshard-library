@@ -1,6 +1,5 @@
 """Flask APP to manage the GeoServer."""
 import argparse
-import logging
 import os
 import pathlib
 import re

@@ -570,76 +570,80 @@ def publish():
         401 if api key is not authorized for this service
 
     """
-    api_key = flask.request.args['api_key']
-    valid_check = validate_api(
-        api_key, f"WRITE:{flask.request.args['catalog']}")
-    if valid_check != 'valid':
-        return valid_check
+    try:
+        api_key = flask.request.args['api_key']
+        valid_check = validate_api(
+            api_key, f"WRITE:{flask.request.args['catalog']}")
+        if valid_check != 'valid':
+            return valid_check
 
-    asset_args = json.loads(flask.request.json)
-    if asset_args['mediatype'] != 'GeoTIFF':
-        return 'invalid mediatype, only "GeoTIFF" supported', 400
+        asset_args = json.loads(flask.request.json)
+        if asset_args['mediatype'] != 'GeoTIFF':
+            return 'invalid mediatype, only "GeoTIFF" supported', 400
 
-    # see if catalog/id are already in db
-    #   if not force(d), then return 403
-    catalog_id_present = _execute_sqlite(
-        '''
-        SELECT count(*)
-        FROM catalog_table
-        WHERE catalog=?, id=?
-        ''', DATABASE_PATH, argument_list=[
-            asset_args['catalog'], asset_args['asset_id']],
-        mode='read_only', execute='execute', fetch='one')
+        # see if catalog/id are already in db
+        #   if not force(d), then return 403
+        catalog_id_present = _execute_sqlite(
+            '''
+            SELECT count(*)
+            FROM catalog_table
+            WHERE catalog=?, id=?
+            ''', DATABASE_PATH, argument_list=[
+                asset_args['catalog'], asset_args['asset_id']],
+            mode='read_only', execute='execute', fetch='one')
 
-    if catalog_id_present and catalog_id_present[0] > 0:
-        if 'force' not in asset_args or not asset_args['force']:
-            return (
-                f'{asset_args["catalog"]}:{asset_args["id"]} '
-                'already published, use force:True to overwrite.'), 403
+        if catalog_id_present and catalog_id_present[0] > 0:
+            if 'force' not in asset_args or not asset_args['force']:
+                return (
+                    f'{asset_args["catalog"]}:{asset_args["id"]} '
+                    'already published, use force:True to overwrite.'), 403
 
-    # build job
-    job_id = build_job_hash(asset_args)
-    callback_payload = json.dumps({
-        'callback_url': flask.url_for(
-            'get_status', job_id=job_id, api_key=api_key, _external=True)})
+        # build job
+        job_id = build_job_hash(asset_args)
+        callback_payload = json.dumps({
+            'callback_url': flask.url_for(
+                'get_status', job_id=job_id, api_key=api_key, _external=True)})
 
-    # see if job already running
-    job_payload = _execute_sqlite(
-        '''
-        SELECT uri, active
-        FROM job_table
-        WHERE job_id=?
-        ''', DATABASE_PATH, argument_list=[job_id],
-        mode='read_only', execute='execute', fetch='one')
+        # see if job already running
+        job_payload = _execute_sqlite(
+            '''
+            SELECT uri, active
+            FROM job_table
+            WHERE job_id=?
+            ''', DATABASE_PATH, argument_list=[job_id],
+            mode='read_only', execute='execute', fetch='one')
 
-    if job_payload:
-        job_uri, job_active = job_payload[0]
-        if job_uri == asset_args['uri']:
-            # if same uri, return callback
-            return callback_payload
-        elif job_active:
-            # if different and still running return 40x
-            return (
-                f'{args["catalog"]}:{args["id"]} actively processing from '
-                f'{job_uri}, wait until finished before sending new uri', 400)
+        if job_payload:
+            job_uri, job_active = job_payload[0]
+            if job_uri == asset_args['uri']:
+                # if same uri, return callback
+                return callback_payload
+            elif job_active:
+                # if different and still running return 40x
+                return (
+                    f'{args["catalog"]}:{args["id"]} actively processing from '
+                    f'{job_uri}, wait until finished before sending new uri', 400)
 
-    # new job
-    _execute_sqlite(
-        '''
-        INSERT OR REPLACE INTO job_table
-            (job_id, uri, job_status, active, last_accessed_utc)
-        VALUES (?, ?, 'scheduled', 1, ?);
-        ''', DATABASE_PATH, argument_list=[
-            job_id, asset_args['uri'],
-            utc_now()],
-        mode='modify', execute='execute')
+        # new job
+        _execute_sqlite(
+            '''
+            INSERT OR REPLACE INTO job_table
+                (job_id, uri, job_status, active, last_accessed_utc)
+            VALUES (?, ?, 'scheduled', 1, ?);
+            ''', DATABASE_PATH, argument_list=[
+                job_id, asset_args['uri'],
+                utc_now()],
+            mode='modify', execute='execute')
 
-    raster_worker_thread = threading.Thread(
-        target=add_raster_worker,
-        args=(asset_args['uri'], asset_args['mediatype'],
-              asset_args['catalog'], asset_args['asset_id'], job_id))
-    raster_worker_thread.start()
-    return callback_payload
+        raster_worker_thread = threading.Thread(
+            target=add_raster_worker,
+            args=(asset_args['uri'], asset_args['mediatype'],
+                  asset_args['catalog'], asset_args['asset_id'], job_id))
+        raster_worker_thread.start()
+        return callback_payload
+    except Exception:
+        LOGGER.exception('something bad happened on publish')
+        raise
 
 
 def build_schema(database_path):
