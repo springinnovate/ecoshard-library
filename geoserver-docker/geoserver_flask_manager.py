@@ -442,7 +442,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
         _execute_sqlite(
             '''
             INSERT OR REPLACE INTO catalog_table
-            VALUES (id=?, catalog=?, xmin=?, ymin=?, xmax=?, ymax=?,
+            VALUES (asset_id=?, catalog=?, xmin=?, ymin=?, xmax=?, ymax=?,
                     utc_datetime=?, mediatype=?, uri=?);
             ''', DATABASE_PATH, argument_list=[
                 raster_id, catalog,
@@ -588,7 +588,7 @@ def publish():
             '''
             SELECT count(*)
             FROM catalog_table
-            WHERE catalog=? AND id=?
+            WHERE catalog=? AND asset_id=?
             ''', DATABASE_PATH, argument_list=[
                 asset_args['catalog'], asset_args['asset_id']],
             mode='read_only', execute='execute', fetch='one')
@@ -670,7 +670,7 @@ def build_schema(database_path):
 
         -- we may search by partial `id` so set NOCASE so we can use the index
         CREATE TABLE catalog_table (
-            id TEXT NOT NULL COLLATE NOCASE,
+            asset_id TEXT NOT NULL COLLATE NOCASE,
             catalog TEXT NOT NULL,
             xmin REAL NOT NULL,
             xmax REAL NOT NULL,
@@ -679,9 +679,9 @@ def build_schema(database_path):
             utc_datetime TEXT NOT NULL,
             mediatype TEXT NOT NULL,
             uri TEXT NOT NULL,
-            PRIMARY KEY (id, catalog)
+            PRIMARY KEY (asset_id, catalog)
             );
-        CREATE INDEX id_index ON catalog_table(id);
+        CREATE INDEX asset_id_index ON catalog_table(asset_id);
         CREATE INDEX catalog_index ON catalog_table(catalog);
         CREATE INDEX xmin_index ON catalog_table(xmin);
         CREATE INDEX xmax_index ON catalog_table(xmax);
