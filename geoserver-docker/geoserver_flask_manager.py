@@ -515,7 +515,7 @@ def validate_api(api_key, permission):
         '''
         SELECT permissions
         FROM api_keys
-        WHERE key=?
+        WHERE api_key=?
         ''', DATABASE_PATH, argument_list=[api_key],
         mode='read_only', execute='execute', fetch='one')
 
@@ -685,7 +685,7 @@ def build_schema(database_path):
         CREATE INDEX mediatype_index ON catalog_table(mediatype);
 
         CREATE TABLE api_keys (
-            key TEXT NOT NULL PRIMARY KEY,
+            api_key TEXT NOT NULL PRIMARY KEY,
             /* permissions is string of READ:catalog WRITE:catalog CREATE
                where READ/WRITE:catalog allow access to read and write the
                catalog and CREATE allows creation of a new catalog.

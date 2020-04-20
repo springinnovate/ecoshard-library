@@ -3,6 +3,7 @@ import argparse
 import logging
 import os
 import pathlib
+import re
 import sqlite3
 import uuid
 
@@ -17,17 +18,6 @@ logging.basicConfig(
         '%(asctime)s (%(relativeCreated)d) %(processName)s %(levelname)s '
         '%(name)s [%(funcName)s:%(lineno)d] %(message)s'))
 LOGGER = logging.getLogger(__name__)
-
-
-def parse_args():
-    """ Parse the arguments.
-    """
-    parser = argparse.ArgumentParser(
-        description='Create or delete an API key.')
-    parser.add_argument(
-        '--create', action='store_true', help='use if creating api key.')
-    parser.add_argument('--delete', type=str, help='delete a key')
-    return parser.parse_args()
 
 
 @retrying.retry(wait_exponential_multiplier=1000, wait_exponential_max=5000)
@@ -107,26 +97,61 @@ if __name__ == '__main__':
         '--create', action='store_true',
         help='create a new api key, will print to stdout')
     parser.add_argument(
-        '--add_permission', type=str, nargs='+', help=(
+        '--add_permission', type=str, default=[], nargs='+', help=(
             'list of permissions to add ex.: WRITE:myworkspace '
             'READ:*'))
+    parser.add_argument(
+        '--delete', action='store_true', help='delete the api key')
     args = parser.parse_args()
 
+    # XOR api_key or create
+    if bool(args.api_key) != args.create:
+        raise ValueError('only --api_key or --create must be set.')
+
+    if args.create and args.delete:
+        raise ValueError('cannot delete and create')
+
+    for permission in args.add_permission:
+        if not re.match(r"^(READ:|WRITE:)([a-z0-9]+|\*)$", permission):
+            raise ValueError(f'invalid permission: "{permission}"')
+
     if args.create:
-        key = uuid.uuid4().hex
+        api_key = uuid.uuid4().hex
+    else:
+        api_key = args.api_key
+
+    if args.create:
         _execute_sqlite(
             '''
-            INSERT INTO api_keys (key)
-            VALUES (?)
-            ''', DATABASE_PATH, argument_list=[key],
+            INSERT INTO api_keys (key, permissions)
+            VALUES (?, ?)
+            ''', DATABASE_PATH, argument_list=[
+                api_key, ' '.join(args.add_permission)],
             mode='modify', execute='execute')
-        print(key)
+    elif args.add_permission:
+        # get old permissions to add onto
+        original_permissions = _execute_sqlite(
+            '''
+            SELECT permissions
+            FROM api_keys
+            WHERE api_key=?
+            ''', DATABASE_PATH, mode='read_only', execute='execute',
+            argument_list=[api_key], fetch='one')
+        if original_permissions is None:
+            raise ValueError(f'{api_key} not valid')
+        new_permissions = ' '.join(
+            set(original_permissions[0].split(' ')) + set(args.add_permission))
+        _execute_sqlite(
+            '''
+            UPDATE api_keys
+            SET permissions=?
+            WHERE api_key=?
+            ''', DATABASE_PATH, argument_list=[new_permissions, api_key],
+            mode='modify', execute='execute')
     elif args.delete:
         _execute_sqlite(
             '''
             DELETE FROM api_keys
-            WHERE key=?
-            ''', DATABASE_PATH, argument_list=[args.delete],
+            WHERE api_key=?
+            ''', DATABASE_PATH, argument_list=[api_key],
             mode='modify', execute='execute')
-    else:
-        raise ValueError('must pass one of --create or --delete')
