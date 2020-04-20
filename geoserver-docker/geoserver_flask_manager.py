@@ -256,14 +256,30 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
           }
         }
 
-        result = do_rest_action(
+        # check if coverstore exists, if so delete it
+        coverstore_exists_result = do_rest_action(
+            session.get,
+            f'http://localhost:{GEOSERVER_PORT}',
+            f'geoserver/rest/workspaces/{catalog}/coveragestores{cover_id}')
+        if coverstore_exists_result:
+            # coverstore exists, delete it
+            delete_coverstore_result = do_rest_action(
+                session.delete,
+                f'http://localhost:{GEOSERVER_PORT}',
+                f'geoserver/rest/workspaces/{catalog}/'
+                f'coveragestores{cover_id}/?purge=all&recurse=true')
+            if not delete_coverstore_result:
+                LOGGER.error(delete_coverstore_result.text)
+                raise RuntimeError(delete_coverstore_result.text)
+
+        create_coverstore_result = do_rest_action(
             session.post,
             f'http://localhost:{GEOSERVER_PORT}',
             f'geoserver/rest/workspaces/{catalog}/coveragestores',
             json=coveragestore_payload)
-        if not result:
-            LOGGER.error(result.text)
-            raise RuntimeError(result.text)
+        if not create_coverstore_result:
+            LOGGER.error(create_coverstore_result.text)
+            raise RuntimeError(create_coverstore_result.text)
 
         LOGGER.debug('update database with coverstore status')
         _execute_sqlite(
@@ -410,15 +426,15 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
             }
 
         LOGGER.debug('send cover request to GeoServer')
-        result = do_rest_action(
+        create_cover_result = do_rest_action(
             session.post,
             f'http://{external_ip}:{GEOSERVER_PORT}',
             f'geoserver/rest/workspaces/{catalog}/'
             f'coveragestores/{urllib.parse.quote(cover_id)}/coverages/',
             json=cover_payload)
-        if not result:
-            LOGGER.error(result.text)
-            raise RuntimeError(result.text)
+        if not create_cover_result:
+            LOGGER.error(create_cover_result.text)
+            raise RuntimeError(create_cover_result.text)
 
         LOGGER.debug('construct the preview url')
 
@@ -431,7 +447,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
             f"&width=1000&height=768&srs={urllib.parse.quote('EPSG:4326')}"
             f"&format=application%2Fopenlayers")
 
-        LOGGER.debug('update database with complete and cover url')
+        LOGGER.debug('update job_table with complete and cover url')
         _execute_sqlite(
             '''
             UPDATE job_table
@@ -442,6 +458,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
             ''', DATABASE_PATH, argument_list=[preview_url, utc_now(), job_id],
             mode='modify', execute='execute')
 
+        LOGGER.debug('update catalog_table with complete and cover url')
         _execute_sqlite(
             '''
             INSERT OR REPLACE INTO catalog_table (
@@ -456,6 +473,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
                 lat_lng_bounding_box[3],
                 utc_now(), mediatype, uri_path],
             mode='modify', execute='execute')
+        LOGGER.debug(f'successful publish of {catalog}:{raster_id}')
 
     except Exception as e:
         LOGGER.exception('something bad happened when doing raster worker')
