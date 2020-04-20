@@ -441,7 +441,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
 
         _execute_sqlite(
             '''
-            INSERT OR REPLACE INTO UPDATE catalog_table
+            INSERT OR REPLACE INTO catalog_table
             VALUES (id=?, catalog=?, xmin=?, ymin=?, xmax=?, ymax=?,
                     utc_datetime=?, mediatype=?, uri=?);
             ''', DATABASE_PATH, argument_list=[
@@ -468,10 +468,6 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
 @APP.route('/api/v1/get_status/<job_id>')
 def get_status(job_id):
     """Return the status of the session."""
-    valid_check = validate_api(flask.request.args)
-    if valid_check != 'valid':
-        return valid_check
-
     LOGGER.debug('getting status for %s', job_id)
 
     status = _execute_sqlite(
@@ -581,6 +577,7 @@ def publish():
             api_key, f"WRITE:{asset_args['catalog']}")
         if valid_check != 'valid':
             return valid_check
+        LOGGER.debug(f"{api_key} has access to WRITE:{asset_args['catalog']}")
 
         if asset_args['mediatype'] != 'GeoTIFF':
             return 'invalid mediatype, only "GeoTIFF" supported', 400
