@@ -23,7 +23,6 @@ import requests
 import retrying
 
 APP = flask.Flask(__name__)
-DEFAULT_WORKSPACE = 'salo'
 DATABASE_PATH = 'manager.db'
 INTER_DATA_DIR = 'data'  # relative to the geoserver 'data_dir'
 REALTIVE_DATA_DIR = '../data_dir'
@@ -35,6 +34,11 @@ logging.basicConfig(
         '%(asctime)s (%(relativeCreated)d) %(processName)s %(levelname)s '
         '%(name)s [%(funcName)s:%(lineno)d] %(message)s'))
 LOGGER = logging.getLogger(__name__)
+
+
+def utc_now():
+    """Return string of current time in UTC."""
+    return str(datetime.datetime.now(datetime.timezone.utc))
 
 
 @retrying.retry(
@@ -131,100 +135,157 @@ def do_rest_action(
         raise
 
 
-def add_raster_worker(uri_path, workspace, raster_id):
+def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
     """This is used to copy and update a coverage set asynchronously.
 
     Args:
         uri_path (str): path to base gs:// bucket to copy from.
-        raster_basename (str): local basename used to identify the raster,
-            if it's not a .tif everything will break.
+        mediatype (str): raster mediatype, only GeoTIFF supported
+        catalog (str): catalog for asset
+        raster_id (str): raster id for asset
+        job_id (str): used to identify entry in job_table
 
     Returns:
         None.
 
     """
     try:
-        raster_data_dir_path = os.path.join(INTER_DATA_DIR, raster_basename)
-        local_path = os.path.join(REALTIVE_DATA_DIR, raster_data_dir_path)
-        cover_id = f'{os.path.splitext(raster_basename)[0]}_cover'
+        # geoserver raster path is for it's local data dir
+        geoserver_raster_path = os.path.join(
+            INTER_DATA_DIR, catalog, f'{raster_id}')
+        # local data dir is for path to copy to from working directory
+        local_data_dir = os.path.join(REALTIVE_DATA_DIR, catalog)
+        try:
+            os.makedirs(local_data_dir)
+        except OSError:
+            pass
+
+        local_raster_path = os.path.join(
+            local_data_dir, os.path.basename(geoserver_raster_path))
+
+        cover_id = f'{raster_id}_cover'
         _execute_sqlite(
             '''
-            UPDATE status_table
-            SET work_status='copying local', last_accessed=?
-            WHERE raster_basename=?;
-            ''', DATABASE_PATH, argument_list=[
-                time.time(), raster_basename],
+            UPDATE job_table
+            SET work_status='copying local', last_accessed_utc=?
+            WHERE job_id=?;
+            ''', DATABASE_PATH, argument_list=[utc_now(), job_id],
             mode='modify', execute='execute')
 
-        LOGGER.debug(' to copy %s to %s', uri_path, local_path)
-        subprocess.run([
-            f'gsutil cp "{uri_path}" "{local_path}"'],
-            shell=True, check=True)
-        if not os.path.exists(local_path):
-            raise RuntimeError(f"{local_path} didn't copy")
+        # CREATE TABLE job_table (
+        #     -- a unique hash of the job based on the raster id
+        #     job_id TEXT NOT NULL PRIMARY KEY,
+        #     uri TEXT NOT NULL,
+        #     work_status TEXT NOT NULL,
+        #     active INT NOT NULL, -- 0 if complete, error no not
+        #     preview_url TEXT,
+        #     last_accessed_utc TEXT NOT NULL
+        #     );
 
-        raster = gdal.OpenEx(local_path, gdal.OF_RASTER)
+        # CREATE INDEX last_accessed_index ON status_table(last_accessed_utc);
+        # CREATE INDEX job_id_index ON status_table(job_id);
+
+        # -- we may search by partial `id` so set NOCASE so we can use the index
+        # CREATE TABLE catalog_table (
+        #     id TEXT NOT NULL COLLATE NOCASE,
+        #     catalog TEXT NOT NULL,
+        #     xmin REAL NOT NULL,
+        #     xmax REAL NOT NULL,
+        #     ymin REAL NOT NULL,
+        #     ymax REAL NOT NULL,
+        #     utc_datetime TEXT NOT NULL,
+        #     mediatype TEXT NOT NULL,
+        #     uri TEXT NOT NULL,
+        #     PRIMARY KEY (id, catalog)
+        #     );
+
+        LOGGER.debug('copy %s to %s', uri_path, local_raster_path)
+        subprocess.run([
+            f'gsutil cp "{uri_path}" "{local_raster_path}"'],
+            shell=True, check=True)
+        if not os.path.exists(local_raster_path):
+            raise RuntimeError(f"{local_raster_path} didn't copy")
+
+        raster = gdal.OpenEx(local_raster_path, gdal.OF_RASTER)
         compression_alg = raster.GetMetadata(
             'IMAGE_STRUCTURE').get('COMPRESSION', None)
         if compression_alg in [None, 'ZSTD']:
             _execute_sqlite(
                 '''
-                UPDATE status_table
+                UPDATE job_table
                 SET work_status=?,
                     last_accessed=?
-                WHERE raster_basename=?;
+                WHERE job_id=?;
                 ''', DATABASE_PATH, argument_list=[
                     f'(re)compressing image from {compression_alg}, this can '
                     'take some time',
-                    time.time(), raster_basename],
+                    utc_now(), job_id],
                 mode='modify', execute='execute')
             compressed_tmp_file = os.path.join(
-                os.path.dirname(local_path),
-                f'COMPRESSION_{raster_basename}')
-            os.rename(local_path, compressed_tmp_file)
+                os.path.dirname(local_data_dir),
+                f'COMPRESSION_{job_id}')
+            os.rename(local_raster_path, compressed_tmp_file)
             ecoshard.compress_raster(
-                compressed_tmp_file, local_path,
+                compressed_tmp_file, local_raster_path,
                 compression_algorithm='LZW', compression_predictor=None)
 
         _execute_sqlite(
             '''
-            UPDATE status_table
+            UPDATE job_table
             SET work_status='building overviews (can take some time)',
                 last_accessed=?
-            WHERE raster_basename=?;
-            ''', DATABASE_PATH, argument_list=[time.time(), raster_basename],
+            WHERE job_id=?;
+            ''', DATABASE_PATH, argument_list=[
+                utc_now(), job_id],
             mode='modify', execute='execute')
 
         ecoshard.build_overviews(
-            local_path, interpolation_method='average',
+            local_raster_path, interpolation_method='average',
             overview_type='internal', rebuild_if_exists=False)
 
         _execute_sqlite(
             '''
-            UPDATE status_table
+            UPDATE job_table
             SET work_status='making coverstore', last_accessed=?
-            WHERE raster_basename=?;
-            ''', DATABASE_PATH, argument_list=[time.time(), raster_basename],
+            WHERE job_id=?;
+            ''', DATABASE_PATH, argument_list=[utc_now(), job_id],
             mode='modify', execute='execute')
 
-        LOGGER.debug('create coverstore on geoserver')
         session = requests.Session()
         session.auth = ('admin', 'geoserver')
+        LOGGER.debug('create workspace if it does not exist')
+
+        workspace_exists_result = do_rest_action(
+            session.get,
+            f'http://localhost:{GEOSERVER_PORT}',
+            f'geoserver/rest/workspaces/{catalog}')
+        if not workspace_exists_result:
+            LOGGER.debug(f'{catalog} does not exist, creating it')
+            create_workspace_result = do_rest_action(
+                session.post,
+                f'http://localhost:{GEOSERVER_PORT}',
+                'geoserver/rest/workspaces',
+                json={'workspace': {'name': catalog}})
+            if not create_workspace_result:
+                # must be an error
+                raise RuntimeError(create_workspace_result.text)
+
+        LOGGER.debug('create coverstore on geoserver')
         coveragestore_payload = {
           "coverageStore": {
             "name": cover_id,
-            "type": 'GeoTIFF',
-            "workspace": DEFAULT_WORKSPACE,
+            "type": mediatype,
+            "workspace": catalog,
             "enabled": True,
             # this one is relative to the data_dir
-            "url": f'file:{raster_data_dir_path}'
+            "url": f'file:{geoserver_raster_path}'
           }
         }
 
         result = do_rest_action(
             session.post,
             f'http://localhost:{GEOSERVER_PORT}',
-            f'geoserver/rest/workspaces/{DEFAULT_WORKSPACE}/coveragestores',
+            f'geoserver/rest/workspaces/{catalog}/coveragestores',
             json=coveragestore_payload)
         LOGGER.debug(result.text)
 
@@ -276,10 +337,10 @@ def add_raster_worker(uri_path, workspace, raster_id):
                     "nativeName": raster_id,
                     "namespace":
                         {
-                            "name": DEFAULT_WORKSPACE,
+                            "name": catalog,
                             "href": (
                                 f"http://{external_ip}:8080/geoserver/"
-                                f"rest/namespaces/{DEFAULT_WORKSPACE}.json")
+                                f"rest/namespaces/{catalog}.json")
                         },
                     "title": raster_id,
                     "description": "description here",
@@ -313,11 +374,11 @@ def add_raster_worker(uri_path, workspace, raster_id):
                         },
                     "store": {
                         "@class": "coverageStore",
-                        "name": f"{DEFAULT_WORKSPACE}:{raster_id}",
+                        "name": f"{catalog}:{raster_id}",
                         "href": (
                             f"http://{external_ip}:{GEOSERVER_PORT}/"
                             "geoserver/rest",
-                            f"/workspaces/{DEFAULT_WORKSPACE}/coveragestores/"
+                            f"/workspaces/{catalog}/coveragestores/"
                             f"{urllib.parse.quote(raster_id)}.json")
                         },
                     "serviceConfiguration": False,
@@ -379,7 +440,7 @@ def add_raster_worker(uri_path, workspace, raster_id):
         result = do_rest_action(
             session.post,
             f'http://{external_ip}:{GEOSERVER_PORT}',
-            f'geoserver/rest/workspaces/{DEFAULT_WORKSPACE}/'
+            f'geoserver/rest/workspaces/{catalog}/'
             f'coveragestores/{urllib.parse.quote(cover_id)}/coverages/',
             json=cover_payload)
         LOGGER.debug(result.text)
@@ -388,9 +449,9 @@ def add_raster_worker(uri_path, workspace, raster_id):
 
         preview_url = (
             f"http://{external_ip}:{GEOSERVER_PORT}/geoserver/"
-            f"{DEFAULT_WORKSPACE}/"
+            f"{catalog}/"
             f"wms?service=WMS&version=1.1.1&request=GetMap&layers=" +
-            urllib.parse.quote(f"{DEFAULT_WORKSPACE}:{raster_id}") + "&bbox="
+            urllib.parse.quote(f"{catalog}:{raster_id}") + "&bbox="
             f"{'%2C'.join([str(v) for v in lat_lng_bounding_box])}"
             f"&width=1000&height=768&srs={urllib.parse.quote('EPSG:4326')}"
             f"&format=application%2Fopenlayers")
@@ -510,9 +571,9 @@ def publish():
         body parameters in json format:
             catalog (str): catalog to publish to.
             id (str): raster ID, must be unique to the catalog.
-            mediatype (str): mediatype of the raster. Currently only 'geotiff'
+            mediatype (str): mediatype of the raster. Currently only 'GeoTIFF'
                 is supported.
-            uri (str): uri to the asset that is accessable by this server.
+            uri (str): uri to the asset that is accessible by this server.
                 Currently supports only `gs://`.
             force (bool): (optional) if True, will overwrite existing
                 catalog:id asset
@@ -523,18 +584,18 @@ def publish():
         401 if api key is not authorized for this service
 
     """
-    LOGGER.debug('checking key')
     api_key = flask.request.args['api_key']
-    # TODO: check the valid api key for the operation on this catalog!
     valid_check = validate_api(
         api_key, f"WRITE:{flask.request.args['catalog']}")
     if valid_check != 'valid':
         return valid_check
 
     asset_args = json.loads(flask.request.json)
+    if asset_args['mediatype'] != 'GeoTIFF':
+        return 'invalid mediatype, only "GeoTIFF" supported', 400
 
     # see if catalog/id are already in db
-    #   if not --force, then return 40x
+    #   if not force(d), then return 403
     catalog_id_present = _execute_sqlite(
         '''
         SELECT count(*)
@@ -584,16 +645,14 @@ def publish():
         VALUES (?, ?, 'scheduled', 1, ?);
         ''', DATABASE_PATH, argument_list=[
             job_id, asset_args['uri'],
-            str(datetime.datetime.now(datetime.timezone.utc))],
+            utc_now()],
         mode='modify', execute='execute')
 
-    LOGGER.debug('start worker')
     raster_worker_thread = threading.Thread(
         target=add_raster_worker,
-        args=(asset_args['uri'], asset_args['catalog'], asset_args['id']))
+        args=(asset_args['uri'], asset_args['mediatype'],
+              asset_args['catalog'], asset_args['id'], job_id))
     raster_worker_thread.start()
-
-    LOGGER.debug('raster worker started returning now')
     return callback_payload
 
 
@@ -702,14 +761,6 @@ if __name__ == '__main__':
                 'geoserver/rest/workspaces/%s.json?recurse=true' %
                 workspace_name)
             LOGGER.debug("delete result for %s: %s", workspace_name, str(r))
-
-    # Create empty workspace
-    result = do_rest_action(
-        session.post,
-        f'http://localhost:{GEOSERVER_PORT}',
-        'geoserver/rest/workspaces?default=true',
-        json={'workspace': {'name': DEFAULT_WORKSPACE}})
-    LOGGER.debug(result.text)
 
     # wait for API calls
     APP.config.update(SERVER_NAME=f'{args.external_ip}:{MANAGER_PORT}')
