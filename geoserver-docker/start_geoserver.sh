@@ -10,7 +10,5 @@ touch geo_log.txt
 tail -n +0 --pid=$$ -f ./geo_log.txt | { sed "/Server:main: Started/ q" && kill $$ ;}
 cd bin
 nohup python3 geoserver_flask_manager.py $EXTERNAL_IP &
-
-touch nohup.out
-tail -f nohup.out
-bash
+sleep 2
+python3 api_key_manager.py --create --add_permission WRITE:salo READ:salo >> api_key
