@@ -519,6 +519,9 @@ def validate_api(api_key, permission):
         ''', DATABASE_PATH, argument_list=[api_key],
         mode='read_only', execute='execute', fetch='one')
 
+    if not allowed_permissions:
+        return 'invalid api key', 400
+
     LOGGER.debug(
         f'allowed permissions for {api_key}: {str(allowed_permissions)}')
     # either permission is directly in there or a wildcard is allowed
