@@ -167,7 +167,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
         _execute_sqlite(
             '''
             UPDATE job_table
-            SET work_status='copying local', last_accessed_utc=?
+            SET job_status='copying local', last_accessed_utc=?
             WHERE job_id=?;
             ''', DATABASE_PATH, argument_list=[utc_now(), job_id],
             mode='modify', execute='execute')
@@ -186,7 +186,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
             _execute_sqlite(
                 '''
                 UPDATE job_table
-                SET work_status=?, last_accessed_utc=?
+                SET job_status=?, last_accessed_utc=?
                 WHERE job_id=?;
                 ''', DATABASE_PATH, argument_list=[
                     f'(re)compressing image from {compression_alg}, this can '
@@ -204,7 +204,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
         _execute_sqlite(
             '''
             UPDATE job_table
-            SET work_status='building overviews (can take some time)',
+            SET job_status='building overviews (can take some time)',
                 last_accessed_utc=?
             WHERE job_id=?;
             ''', DATABASE_PATH, argument_list=[
@@ -218,7 +218,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
         _execute_sqlite(
             '''
             UPDATE job_table
-            SET work_status='making coverstore', last_accessed_utc=?
+            SET job_status='making coverstore', last_accessed_utc=?
             WHERE job_id=?;
             ''', DATABASE_PATH, argument_list=[utc_now(), job_id],
             mode='modify', execute='execute')
@@ -267,7 +267,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
         _execute_sqlite(
             '''
             UPDATE job_table
-            SET work_status='making cover', last_accessed_utc=?
+            SET job_status='making cover', last_accessed_utc=?
             WHERE job_id=?;
             ''', DATABASE_PATH, argument_list=[utc_now(), job_id],
             mode='modify', execute='execute')
@@ -432,7 +432,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
             '''
             UPDATE job_table
             SET
-                work_status=?, preview_url=?, last_accessed_utc=?,
+                job_status=?, preview_url=?, last_accessed_utc=?,
                 active=?
             WHERE job_id=?;
             ''', DATABASE_PATH, argument_list=[
@@ -458,7 +458,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
         _execute_sqlite(
             '''
             UPDATE job_table
-            SET work_status=?, last_accessed_utc=?, active=?
+            SET job_status=?, last_accessed_utc=?, active=?
             WHERE job_id=?;
             ''', DATABASE_PATH, argument_list=[
                 f'ERROR: {str(e)}', time.time(), 0, job_id],
@@ -472,19 +472,18 @@ def get_status(job_id):
     if valid_check != 'valid':
         return valid_check
 
-    raster_basename = urllib.parse.unquote(job_id)
-    LOGGER.debug('getting status for %s', raster_basename)
+    LOGGER.debug('getting status for %s', job_id)
 
     status = _execute_sqlite(
         '''
-        SELECT work_status, preview_url
+        SELECT job_status, preview_url
         FROM job_table
-        WHERE raster_basename=?;
-        ''', DATABASE_PATH, argument_list=[raster_basename],
+        WHERE job_id=?;
+        ''', DATABASE_PATH, argument_list=[job_id],
         mode='read_only', execute='execute', fetch='one')
     if status:
         return {
-            'raster_basename': raster_basename,
+            'job_id': job_id,
             'status': status[0],
             'preview_url': status[1]
             }
@@ -493,7 +492,7 @@ def get_status(job_id):
             '''SELECT * FROM job_table''', DATABASE_PATH, argument_list=[],
             mode='read_only', execute='execute', fetch='all')
         LOGGER.debug('all status: %s', all_status)
-        return f'no status for {raster_basename}', 500
+        return f'no status for {job_id}', 500
 
 
 def validate_api(api_key, permission):
@@ -628,7 +627,7 @@ def publish():
     _execute_sqlite(
         '''
         INSERT OR REPLACE INTO job_table
-            (job_id, uri, work_status, active, last_accessed_utc)
+            (job_id, uri, job_status, active, last_accessed_utc)
         VALUES (?, ?, 'scheduled', 1, ?);
         ''', DATABASE_PATH, argument_list=[
             job_id, asset_args['uri'],
@@ -654,7 +653,7 @@ def build_schema(database_path):
             -- a unique hash of the job based on the raster id
             job_id TEXT NOT NULL PRIMARY KEY,
             uri TEXT NOT NULL,
-            work_status TEXT NOT NULL,
+            job_status TEXT NOT NULL,
             active INT NOT NULL, -- 0 if complete, error no not
             preview_url TEXT,
             last_accessed_utc TEXT NOT NULL
