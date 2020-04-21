@@ -609,6 +609,11 @@ def publish():
         if asset_args['mediatype'] != 'GeoTIFF':
             return 'invalid mediatype, only "GeoTIFF" supported', 400
 
+        if not asset_args['catalog'] or not asset_args['asset_id']:
+            return (
+                f'invalid catalog:asset_id: '
+                f'{asset_args["catalog"]}:{asset_args["asset_id"]}'), 400
+
         # see if catalog/id are already in db
         #   if not force(d), then return 403
         catalog_id_present = _execute_sqlite(
