@@ -592,7 +592,7 @@ def search():
         'FROM catalog_table')
 
     if where_query_list:
-        base_query_string += f" {' AND '.join(where_query_list)}"
+        base_query_string += f" WHERE {' AND '.join(where_query_list)}"
 
     bounding_box_search = _execute_sqlite(
         base_query_string,
