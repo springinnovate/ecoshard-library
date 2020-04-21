@@ -789,7 +789,7 @@ def publish():
             target=add_raster_worker,
             args=(asset_args['uri'], asset_args['mediatype'],
                   asset_args['catalog'], asset_args['asset_id'],
-                  asset_args['descriptoin'], job_id))
+                  asset_args['description'], job_id))
         raster_worker_thread.start()
         return callback_payload
     except Exception:
