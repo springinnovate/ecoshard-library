@@ -494,7 +494,7 @@ def add_raster_worker(
             mode='modify', execute='execute')
 
 
-@APP.route('api/v1/search')
+@APP.route('/api/v1/search', methods=["POST"])
 def search():
     """Search the catalog using STAC format.
 
