@@ -135,7 +135,8 @@ def do_rest_action(
         raise
 
 
-def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
+def add_raster_worker(
+        uri_path, mediatype, catalog, raster_id, asset_description, job_id):
     """This is used to copy and update a coverage set asynchronously.
 
     Args:
@@ -143,6 +144,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
         mediatype (str): raster mediatype, only GeoTIFF supported
         catalog (str): catalog for asset
         raster_id (str): raster id for asset
+        asset_description (str): asset description to record
         job_id (str): used to identify entry in job_table
 
     Returns:
@@ -468,7 +470,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
             '''
             INSERT OR REPLACE INTO catalog_table (
                 asset_id, catalog, xmin, ymin, xmax, ymax,
-                utc_datetime, mediatype, uri)
+                utc_datetime, mediatype, description, uri)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
             ''', DATABASE_PATH, argument_list=[
                 raster_id, catalog,
@@ -476,7 +478,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
                 lat_lng_bounding_box[1],
                 lat_lng_bounding_box[2],
                 lat_lng_bounding_box[3],
-                utc_now(), mediatype, uri_path],
+                utc_now(), mediatype, asset_description, uri_path],
             mode='modify', execute='execute')
         LOGGER.debug(f'successful publish of {catalog}:{raster_id}')
 
@@ -490,6 +492,68 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
             ''', DATABASE_PATH, argument_list=[
                 f'ERROR: {str(e)}', time.time(), 0, job_id],
             mode='modify', execute='execute')
+
+
+@APP.route('api/v1/search')
+def search():
+    """Search the catalog using STAC format.
+
+    Args:
+        query parameter:
+            api_key, used to filter query results, must have READ:* or
+                READ:[catalog] access to get results from that catalog.
+        body parameters include:
+            bbox = [xmin, ymin, xmax, ymax]
+            collections = ['list', 'of', 'catalogs']
+            ids = ['list', 'of', 'asset', 'ids']
+            datetime =
+                "exact time" | "low_time/high_time" | "../high time" |
+                "low time/.."
+
+    Responses:
+        json:
+            {
+                'features': [
+                    {
+                        # 'id' can be used to fetch
+                        'id': {catalog}:{id},
+                        # bbox is overlap with query bbox
+                        'bbox': [xmin, ymin, xmax, ymax],
+                        'description': 'asset description'
+                    }
+                ]
+            }
+
+        400 if invalid api key
+
+    Returns:
+        None.
+
+    """
+    api_key = flask.request.args['api_key']
+
+    allowed_permissions = _execute_sqlite(
+        '''
+        SELECT permissions
+        FROM api_keys
+        WHERE api_key=?
+        ''', DATABASE_PATH, argument_list=[api_key],
+        mode='read_only', execute='execute', fetch='one')
+
+    if not allowed_permissions:
+        return 'invalid api key', 400
+
+    allowed_catalog_set = set([
+        permission.split(':')[1]
+        for permission in allowed_permissions[0].split(' ')
+        if permission.startswith('READ:')])
+
+    if '*' in allowed_catalog_set:
+        # query for all
+        pass
+    else:
+        # query with set
+        pass
 
 
 @APP.route('/api/v1/get_status/<job_id>')
@@ -588,6 +652,7 @@ def publish():
                 is supported.
             uri (str): uri to the asset that is accessible by this server.
                 Currently supports only `gs://`.
+            description (str): description of the asset
             force (bool): (optional) if True, will overwrite existing
                 catalog:id asset
 
@@ -667,7 +732,8 @@ def publish():
         raster_worker_thread = threading.Thread(
             target=add_raster_worker,
             args=(asset_args['uri'], asset_args['mediatype'],
-                  asset_args['catalog'], asset_args['asset_id'], job_id))
+                  asset_args['catalog'], asset_args['asset_id'],
+                  asset_args['descriptoin'], job_id))
         raster_worker_thread.start()
         return callback_payload
     except Exception:
@@ -705,6 +771,7 @@ def build_schema(database_path):
             ymax REAL NOT NULL,
             utc_datetime TEXT NOT NULL,
             mediatype TEXT NOT NULL,
+            description TEXT NOT NULL,
             uri TEXT NOT NULL,
             PRIMARY KEY (asset_id, catalog)
             );
