@@ -795,6 +795,13 @@ def publish():
         return callback_payload
     except Exception:
         LOGGER.exception('something bad happened on publish')
+        _execute_sqlite(
+            '''
+            INSERT OR REPLACE INTO job_table
+                (job_id, job_status, active, last_accessed_utc)
+            VALUES (?, 'crashed on schedule', 0, ?);
+            ''', DATABASE_PATH, argument_list=[job_id, utc_now()],
+            mode='modify', execute='execute')
         raise
 
 
