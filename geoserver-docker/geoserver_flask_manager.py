@@ -633,9 +633,9 @@ def publish():
 
         # build job
         job_id = build_job_hash(asset_args)
-        callback_payload = json.dumps({
-            'callback_url': flask.url_for(
-                'get_status', job_id=job_id, api_key=api_key, _external=True)})
+        callback_url = flask.url_for(
+            'get_status', job_id=job_id, api_key=api_key, _external=True)
+        callback_payload = json.dumps({'callback_url': callback_url})
 
         # see if job already running
         job_payload = _execute_sqlite(
@@ -650,7 +650,7 @@ def publish():
         if job_payload and job_payload[0]:
             return (
                 f'{asset_args["catalog"]}:{asset_args["asset_id"]} actively '
-                f'processing from {callback_payload["callback_url"]}, wait '
+                f'processing from {callback_url}, wait '
                 f'until finished before sending new uri', 400)
 
         # new job
