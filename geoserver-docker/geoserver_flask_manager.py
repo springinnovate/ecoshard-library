@@ -573,10 +573,11 @@ def search():
             # if not allowed to read everything, restrict query
             catalog_set = catalog_set.union(allowed_catalog_set)
         where_query_list.append(
-            f"(catalog IN ({','.join(catalog_set)}))")
+            f"""(catalog IN ({','.join([f"'{x}'" for x in catalog_set])}))""")
     elif not all_catalogs_allowed:
         where_query_list.append(
-            f"(catalog IN ({','.join(allowed_catalog_set)}))")
+            f"""(catalog IN ({
+                ','.join([f"'{x}'" for x in allowed_catalog_set])}))""")
 
     if search_data['asset_id']:
         where_query_list.append('(asset_id LIKE ?)')
