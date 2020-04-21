@@ -247,9 +247,10 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
         coverstore_exists_result = do_rest_action(
             session.get,
             f'http://localhost:{GEOSERVER_PORT}',
-            f'geoserver/rest/workspaces/{catalog}/coveragestores{cover_id}')
+            f'geoserver/rest/workspaces/{catalog}/coveragestores/{cover_id}')
 
-        LOGGER.debug(f'coverstore_exists_result: {str(coverstore_exists_result)}')
+        LOGGER.debug(
+            f'coverstore_exists_result: {str(coverstore_exists_result)}')
 
         if coverstore_exists_result:
             LOGGER.warn(f'{catalog}:{cover_id}, so deleting it')
