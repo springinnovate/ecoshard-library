@@ -243,6 +243,23 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
                 # must be an error
                 raise RuntimeError(create_workspace_result.text)
 
+        # check if coverstore exists, if so delete it
+        coverstore_exists_result = do_rest_action(
+            session.get,
+            f'http://localhost:{GEOSERVER_PORT}',
+            f'geoserver/rest/workspaces/{catalog}/coveragestores{cover_id}')
+        if coverstore_exists_result:
+            LOGGER.warn(f'{catalog}:{cover_id}, so deleting it')
+            # coverstore exists, delete it
+            delete_coverstore_result = do_rest_action(
+                session.delete,
+                f'http://localhost:{GEOSERVER_PORT}',
+                f'geoserver/rest/workspaces/{catalog}/'
+                f'coveragestores{cover_id}/?purge=all&recurse=true')
+            if not delete_coverstore_result:
+                LOGGER.error(delete_coverstore_result.text)
+                raise RuntimeError(delete_coverstore_result.text)
+
         # create coverstore
         LOGGER.debug('create coverstore on geoserver')
         coveragestore_payload = {
@@ -255,22 +272,6 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
             "url": f'file:{geoserver_raster_path}'
           }
         }
-
-        # check if coverstore exists, if so delete it
-        coverstore_exists_result = do_rest_action(
-            session.get,
-            f'http://localhost:{GEOSERVER_PORT}',
-            f'geoserver/rest/workspaces/{catalog}/coveragestores{cover_id}')
-        if coverstore_exists_result:
-            # coverstore exists, delete it
-            delete_coverstore_result = do_rest_action(
-                session.delete,
-                f'http://localhost:{GEOSERVER_PORT}',
-                f'geoserver/rest/workspaces/{catalog}/'
-                f'coveragestores{cover_id}/?purge=all&recurse=true')
-            if not delete_coverstore_result:
-                LOGGER.error(delete_coverstore_result.text)
-                raise RuntimeError(delete_coverstore_result.text)
 
         create_coverstore_result = do_rest_action(
             session.post,
@@ -619,7 +620,7 @@ def publish():
             if 'force' not in asset_args or not asset_args['force']:
                 return (
                     f'{asset_args["catalog"]}:{asset_args["asset_id"]} '
-                    'already published, use force:True to overwrite.'), 403
+                    'already published, use force:True to overwrite.'), 400
 
         # build job
         job_id = build_job_hash(asset_args)
