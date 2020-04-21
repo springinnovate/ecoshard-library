@@ -471,7 +471,7 @@ def add_raster_worker(
             INSERT OR REPLACE INTO catalog_table (
                 asset_id, catalog, xmin, ymin, xmax, ymax,
                 utc_datetime, mediatype, description, uri)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             ''', DATABASE_PATH, argument_list=[
                 raster_id, catalog,
                 lat_lng_bounding_box[0],
