@@ -649,9 +649,9 @@ def publish():
         # if there's job and it's active...
         if job_payload and job_payload[0]:
             return (
-                f'{args["catalog"]}:{args["asset_id"]} actively processing '
-                f'from {callback_payload["callback_url"]}, wait until '
-                f'finished before sending new uri', 400)
+                f'{asset_args["catalog"]}:{asset_args["asset_id"]} actively '
+                f'processing from {callback_payload["callback_url"]}, wait '
+                f'until finished before sending new uri', 400)
 
         # new job
         _execute_sqlite(
