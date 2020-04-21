@@ -550,7 +550,7 @@ def search():
         s_xmin, s_ymin, s_xmax, s_ymax = [
             float(val) for val in search_data['bounding_box'].split(',')]
         where_query_list.append('(xmax>? and ymax>? and xmin<? and ymin<?)')
-        argument_list.extend(s_xmin, s_ymin, s_xmax, s_ymax)
+        argument_list.extend([s_xmin, s_ymin, s_xmax, s_ymax])
 
     if search_data['datetime']:
         min_time, max_time = search_data.split('/')
@@ -592,7 +592,7 @@ def search():
         'FROM catalog_table')
 
     if where_query_list:
-        base_query_string += f" {'AND'.join(where_query_list)}"
+        base_query_string += f" {' AND '.join(where_query_list)}"
 
     bounding_box_search = _execute_sqlite(
         base_query_string,
