@@ -259,7 +259,7 @@ def add_raster_worker(uri_path, mediatype, catalog, raster_id, job_id):
                 session.delete,
                 f'http://localhost:{GEOSERVER_PORT}',
                 f'geoserver/rest/workspaces/{catalog}/'
-                f'coveragestores{cover_id}/?purge=all&recurse=true')
+                f'coveragestores/{cover_id}/?purge=all&recurse=true')
             if not delete_coverstore_result:
                 LOGGER.error(delete_coverstore_result.text)
                 raise RuntimeError(delete_coverstore_result.text)
