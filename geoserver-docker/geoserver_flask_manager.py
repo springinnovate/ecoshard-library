@@ -721,6 +721,7 @@ def publish():
     try:
         api_key = flask.request.args['api_key']
         asset_args = json.loads(flask.request.json)
+        LOGGER.debug(f"asset args: {str(asset_args)}")
         valid_check = validate_api(
             api_key, f"WRITE:{asset_args['catalog']}")
         if valid_check != 'valid':
