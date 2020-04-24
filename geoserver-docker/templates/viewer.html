@@ -13,10 +13,11 @@
 <body>
    <div id="mapid"></div>
    <script>
-    var mymap = L.map('mapid').setView([0, 0], 0);
+    var mymap = L.map('mapid').setView(
+        [{{ x_center }}, {{ y_center }}], 0);
     var wms_layer = L.tileLayer.wms(
-      "http://35.233.220.205:8080/geoserver/salo/wms", {
-      layers: 'salo:Mann-Burn333_Prob-2001-25-BAU',
+      {{ geoserver_url }}, {
+      layers: {{ layer }},
       format: 'image/png'
     });
     wms_layer.addTo(mymap);

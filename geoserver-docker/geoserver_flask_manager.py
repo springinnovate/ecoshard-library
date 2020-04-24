@@ -53,6 +53,7 @@ def construct_preview_url(
         f"{'%2C'.join([str(v) for v in lat_lng_bounding_box])}"
         f"&width=1000&height=768&srs={urllib.parse.quote('EPSG:4326')}"
         f"&format=application%2Fopenlayers")
+    return preview_url
 
 
 @APP.route('/api/v1/fetch', methods=["POST"])
@@ -135,7 +136,7 @@ def fetch():
             'layer': f'{fetch_data["catalog"]}:{fetch_data["asset_id"]}',
             'geoserver_url': (
                 f"http://{external_ip}:8080/"
-                f"geoserver/{fetch_data["catalog"]}/wms"),
+                f"geoserver/{fetch_data['catalog']}/wms"),
             'x_center': x_center,
             'y_center': y_center})
 
@@ -544,7 +545,7 @@ def add_raster_worker(
 
         LOGGER.debug('construct the preview url')
 
-        construct_preview_url(
+        preview_url = construct_preview_url(
             external_ip, GEOSERVER_PORT, catalog, raster_id,
             lat_lng_bounding_box)
 
