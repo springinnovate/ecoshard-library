@@ -1,7 +1,7 @@
 #!/bin/bash -x
 export GEOSERVER_HOME=/usr/local/geoserver
 export GEOSERVER_DATA_DIR=${GEOSERVER_HOME}/data_dir
-export STAC_DATABASE_PATH=${GEOSERVER_DATA_DIR}/stac_database.db
+export STAC_DATABASE_PATH=${GEOSERVER_DATA_DIR}/data/stac_database.db
 export JAVA_OPTS="-Xms512m -Xmx2g -XX:SoftRefLRUPolicyMSPerMB=36000"
 export JAVA_BIN=/usr/bin/java
 export EXTERNAL_IP=$1
