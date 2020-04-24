@@ -41,6 +41,71 @@ def utc_now():
     return str(datetime.datetime.now(datetime.timezone.utc))
 
 
+@APP.route('/api/v1/fetch', methods=["POST"])
+def fetch():
+    """Search the catalog using STAC format.
+
+    The body parameters can be queried from
+
+    Args:
+        query parameter:
+            api_key, used to filter query results, must have READ:* or
+                READ:[catalog] access to get results from that catalog.
+        body parameters include:
+            catalog (str): catalog the asset is located in
+            asset_id (str): asset it of the asset in the given catalog.
+            type (str): can be one of "WMS"|"href" where
+                "WMS_preview": gives a link for a public WMS preview layer that
+                    can be scraped for the raw WMS url or inspected directly.
+                "uri": gives a URI that is the direct link to the dataset,
+                    this may be a gs:// or https:// or other url. The caller
+                    will infer this from context.
+
+    Responses:
+        json:
+            {
+                type (str): "WMS" or "herf" depending on body type passed
+                link (str): url for the specified type
+            }
+
+        400 if invalid api key or catalog:asset_id not found
+
+    Returns:
+        None.
+
+    """
+    fetch_data = json.loads(flask.request.json)
+    api_key = flask.request.args['api_key']
+    valid_check = validate_api(api_key, f'READ:{fetch_data["catalog"]}')
+    if valid_check != 'valid':
+        return valid_check
+
+    fetch_payload = _execute_sqlite(
+        '''
+        SELECT uri
+        FROM catalog_table
+        WHERE asset_id=? AND catalog=?
+        ''', DATABASE_PATH, argument_list=[
+            fetch_data["asset_id"], fetch_data["catalog"]],
+        execute='execute', fetch='one')
+
+    if not fetch_payload:
+        return (
+            f'{fetch_data["asset_id"]}:{fetch_data["catalog"]} not found', 400)
+
+    if fetch_data["type"] == 'uri':
+        return {
+            'type': fetch_data['type'],
+            'link': fetch_payload[0]
+        }
+
+    if fetch_data['type'] == 'WMS_preview':
+        return {
+            'type': fetch_data['type'],
+            'link': fetch_payload[0]
+        }
+
+
 @retrying.retry(
     wait_exponential_multiplier=100, wait_exponential_max=2000,
     stop_max_attempt_number=5)
@@ -444,6 +509,9 @@ def add_raster_worker(
             raise RuntimeError(create_cover_result.text)
 
         LOGGER.debug('construct the preview url')
+
+        construct_preview_url(
+            external_ip, GEOSERVER_PORT, catalog, raster_id, )
 
         preview_url = (
             f"http://{external_ip}:{GEOSERVER_PORT}/geoserver/"
