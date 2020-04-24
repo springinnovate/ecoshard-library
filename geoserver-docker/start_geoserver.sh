@@ -10,7 +10,7 @@ nohup $JAVA_BIN $JAVA_OPTS -DGEOSERVER_DATA_DIR=$GEOSERVER_DATA_DIR -Djava.awt.h
 touch geo_log.txt
 tail -n +0 --pid=$$ -f ./geo_log.txt | { sed "/Server:main: Started/ q" && kill $$ ;}
 cd bin
-nohup python3 geoserver_flask_manager.py $EXTERNAL_IP --debug_api_key debug_api --db_path $STAC_DATABASE_PATH &
+nohup python3 geoserver_flask_manager.py --external_ip $EXTERNAL_IP --debug_api_key debug_api --db_path $STAC_DATABASE_PATH &
 sleep 2
 python3 api_key_manager.py --create --add_permission WRITE:salo READ:salo >> api_key
 bash
