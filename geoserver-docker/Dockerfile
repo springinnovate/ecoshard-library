@@ -175,6 +175,10 @@ COPY start_geoserver.sh /usr/local/geoserver/bin
 COPY geoserver_flask_manager.py /usr/local/geoserver/bin
 COPY geoserver_tracer.py /usr/local/geoserver/bin
 COPY api_key_manager.py /usr/local/geoserver/bin
+RUN mkdir /usr/local/geoserver/bin/templates
+COPY templates/viewer.html /usr/local/geoserver/bin/templates
+RUN mkdir /usr/local/geoserver/bin/css
+COPY static/style.css /usr/local/geoserver/bin/static
 
 WORKDIR /usr/local/geoserver
 ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]
