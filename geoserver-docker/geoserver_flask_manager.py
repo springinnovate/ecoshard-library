@@ -903,7 +903,8 @@ def publish():
 def build_schema(database_path):
     """Build the database schema to `database_path`."""
     if os.path.exists(database_path):
-        os.remove(database_path)
+        LOGGER.warn('database already exists, not overwriting')
+        return
 
     create_database_sql = (
         """
@@ -968,6 +969,9 @@ if __name__ == '__main__':
     parser.add_argument(
         'external_ip', type=str,
         help='external ip of this host')
+    parser.add_argument(
+        'debug_api_key', type=str,
+        help='a debug api key with full access')
     args = parser.parse_args()
     LOGGER.debug('starting up!')
     build_schema(DATABASE_PATH)
@@ -979,6 +983,14 @@ if __name__ == '__main__':
             'external_ip',
             pickle.dumps(args.external_ip)],
         mode='modify', execute='execute')
+
+    if args.debug_api_key:
+        _execute_sqlite(
+            '''
+            INSERT INTO api_keys (api_key, permissions)
+            VALUES (?, 'READ:* WRITE:*')
+            ''', DATABASE_PATH, argument_list=[args.debug_api_key],
+            mode='modify', execute='execute')
 
     # First delete all the defaults off the geoserver
     session = requests.Session()
