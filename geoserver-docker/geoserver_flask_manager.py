@@ -41,6 +41,20 @@ def utc_now():
     return str(datetime.datetime.now(datetime.timezone.utc))
 
 
+def construct_preview_url(
+        external_ip, GEOSERVER_PORT, catalog, raster_id,
+        lat_lng_bounding_box):
+    """Construct a geoserver preview url."""
+    preview_url = (
+        f"http://{external_ip}:{GEOSERVER_PORT}/geoserver/"
+        f"{catalog}/"
+        f"wms?service=WMS&version=1.1.1&request=GetMap&layers=" +
+        urllib.parse.quote(f"{catalog}:{raster_id}") + "&bbox="
+        f"{'%2C'.join([str(v) for v in lat_lng_bounding_box])}"
+        f"&width=1000&height=768&srs={urllib.parse.quote('EPSG:4326')}"
+        f"&format=application%2Fopenlayers")
+
+
 @APP.route('/api/v1/fetch', methods=["POST"])
 def fetch():
     """Search the catalog using STAC format.
@@ -511,16 +525,8 @@ def add_raster_worker(
         LOGGER.debug('construct the preview url')
 
         construct_preview_url(
-            external_ip, GEOSERVER_PORT, catalog, raster_id, )
-
-        preview_url = (
-            f"http://{external_ip}:{GEOSERVER_PORT}/geoserver/"
-            f"{catalog}/"
-            f"wms?service=WMS&version=1.1.1&request=GetMap&layers=" +
-            urllib.parse.quote(f"{catalog}:{raster_id}") + "&bbox="
-            f"{'%2C'.join([str(v) for v in lat_lng_bounding_box])}"
-            f"&width=1000&height=768&srs={urllib.parse.quote('EPSG:4326')}"
-            f"&format=application%2Fopenlayers")
+            external_ip, GEOSERVER_PORT, catalog, raster_id,
+            lat_lng_bounding_box)
 
         LOGGER.debug('update job_table with complete and cover url')
         _execute_sqlite(
