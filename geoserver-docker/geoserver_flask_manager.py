@@ -96,7 +96,7 @@ def fetch():
 
     fetch_payload = _execute_sqlite(
         '''
-        SELECT uri
+        SELECT uri, xmin, ymin, xmax, ymax
         FROM catalog_table
         WHERE asset_id=? AND catalog=?
         ''', DATABASE_PATH, argument_list=[
@@ -110,14 +110,34 @@ def fetch():
     if fetch_data["type"] == 'uri':
         return {
             'type': fetch_data['type'],
-            'link': fetch_payload[0]
-        }
+            'link': fetch_payload[0],
+           }
 
     if fetch_data['type'] == 'WMS_preview':
-        return {
-            'type': fetch_data['type'],
-            'link': fetch_payload[0]
-        }
+        xmin = fetch_payload[1]
+        ymin = fetch_payload[2]
+        xmax = fetch_payload[3]
+        ymax = fetch_payload[4]
+
+        x_center = (xmax+xmin)/2
+        y_center = (ymax+ymin)/2
+
+        external_ip = pickle.loads(
+            _execute_sqlite(
+                '''
+                SELECT value
+                FROM global_variables
+                WHERE key='external_ip'
+                ''', DATABASE_PATH, mode='read_only', execute='execute',
+                argument_list=[], fetch='one')[0])
+
+        return flask.render_template('viewer.html', {
+            'layer': f'{fetch_data["catalog"]}:{fetch_data["asset_id"]}',
+            'geoserver_url': (
+                f"http://{external_ip}:8080/"
+                f"geoserver/{fetch_data["catalog"]}/wms"),
+            'x_center': x_center,
+            'y_center': y_center})
 
 
 @retrying.retry(
