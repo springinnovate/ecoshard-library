@@ -968,13 +968,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Start GeoServer REST API server.')
     parser.add_argument(
-        'external_ip', type=str,
+        '--external_ip', type=str, required=True,
         help='external ip of this host')
     parser.add_argument(
-        'db_path', type=str, help='path to database')
+        '--db_path', required=True, type=str, help='path to database')
     parser.add_argument(
-        '--debug_api_key', type=str,
-        help='a debug api key with full access')
+        '--debug_api_key', type=str, help='a debug api key with full access')
 
     args = parser.parse_args()
     LOGGER.debug('starting up!')
