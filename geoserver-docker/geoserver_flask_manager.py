@@ -132,7 +132,7 @@ def fetch():
                 ''', DATABASE_PATH, mode='read_only', execute='execute',
                 argument_list=[], fetch='one')[0])
 
-        return flask.render_template('viewer.html', {
+        return flask.render_template('viewer.html', **{
             'layer': f'{fetch_data["catalog"]}:{fetch_data["asset_id"]}',
             'geoserver_url': (
                 f"http://{external_ip}:8080/"
