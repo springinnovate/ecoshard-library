@@ -970,14 +970,18 @@ if __name__ == '__main__':
         'external_ip', type=str,
         help='external ip of this host')
     parser.add_argument(
-        'debug_api_key', type=str,
+        'db_path', type=str, help='path to database')
+    parser.add_argument(
+        '--debug_api_key', type=str,
         help='a debug api key with full access')
+
     args = parser.parse_args()
     LOGGER.debug('starting up!')
+    DATABASE_PATH = args.db_path
     build_schema(DATABASE_PATH)
     _execute_sqlite(
         '''
-        INSERT INTO global_variables (key, value)
+        INSERT OR REPLACE INTO global_variables (key, value)
         VALUES (?, ?)
         ''', DATABASE_PATH, argument_list=[
             'external_ip',
@@ -987,7 +991,7 @@ if __name__ == '__main__':
     if args.debug_api_key:
         _execute_sqlite(
             '''
-            INSERT INTO api_keys (api_key, permissions)
+            INSERT OR REPLACE INTO api_keys (api_key, permissions)
             VALUES (?, 'READ:* WRITE:*')
             ''', DATABASE_PATH, argument_list=[args.debug_api_key],
             mode='modify', execute='execute')
