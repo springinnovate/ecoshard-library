@@ -132,13 +132,54 @@ def fetch():
                 ''', DATABASE_PATH, mode='read_only', execute='execute',
                 argument_list=[], fetch='one')[0])
 
-        return flask.render_template('viewer.html', **{
-            'layer': f'{fetch_data["catalog"]}:{fetch_data["asset_id"]}',
-            'geoserver_url': (
-                f"http://{external_ip}:8080/"
-                f"geoserver/{fetch_data['catalog']}/wms"),
-            'x_center': x_center,
-            'y_center': y_center})
+        return flask.url_for(
+            'viewer', fetch_data['catalog'], fetch_data['asset_id'],
+            fetch_data['api_key'])
+
+
+@APP.route('/api/v1/viewer')
+def viewer():
+    """Render a viewer webpage."""
+    catalog = flask.request.args['catalog']
+    asset_id = flask.request.args['asset_id']
+    # TODO: is the api key necessary? api_key = flask.request.args['api_key']
+
+    external_ip = pickle.loads(
+        _execute_sqlite(
+            '''
+            SELECT value
+            FROM global_variables
+            WHERE key='external_ip'
+            ''', DATABASE_PATH, mode='read_only', execute='execute',
+            argument_list=[], fetch='one')[0])
+
+    fetch_payload = _execute_sqlite(
+        '''
+        SELECT xmin, ymin, xmax, ymax
+        FROM catalog_table
+        WHERE asset_id=? AND catalog=?
+        ''', DATABASE_PATH, argument_list=[asset_id, catalog],
+        execute='execute', fetch='one')
+
+    if not fetch_payload:
+        return (
+            f'{asset_id}:{catalog} not found', 400)
+
+    xmin = fetch_payload[0]
+    ymin = fetch_payload[1]
+    xmax = fetch_payload[2]
+    ymax = fetch_payload[3]
+
+    x_center = (xmax+xmin)/2
+    y_center = (ymax+ymin)/2
+
+    return flask.render_template('viewer.html', **{
+        'layer': f'{catalog}:{asset_id}',
+        'geoserver_url': (
+            f"http://{external_ip}:8080/"
+            f"geoserver/{catalog}/wms"),
+        'x_center': x_center,
+        'y_center': y_center})
 
 
 @retrying.retry(
