@@ -115,9 +115,12 @@ def fetch():
            }
 
     if fetch_data['type'] == 'WMS_preview':
-        return flask.url_for(
-            'viewer', catalog=fetch_data['catalog'],
-            asset_id=fetch_data['asset_id'], api_key=api_key)
+        return {
+            'viewer_url': flask.url_for(
+                'viewer', catalog=fetch_data['catalog'],
+                asset_id=fetch_data['asset_id'], api_key=api_key,
+                _external=True)
+            }
 
 
 @APP.route('/api/v1/viewer')
@@ -156,15 +159,13 @@ def viewer():
     x_center = (xmax+xmin)/2
     y_center = (ymax+ymin)/2
 
-    return {
-        'viewer_url': flask.render_template('viewer.html', **{
-            'layer': f'{catalog}:{asset_id}',
-            'geoserver_url': (
-                f"http://{external_ip}:8080/"
-                f"geoserver/{catalog}/wms"),
-            'x_center': x_center,
-            'y_center': y_center}, _external=True)
-        }
+    return flask.render_template('viewer.html', **{
+        'layer': f'{catalog}:{asset_id}',
+        'geoserver_url': (
+            f"http://{external_ip}:8080/"
+            f"geoserver/{catalog}/wms"),
+        'x_center': x_center,
+        'y_center': y_center}, _external=True)
 
 
 @retrying.retry(
