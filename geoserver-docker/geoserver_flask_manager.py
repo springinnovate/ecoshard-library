@@ -156,13 +156,15 @@ def viewer():
     x_center = (xmax+xmin)/2
     y_center = (ymax+ymin)/2
 
-    return flask.render_template('viewer.html', **{
-        'layer': f'{catalog}:{asset_id}',
-        'geoserver_url': (
-            f"http://{external_ip}:8080/"
-            f"geoserver/{catalog}/wms"),
-        'x_center': x_center,
-        'y_center': y_center})
+    return {
+        'viewer_url': flask.render_template('viewer.html', **{
+            'layer': f'{catalog}:{asset_id}',
+            'geoserver_url': (
+                f"http://{external_ip}:8080/"
+                f"geoserver/{catalog}/wms"),
+            'x_center': x_center,
+            'y_center': y_center}, _external=True)
+        }
 
 
 @retrying.retry(
