@@ -16,8 +16,8 @@
     var mymap = L.map('mapid').setView(
         [{{ x_center }}, {{ y_center }}], 0);
     var wms_layer = L.tileLayer.wms(
-      {{ geoserver_url }}, {
-      layers: {{ layer }},
+      '{{ geoserver_url }}', {
+      layers: '{{ layer }}',
       format: 'image/png'
     });
     wms_layer.addTo(mymap);
