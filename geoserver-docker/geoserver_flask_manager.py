@@ -161,6 +161,7 @@ def viewer():
 
     return flask.render_template('viewer.html', **{
         'layer': f'{catalog}:{asset_id}',
+        'style_css_url': flask.url_for('static', filename='style.css'),
         'geoserver_url': (
             f"http://{external_ip}:8080/"
             f"geoserver/{catalog}/wms"),
