@@ -115,26 +115,8 @@ def fetch():
            }
 
     if fetch_data['type'] == 'WMS_preview':
-        xmin = fetch_payload[1]
-        ymin = fetch_payload[2]
-        xmax = fetch_payload[3]
-        ymax = fetch_payload[4]
-
-        x_center = (xmax+xmin)/2
-        y_center = (ymax+ymin)/2
-
-        external_ip = pickle.loads(
-            _execute_sqlite(
-                '''
-                SELECT value
-                FROM global_variables
-                WHERE key='external_ip'
-                ''', DATABASE_PATH, mode='read_only', execute='execute',
-                argument_list=[], fetch='one')[0])
-
         return flask.url_for(
-            'viewer', fetch_data['catalog'], fetch_data['asset_id'],
-            fetch_data['api_key'])
+            'viewer', fetch_data['catalog'], fetch_data['asset_id'], api_key)
 
 
 @APP.route('/api/v1/viewer')
