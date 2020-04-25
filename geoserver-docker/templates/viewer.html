@@ -13,8 +13,10 @@
 <body>
    <div id="mapid"></div>
    <script>
-    var mymap = L.map('mapid').setView(
-        [{{ x_center }}, {{ y_center }}], 0);
+    var mymap = L.map('mapid', {
+      crs: L.CRS.EPSG4326
+    }).setView(
+        [{{ y_center }}, {{ x_center }}], 3);
     var wms_layer = L.tileLayer.wms(
       '{{ geoserver_url }}', {
       layers: '{{ layer }}',
