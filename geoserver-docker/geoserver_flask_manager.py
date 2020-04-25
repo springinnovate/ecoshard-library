@@ -116,7 +116,8 @@ def fetch():
 
     if fetch_data['type'] == 'WMS_preview':
         return flask.url_for(
-            'viewer', fetch_data['catalog'], fetch_data['asset_id'], api_key)
+            'viewer', catalog=fetch_data['catalog'],
+            asset_id=fetch_data['asset_id'], api_key=api_key)
 
 
 @APP.route('/api/v1/viewer')
