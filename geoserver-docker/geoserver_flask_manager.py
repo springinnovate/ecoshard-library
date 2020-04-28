@@ -8,6 +8,7 @@ import os
 import pathlib
 import pickle
 import re
+import secrets
 import sqlite3
 import subprocess
 import urllib.parse
@@ -28,6 +29,8 @@ INTER_DATA_DIR = 'data'  # relative to the geoserver 'data_dir'
 REALTIVE_DATA_DIR = '../data_dir/data'
 GEOSERVER_PORT = '8080'
 MANAGER_PORT = '8888'
+PASSWORD_FILE = './secrets/adminpass'
+
 logging.basicConfig(
     level=logging.DEBUG,
     format=(
@@ -992,20 +995,55 @@ def build_schema(database_path):
         mode='modify', execute='script')
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(
-        description='Start GeoServer REST API server.')
-    parser.add_argument(
-        '--external_ip', type=str, required=True,
-        help='external ip of this host')
-    parser.add_argument(
-        '--db_path', required=True, type=str, help='path to database')
-    parser.add_argument(
-        '--debug_api_key', type=str, help='a debug api key with full access')
+def initalize_geoserver():
+    """Ensure database exists, set security, and set server initial stores."""
+    # make new random password if one does not exist
 
-    args = parser.parse_args()
-    LOGGER.debug('starting up!')
+    # * change default geoserver password
+    #   * check if password on disk
+    #     * if not create new random password
+    #     * change password via REST
+    try:
+        os.makedirs(os.dirname(PASSWORD_FILE))
+    except OSError:
+        pass
+
+    if not os.path.exists(PASSWORD_FILE):
+        with open(PASSWORD_FILE, 'w') as password_file:
+            master_geoserver_password = secrets.token_urlsafe(16)
+            password_file.write(master_geoserver_password)
+        update_pw_body = {
+          'oldMasterPassword': 'geoserver',
+          'newMasterPassword': master_geoserver_password
+        }
+        session = requests.Session()
+        session.auth = ('admin', 'geoserver')
+        password_update_request = do_rest_action(
+            session.put,
+            f'http://localhost:{GEOSERVER_PORT}',
+            'geoserver/rest/security/masterpw',
+            json=update_pw_body)
+
+        if not password_update_request:
+            raise RuntimeError(
+                'could not reset master password: ' +
+                password_update_request.text)
+    else:
+        with open(PASSWORD_FILE, 'r') as password_file:
+            master_geoserver_password = password_file.read()
+        session = requests.Session()
+        session.auth = ('admin', master_geoserver_password)
+
     DATABASE_PATH = args.db_path
+
+    # check if database exists
+    # * set up so that if geoserver goes down it can reconstruct from database
+    # 1a) get list of layers (stores?) on the geoserver
+    # 1b) get list of layers from database
+    # 2a) do set difference a-b and remove those
+    # 2b) do set difference b-a and add those
+
+
     build_schema(DATABASE_PATH)
     _execute_sqlite(
         '''
@@ -1041,6 +1079,24 @@ if __name__ == '__main__':
                 'geoserver/rest/workspaces/%s.json?recurse=true' %
                 workspace_name)
             LOGGER.debug("delete result for %s: %s", workspace_name, str(r))
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Start GeoServer REST API server.')
+    parser.add_argument(
+        '--external_ip', type=str, required=True,
+        help='external ip of this host')
+    parser.add_argument(
+        '--db_path', required=True, type=str, help='path to database')
+    parser.add_argument(
+        '--debug_api_key', type=str, help='a debug api key with full access')
+
+    args = parser.parse_args()
+    LOGGER.debug('starting up!')
+
+
+    initalize_geoserver()
 
     # wait for API calls
     APP.config.update(SERVER_NAME=f'{args.external_ip}:{MANAGER_PORT}')
