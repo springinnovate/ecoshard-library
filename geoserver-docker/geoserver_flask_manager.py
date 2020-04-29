@@ -1010,6 +1010,15 @@ def get_database_layers():
 
 def initalize_geoserver(database_path):
     """Ensure database exists, set security, and set server initial stores."""
+
+    # check if database exists, if it does, everything is already initialized
+    # * set up so that if geoserver goes down it can reconstruct from database
+    if not os.path.exists(DATABASE_PATH):
+        build_schema(DATABASE_PATH)
+    else:
+        LOGGER.info('geoserver previously initalized')
+        return
+
     # make new random password if one does not exist
 
     # * change default geoserver password
@@ -1050,49 +1059,23 @@ def initalize_geoserver(database_path):
     session.auth = (GEOSERVER_USER, geoserver_password)
     del geoserver_password
 
-    # check if database exists
-    # * set up so that if geoserver goes down it can reconstruct from database
-    if not os.path.exists(DATABASE_PATH):
-        build_schema(DATABASE_PATH)
+    # get list of workspaces on the geoserver and delete them
+    layers_result = do_rest_action(
+        session.get,
+        f'http://localhost:{GEOSERVER_PORT}',
+        'geoserver/rest/workspaces.json').json()
+    LOGGER.debug(layers_result)
+    workspace_name_list = [
+        layer['name'] for layer in layers_result['workspaces']['workspace']]
 
-    # 1a) get list of layers (stores?) on the geoserver
-    # 1b) get list of layers from database
-    geoserver_layers = set(get_geoserver_layers())
-    database_layers = set(get_database_layers())
-
-    # 2a) do set difference a-b and remove those
-    unregistered_layers = geoserver_layers.difference(database_layers)
-    LOGGER.debug(f'these are unregistered layers: {unregistered_layers}')
-
-    for unregistered_layer in unregistered_layers:
+    for workspace_name in workspace_name_list:
         delete_result = do_rest_action(
             session.delete,
             f'http://localhost:{GEOSERVER_PORT}',
-            f'geoserver/rest/layers/{unregistered_layer}?recurse=true')
+            f'geoserver/rest/workspaces/{workspace_name}?recurse=true')
         if not delete_result:
             LOGGER.error(delete_result.text)
             raise RuntimeError(delete_result.text)
-
-    # 2b) do set difference b-a and add those
-    unpublished_layers = database_layers.difference(geoserver_layers)
-    LOGGER.debug(f'these are unpublished layers: {unpublished_layers}')
-    for unpublished_layer in unpublished_layers:
-        pass
-    '''
-    CREATE TABLE catalog_table (
-        asset_id TEXT NOT NULL COLLATE NOCASE,
-        catalog TEXT NOT NULL,
-        xmin REAL NOT NULL,
-        xmax REAL NOT NULL,
-        ymin REAL NOT NULL,
-        ymax REAL NOT NULL,
-        utc_datetime TEXT NOT NULL,
-        mediatype TEXT NOT NULL,
-        description TEXT NOT NULL,
-        uri TEXT NOT NULL,
-        PRIMARY KEY (asset_id, catalog)
-        );
-    '''
 
 
 if __name__ == '__main__':
