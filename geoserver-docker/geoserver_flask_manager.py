@@ -25,11 +25,15 @@ import retrying
 
 APP = flask.Flask(__name__)
 DATABASE_PATH = 'manager.db'
-INTER_DATA_DIR = 'data'  # relative to the geoserver 'data_dir'
-REALTIVE_DATA_DIR = '../data_dir/data'
+# relative to the geoserver 'data_dir'
+
+INTER_DATA_DIR = 'data'
+FULL_DATA_DIR = os.path.abspath(
+    os.path.join('..', 'data_dir', INTER_DATA_DIR))
 GEOSERVER_PORT = '8080'
 MANAGER_PORT = '8888'
 PASSWORD_FILE = './secrets/adminpass'
+GEOSERVER_USER = 'admin'
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -42,21 +46,6 @@ LOGGER = logging.getLogger(__name__)
 def utc_now():
     """Return string of current time in UTC."""
     return str(datetime.datetime.now(datetime.timezone.utc))
-
-
-def construct_preview_url(
-        external_ip, GEOSERVER_PORT, catalog, raster_id,
-        lat_lng_bounding_box):
-    """Construct a geoserver preview url."""
-    preview_url = (
-        f"http://{external_ip}:{GEOSERVER_PORT}/geoserver/"
-        f"{catalog}/"
-        f"wms?service=WMS&version=1.1.1&request=GetMap&layers=" +
-        urllib.parse.quote(f"{catalog}:{raster_id}") + "&bbox="
-        f"{'%2C'.join([str(v) for v in lat_lng_bounding_box])}"
-        f"&width=1000&height=768&srs={urllib.parse.quote('EPSG:4326')}"
-        f"&format=application%2Fopenlayers")
-    return preview_url
 
 
 @APP.route('/api/v1/fetch', methods=["POST"])
@@ -119,7 +108,8 @@ def fetch():
 
     if fetch_data['type'] == 'WMS_preview':
         return {
-            'viewer_url': flask.url_for(
+            'type': fetch_data['type'],
+            'link': flask.url_for(
                 'viewer', catalog=fetch_data['catalog'],
                 asset_id=fetch_data['asset_id'], api_key=api_key,
                 _external=True)
@@ -266,8 +256,226 @@ def do_rest_action(
         raise
 
 
+def publish_to_geoserver(
+        geoserver_raster_path, local_raster_path, catalog, raster_id,
+        mediatype):
+    """Publish the layer to the geoserver."""
+    with open(PASSWORD_FILE, 'r') as password_file:
+        master_geoserver_password = password_file.read()
+    session = requests.Session()
+    session.auth = (GEOSERVER_USER, master_geoserver_password)
+
+    # make workspace
+    LOGGER.debug('create workspace if it does not exist')
+    workspace_exists_result = do_rest_action(
+        session.get,
+        f'http://localhost:{GEOSERVER_PORT}',
+        f'geoserver/rest/workspaces/{catalog}')
+    if not workspace_exists_result:
+        LOGGER.debug(f'{catalog} does not exist, creating it')
+        create_workspace_result = do_rest_action(
+            session.post,
+            f'http://localhost:{GEOSERVER_PORT}',
+            'geoserver/rest/workspaces',
+            json={'workspace': {'name': catalog}})
+        if not create_workspace_result:
+            # must be an error
+            raise RuntimeError(create_workspace_result.text)
+
+    # check if coverstore exists, if so delete it
+    cover_id = f'{raster_id}_cover'
+    coverstore_exists_result = do_rest_action(
+        session.get,
+        f'http://localhost:{GEOSERVER_PORT}',
+        f'geoserver/rest/workspaces/{catalog}/coveragestores/{cover_id}')
+
+    LOGGER.debug(
+        f'coverstore_exists_result: {str(coverstore_exists_result)}')
+
+    if coverstore_exists_result:
+        LOGGER.warn(f'{catalog}:{cover_id}, so deleting it')
+        # coverstore exists, delete it
+        delete_coverstore_result = do_rest_action(
+            session.delete,
+            f'http://localhost:{GEOSERVER_PORT}',
+            f'geoserver/rest/workspaces/{catalog}/'
+            f'coveragestores/{cover_id}/?purge=all&recurse=true')
+        if not delete_coverstore_result:
+            LOGGER.error(delete_coverstore_result.text)
+            raise RuntimeError(delete_coverstore_result.text)
+
+    # create coverstore
+    LOGGER.debug('create coverstore on geoserver')
+    coveragestore_payload = {
+      "coverageStore": {
+        "name": cover_id,
+        "type": mediatype,
+        "workspace": catalog,
+        "enabled": True,
+        # this one is relative to the data_dir
+        "url": f'file:{geoserver_raster_path}'
+      }
+    }
+
+    create_coverstore_result = do_rest_action(
+        session.post,
+        f'http://localhost:{GEOSERVER_PORT}',
+        f'geoserver/rest/workspaces/{catalog}/coveragestores',
+        json=coveragestore_payload)
+    if not create_coverstore_result:
+        LOGGER.error(create_coverstore_result.text)
+        raise RuntimeError(create_coverstore_result.text)
+
+    LOGGER.debug('get local raster info')
+    raster_info = pygeoprocessing.get_raster_info(local_raster_path)
+    raster = gdal.OpenEx(local_raster_path, gdal.OF_RASTER)
+    band = raster.GetRasterBand(1)
+    raster_min, raster_max, raster_mean, raster_stdev = \
+        band.GetStatistics(0, 1)
+    gt = raster_info['geotransform']
+
+    raster_srs = osr.SpatialReference()
+    raster_srs.ImportFromWkt(raster_info['projection'])
+
+    wgs84_srs = osr.SpatialReference()
+    wgs84_srs.ImportFromEPSG(4326)
+    lat_lng_bounding_box = pygeoprocessing.transform_bounding_box(
+        raster_info['bounding_box'],
+        raster_info['projection'], wgs84_srs.ExportToWkt())
+
+    epsg_crs = ':'.join(
+        [raster_srs.GetAttrValue('AUTHORITY', i) for i in [0, 1]])
+
+    LOGGER.debug('construct the cover_payload')
+
+    external_ip = pickle.loads(
+        _execute_sqlite(
+            '''
+            SELECT value
+            FROM global_variables
+            WHERE key='external_ip'
+            ''', DATABASE_PATH, mode='read_only', execute='execute',
+            argument_list=[], fetch='one')[0])
+
+    cover_payload = {
+        "coverage":
+            {
+                "name": raster_id,
+                "nativeName": raster_id,
+                "namespace":
+                    {
+                        "name": catalog,
+                        "href": (
+                            f"http://{external_ip}:8080/geoserver/"
+                            f"rest/namespaces/{catalog}.json")
+                    },
+                "title": raster_id,
+                "description": "description here",
+                "abstract": "abstract here",
+                "keywords": {
+                    "string": [raster_id, "WCS", "GeoTIFF"]
+                    },
+                "nativeCRS": raster_info['projection'],
+                "srs": epsg_crs,
+                "nativeBoundingBox": {
+                    "minx": raster_info['bounding_box'][0],
+                    "maxx": raster_info['bounding_box'][2],
+                    "miny": raster_info['bounding_box'][1],
+                    "maxy": raster_info['bounding_box'][3],
+                    "crs": raster_info['projection'],
+                    },
+                "latLonBoundingBox": {
+                    "minx": lat_lng_bounding_box[0],
+                    "maxx": lat_lng_bounding_box[2],
+                    "miny": lat_lng_bounding_box[1],
+                    "maxy": lat_lng_bounding_box[3],
+                    "crs": "EPSG:4326"
+                    },
+                "projectionPolicy": "NONE",
+                "enabled": True,
+                "metadata": {
+                    "entry": {
+                        "@key": "dirName",
+                        "$": f"{cover_id}_{raster_id}"
+                        }
+                    },
+                "store": {
+                    "@class": "coverageStore",
+                    "name": f"{catalog}:{raster_id}",
+                    "href": (
+                        f"http://{external_ip}:{GEOSERVER_PORT}/"
+                        "geoserver/rest",
+                        f"/workspaces/{catalog}/coveragestores/"
+                        f"{urllib.parse.quote(raster_id)}.json")
+                    },
+                "serviceConfiguration": False,
+                "nativeFormat": "GeoTIFF",
+                "grid": {
+                    "@dimension": "2",
+                    "range": {
+                        "low": "0 0",
+                        "high": (
+                            f"{raster_info['raster_size'][0]} "
+                            f"{raster_info['raster_size'][1]}")
+                        },
+                    "transform": {
+                        "scaleX": gt[1],
+                        "scaleY": gt[5],
+                        "shearX": gt[2],
+                        "shearY": gt[4],
+                        "translateX": gt[0],
+                        "translateY": gt[3]
+                        },
+                    "crs": raster_info['projection']
+                    },
+                "supportedFormats": {
+                    "string": [
+                        "GEOTIFF", "ImageMosaic", "ArcGrid", "GIF", "PNG",
+                        "JPEG", "TIFF", "GeoPackage (mosaic)"]
+                    },
+                "interpolationMethods": {
+                    "string": ["nearest neighbor", "bilinear", "bicubic"]
+                    },
+                "defaultInterpolationMethod": "nearest neighbor",
+                "dimensions": {
+                    "coverageDimension": [{
+                        "name": "GRAY_INDEX",
+                        "description": (
+                            "GridSampleDimension[-Infinity,Infinity]"),
+                        "range": {"min": raster_min, "max": raster_max},
+                        "nullValues": {"double": [
+                            raster_info['nodata'][0]]},
+                        "dimensionType":{"name": "REAL_32BITS"}
+                        }]
+                    },
+                "parameters": {
+                    "entry": [
+                        {"string": "InputTransparentColor", "null": ""},
+                        {"string": ["SUGGESTED_TILE_SIZE", "512,512"]},
+                        {
+                            "string": "RescalePixels",
+                            "boolean": True
+                        }]
+                    },
+                "nativeCoverageName": raster_id
+            }
+        }
+
+    LOGGER.debug('send cover request to GeoServer')
+    create_cover_result = do_rest_action(
+        session.post,
+        f'http://{external_ip}:{GEOSERVER_PORT}',
+        f'geoserver/rest/workspaces/{catalog}/'
+        f'coveragestores/{urllib.parse.quote(cover_id)}/coverages/',
+        json=cover_payload)
+    if not create_cover_result:
+        LOGGER.error(create_cover_result.text)
+        raise RuntimeError(create_cover_result.text)
+
+
 def add_raster_worker(
-        uri_path, mediatype, catalog, raster_id, asset_description, job_id):
+        uri_path, mediatype, catalog, raster_id, asset_description, job_id,
+        lat_lng_bounding_box):
     """This is used to copy and update a coverage set asynchronously.
 
     Args:
@@ -287,16 +495,15 @@ def add_raster_worker(
         geoserver_raster_path = os.path.join(
             INTER_DATA_DIR, catalog, f'{raster_id}.tif')
         # local data dir is for path to copy to from working directory
-        local_data_dir = os.path.join(REALTIVE_DATA_DIR, catalog)
+        catalog_data_dir = os.path.join(FULL_DATA_DIR, catalog)
         try:
-            os.makedirs(local_data_dir)
+            os.makedirs(catalog_data_dir)
         except OSError:
             pass
 
         local_raster_path = os.path.join(
-            local_data_dir, os.path.basename(geoserver_raster_path))
+            catalog_data_dir, os.path.basename(geoserver_raster_path))
 
-        cover_id = f'{raster_id}_cover'
         _execute_sqlite(
             '''
             UPDATE job_table
@@ -327,7 +534,7 @@ def add_raster_worker(
                     utc_now(), job_id],
                 mode='modify', execute='execute')
             compressed_tmp_file = os.path.join(
-                os.path.dirname(local_data_dir),
+                os.path.dirname(catalog_data_dir),
                 f'COMPRESSION_{job_id}')
             os.rename(local_raster_path, compressed_tmp_file)
             ecoshard.compress_raster(
@@ -351,244 +558,24 @@ def add_raster_worker(
         _execute_sqlite(
             '''
             UPDATE job_table
-            SET job_status='making coverstore', last_accessed_utc=?
+            SET job_status='publishing to geoserver', last_accessed_utc=?
             WHERE job_id=?;
             ''', DATABASE_PATH, argument_list=[utc_now(), job_id],
             mode='modify', execute='execute')
 
-        session = requests.Session()
-        session.auth = ('admin', 'geoserver')
-
-        # make workspace
-        LOGGER.debug('create workspace if it does not exist')
-        workspace_exists_result = do_rest_action(
-            session.get,
-            f'http://localhost:{GEOSERVER_PORT}',
-            f'geoserver/rest/workspaces/{catalog}')
-        if not workspace_exists_result:
-            LOGGER.debug(f'{catalog} does not exist, creating it')
-            create_workspace_result = do_rest_action(
-                session.post,
-                f'http://localhost:{GEOSERVER_PORT}',
-                'geoserver/rest/workspaces',
-                json={'workspace': {'name': catalog}})
-            if not create_workspace_result:
-                # must be an error
-                raise RuntimeError(create_workspace_result.text)
-
-        # check if coverstore exists, if so delete it
-        coverstore_exists_result = do_rest_action(
-            session.get,
-            f'http://localhost:{GEOSERVER_PORT}',
-            f'geoserver/rest/workspaces/{catalog}/coveragestores/{cover_id}')
-
-        LOGGER.debug(
-            f'coverstore_exists_result: {str(coverstore_exists_result)}')
-
-        if coverstore_exists_result:
-            LOGGER.warn(f'{catalog}:{cover_id}, so deleting it')
-            # coverstore exists, delete it
-            delete_coverstore_result = do_rest_action(
-                session.delete,
-                f'http://localhost:{GEOSERVER_PORT}',
-                f'geoserver/rest/workspaces/{catalog}/'
-                f'coveragestores/{cover_id}/?purge=all&recurse=true')
-            if not delete_coverstore_result:
-                LOGGER.error(delete_coverstore_result.text)
-                raise RuntimeError(delete_coverstore_result.text)
-
-        # create coverstore
-        LOGGER.debug('create coverstore on geoserver')
-        coveragestore_payload = {
-          "coverageStore": {
-            "name": cover_id,
-            "type": mediatype,
-            "workspace": catalog,
-            "enabled": True,
-            # this one is relative to the data_dir
-            "url": f'file:{geoserver_raster_path}'
-          }
-        }
-
-        create_coverstore_result = do_rest_action(
-            session.post,
-            f'http://localhost:{GEOSERVER_PORT}',
-            f'geoserver/rest/workspaces/{catalog}/coveragestores',
-            json=coveragestore_payload)
-        if not create_coverstore_result:
-            LOGGER.error(create_coverstore_result.text)
-            raise RuntimeError(create_coverstore_result.text)
-
-        LOGGER.debug('update database with coverstore status')
-        _execute_sqlite(
-            '''
-            UPDATE job_table
-            SET job_status='making cover', last_accessed_utc=?
-            WHERE job_id=?;
-            ''', DATABASE_PATH, argument_list=[utc_now(), job_id],
-            mode='modify', execute='execute')
-
-        LOGGER.debug('get local raster info')
-        raster_info = pygeoprocessing.get_raster_info(local_raster_path)
-        raster = gdal.OpenEx(local_raster_path, gdal.OF_RASTER)
-        band = raster.GetRasterBand(1)
-        raster_min, raster_max, raster_mean, raster_stdev = \
-            band.GetStatistics(0, 1)
-        gt = raster_info['geotransform']
-
-        raster_srs = osr.SpatialReference()
-        raster_srs.ImportFromWkt(raster_info['projection'])
-
-        wgs84_srs = osr.SpatialReference()
-        wgs84_srs.ImportFromEPSG(4326)
-        lat_lng_bounding_box = pygeoprocessing.transform_bounding_box(
-            raster_info['bounding_box'],
-            raster_info['projection'], wgs84_srs.ExportToWkt())
-
-        epsg_crs = ':'.join(
-            [raster_srs.GetAttrValue('AUTHORITY', i) for i in [0, 1]])
-
-        LOGGER.debug('construct the cover_payload')
-
-        external_ip = pickle.loads(
-            _execute_sqlite(
-                '''
-                SELECT value
-                FROM global_variables
-                WHERE key='external_ip'
-                ''', DATABASE_PATH, mode='read_only', execute='execute',
-                argument_list=[], fetch='one')[0])
-
-        cover_payload = {
-            "coverage":
-                {
-                    "name": raster_id,
-                    "nativeName": raster_id,
-                    "namespace":
-                        {
-                            "name": catalog,
-                            "href": (
-                                f"http://{external_ip}:8080/geoserver/"
-                                f"rest/namespaces/{catalog}.json")
-                        },
-                    "title": raster_id,
-                    "description": "description here",
-                    "abstract": "abstract here",
-                    "keywords": {
-                        "string": [raster_id, "WCS", "GeoTIFF"]
-                        },
-                    "nativeCRS": raster_info['projection'],
-                    "srs": epsg_crs,
-                    "nativeBoundingBox": {
-                        "minx": raster_info['bounding_box'][0],
-                        "maxx": raster_info['bounding_box'][2],
-                        "miny": raster_info['bounding_box'][1],
-                        "maxy": raster_info['bounding_box'][3],
-                        "crs": raster_info['projection'],
-                        },
-                    "latLonBoundingBox": {
-                        "minx": lat_lng_bounding_box[0],
-                        "maxx": lat_lng_bounding_box[2],
-                        "miny": lat_lng_bounding_box[1],
-                        "maxy": lat_lng_bounding_box[3],
-                        "crs": "EPSG:4326"
-                        },
-                    "projectionPolicy": "NONE",
-                    "enabled": True,
-                    "metadata": {
-                        "entry": {
-                            "@key": "dirName",
-                            "$": f"{cover_id}_{raster_id}"
-                            }
-                        },
-                    "store": {
-                        "@class": "coverageStore",
-                        "name": f"{catalog}:{raster_id}",
-                        "href": (
-                            f"http://{external_ip}:{GEOSERVER_PORT}/"
-                            "geoserver/rest",
-                            f"/workspaces/{catalog}/coveragestores/"
-                            f"{urllib.parse.quote(raster_id)}.json")
-                        },
-                    "serviceConfiguration": False,
-                    "nativeFormat": "GeoTIFF",
-                    "grid": {
-                        "@dimension": "2",
-                        "range": {
-                            "low": "0 0",
-                            "high": (
-                                f"{raster_info['raster_size'][0]} "
-                                f"{raster_info['raster_size'][1]}")
-                            },
-                        "transform": {
-                            "scaleX": gt[1],
-                            "scaleY": gt[5],
-                            "shearX": gt[2],
-                            "shearY": gt[4],
-                            "translateX": gt[0],
-                            "translateY": gt[3]
-                            },
-                        "crs": raster_info['projection']
-                        },
-                    "supportedFormats": {
-                        "string": [
-                            "GEOTIFF", "ImageMosaic", "ArcGrid", "GIF", "PNG",
-                            "JPEG", "TIFF", "GeoPackage (mosaic)"]
-                        },
-                    "interpolationMethods": {
-                        "string": ["nearest neighbor", "bilinear", "bicubic"]
-                        },
-                    "defaultInterpolationMethod": "nearest neighbor",
-                    "dimensions": {
-                        "coverageDimension": [{
-                            "name": "GRAY_INDEX",
-                            "description": (
-                                "GridSampleDimension[-Infinity,Infinity]"),
-                            "range": {"min": raster_min, "max": raster_max},
-                            "nullValues": {"double": [
-                                raster_info['nodata'][0]]},
-                            "dimensionType":{"name": "REAL_32BITS"}
-                            }]
-                        },
-                    "parameters": {
-                        "entry": [
-                            {"string": "InputTransparentColor", "null": ""},
-                            {"string": ["SUGGESTED_TILE_SIZE", "512,512"]},
-                            {
-                                "string": "RescalePixels",
-                                "boolean": True
-                            }]
-                        },
-                    "nativeCoverageName": raster_id
-                }
-            }
-
-        LOGGER.debug('send cover request to GeoServer')
-        create_cover_result = do_rest_action(
-            session.post,
-            f'http://{external_ip}:{GEOSERVER_PORT}',
-            f'geoserver/rest/workspaces/{catalog}/'
-            f'coveragestores/{urllib.parse.quote(cover_id)}/coverages/',
-            json=cover_payload)
-        if not create_cover_result:
-            LOGGER.error(create_cover_result.text)
-            raise RuntimeError(create_cover_result.text)
+        publish_to_geoserver()
 
         LOGGER.debug('construct the preview url')
-
-        preview_url = construct_preview_url(
-            external_ip, GEOSERVER_PORT, catalog, raster_id,
-            lat_lng_bounding_box)
 
         LOGGER.debug('update job_table with complete and cover url')
         _execute_sqlite(
             '''
             UPDATE job_table
             SET
-                job_status='complete', preview_url=?, last_accessed_utc=?,
+                job_status='complete', last_accessed_utc=?,
                 active=0
             WHERE job_id=?;
-            ''', DATABASE_PATH, argument_list=[preview_url, utc_now(), job_id],
+            ''', DATABASE_PATH, argument_list=[utc_now(), job_id],
             mode='modify', execute='execute')
 
         LOGGER.debug('update catalog_table with complete and cover url')
@@ -746,7 +733,7 @@ def get_status(job_id):
 
     status = _execute_sqlite(
         '''
-        SELECT job_status, preview_url
+        SELECT job_status
         FROM job_table
         WHERE job_id=?;
         ''', DATABASE_PATH, argument_list=[job_id],
@@ -755,7 +742,6 @@ def get_status(job_id):
         return {
             'job_id': job_id,
             'status': status[0],
-            'preview_url': status[1]
             }
     else:
         all_status = _execute_sqlite(
@@ -935,8 +921,7 @@ def publish():
 def build_schema(database_path):
     """Build the database schema to `database_path`."""
     if os.path.exists(database_path):
-        LOGGER.warn('database already exists, not overwriting')
-        return
+        raise ValueError('database already exists: ' + database_path)
 
     create_database_sql = (
         """
@@ -946,7 +931,6 @@ def build_schema(database_path):
             uri TEXT NOT NULL,
             job_status TEXT NOT NULL,
             active INT NOT NULL, -- 0 if complete, error no not
-            preview_url TEXT,
             last_accessed_utc TEXT NOT NULL
             );
 
@@ -995,7 +979,34 @@ def build_schema(database_path):
         mode='modify', execute='script')
 
 
-def initalize_geoserver():
+def get_geoserver_layers():
+    """Return list of [workspace]:[layername] registered in the geoserver."""
+    with open(PASSWORD_FILE, 'r') as password_file:
+        master_geoserver_password = password_file.read()
+
+    session = requests.Session()
+    session.auth = (GEOSERVER_USER, master_geoserver_password)
+    layers_result = do_rest_action(
+        session.get,
+        f'http://localhost:{GEOSERVER_PORT}',
+        'geoserver/rest/layers.json').json()
+    layer_name_list = [layer['name'] for layer in layers_result['layers']]
+    return layer_name_list
+
+
+def get_database_layers():
+    """Return a list of [workspace]:[layername] register in database."""
+    catalog_sql_result = _execute_sqlite(
+        '''
+        SELECT catalog, asset_id
+        FROM catalog_table
+        ''', DATABASE_PATH, argument_list=[],
+        mode='read_only', execute='execute', fetch='all')
+    return [
+        f'{catalog}:{asset_id}' for catalog, asset_id in catalog_sql_result]
+
+
+def initalize_geoserver(database_path):
     """Ensure database exists, set security, and set server initial stores."""
     # make new random password if one does not exist
 
@@ -1017,7 +1028,7 @@ def initalize_geoserver():
           'newMasterPassword': master_geoserver_password
         }
         session = requests.Session()
-        session.auth = ('admin', 'geoserver')
+        session.auth = (GEOSERVER_USER, 'geoserver')
         password_update_request = do_rest_action(
             session.put,
             f'http://localhost:{GEOSERVER_PORT}',
@@ -1028,57 +1039,56 @@ def initalize_geoserver():
             raise RuntimeError(
                 'could not reset master password: ' +
                 password_update_request.text)
-    else:
-        with open(PASSWORD_FILE, 'r') as password_file:
-            master_geoserver_password = password_file.read()
-        session = requests.Session()
-        session.auth = ('admin', master_geoserver_password)
 
-    DATABASE_PATH = args.db_path
+    with open(PASSWORD_FILE, 'r') as password_file:
+        master_geoserver_password = password_file.read()
+    session = requests.Session()
+    session.auth = (GEOSERVER_USER, master_geoserver_password)
+    del master_geoserver_password
 
     # check if database exists
     # * set up so that if geoserver goes down it can reconstruct from database
+    if not os.path.exists(DATABASE_PATH):
+        build_schema(DATABASE_PATH)
+
     # 1a) get list of layers (stores?) on the geoserver
     # 1b) get list of layers from database
+    geoserver_layers = set(get_geoserver_layers())
+    database_layers = set(get_database_layers())
+
     # 2a) do set difference a-b and remove those
+    unregistered_layers = geoserver_layers.difference(database_layers)
+    LOGGER.debug(f'these are unregistered layers: {unregistered_layers}')
+
+    for unregistered_layer in unregistered_layers:
+        delete_result = do_rest_action(
+            session.delete,
+            f'http://localhost:{GEOSERVER_PORT}',
+            f'geoserver/rest/layers/{unregistered_layer}?recurse=true')
+        if not delete_result:
+            LOGGER.error(delete_result.text)
+            raise RuntimeError(delete_result.text)
+
     # 2b) do set difference b-a and add those
-
-
-    build_schema(DATABASE_PATH)
-    _execute_sqlite(
-        '''
-        INSERT OR REPLACE INTO global_variables (key, value)
-        VALUES (?, ?)
-        ''', DATABASE_PATH, argument_list=[
-            'external_ip',
-            pickle.dumps(args.external_ip)],
-        mode='modify', execute='execute')
-
-    if args.debug_api_key:
-        _execute_sqlite(
-            '''
-            INSERT OR REPLACE INTO api_keys (api_key, permissions)
-            VALUES (?, 'READ:* WRITE:*')
-            ''', DATABASE_PATH, argument_list=[args.debug_api_key],
-            mode='modify', execute='execute')
-
-    # First delete all the defaults off the geoserver
-    session = requests.Session()
-    session.auth = ('admin', 'geoserver')
-    workspaces_result = do_rest_action(
-        session.get,
-        f'http://localhost:{GEOSERVER_PORT}',
-        'geoserver/rest/workspaces.json').json()
-
-    if 'workspace' in workspaces_result['workspaces']:
-        for workspace in workspaces_result['workspaces']['workspace']:
-            workspace_name = workspace['name']
-            r = do_rest_action(
-                session.delete,
-                f'http://localhost:{GEOSERVER_PORT}',
-                'geoserver/rest/workspaces/%s.json?recurse=true' %
-                workspace_name)
-            LOGGER.debug("delete result for %s: %s", workspace_name, str(r))
+    unpublished_layers = database_layers.difference(geoserver_layers)
+    LOGGER.debug(f'these are unpublished layers: {unpublished_layers}')
+    for unpublished_layer in unpublished_layers:
+        pass
+    '''
+    CREATE TABLE catalog_table (
+        asset_id TEXT NOT NULL COLLATE NOCASE,
+        catalog TEXT NOT NULL,
+        xmin REAL NOT NULL,
+        xmax REAL NOT NULL,
+        ymin REAL NOT NULL,
+        ymax REAL NOT NULL,
+        utc_datetime TEXT NOT NULL,
+        mediatype TEXT NOT NULL,
+        description TEXT NOT NULL,
+        uri TEXT NOT NULL,
+        PRIMARY KEY (asset_id, catalog)
+        );
+    '''
 
 
 if __name__ == '__main__':
@@ -1094,9 +1104,26 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     LOGGER.debug('starting up!')
+    initalize_geoserver(args.db_path)
 
+    # set the external IP so we can return correct contexts
+    _execute_sqlite(
+        '''
+        INSERT OR REPLACE INTO global_variables (key, value)
+        VALUES (?, ?)
+        ''', DATABASE_PATH, argument_list=[
+            'external_ip',
+            pickle.dumps(args.external_ip)],
+        mode='modify', execute='execute')
 
-    initalize_geoserver()
+    # add a default API key if needed
+    if args.debug_api_key:
+        _execute_sqlite(
+            '''
+            INSERT OR REPLACE INTO api_keys (api_key, permissions)
+            VALUES (?, 'READ:* WRITE:*')
+            ''', DATABASE_PATH, argument_list=[args.debug_api_key],
+            mode='modify', execute='execute')
 
     # wait for API calls
     APP.config.update(SERVER_NAME=f'{args.external_ip}:{MANAGER_PORT}')
