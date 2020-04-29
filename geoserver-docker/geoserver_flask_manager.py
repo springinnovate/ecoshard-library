@@ -991,7 +991,8 @@ def get_geoserver_layers():
         f'http://localhost:{GEOSERVER_PORT}',
         'geoserver/rest/layers.json').json()
     LOGGER.debug(layers_result)
-    layer_name_list = [layer['name'] for layer in layers_result['layers']]
+    layer_name_list = [
+        layer['name'] for layer in layers_result['layers']['layer']]
     return layer_name_list
 
 
