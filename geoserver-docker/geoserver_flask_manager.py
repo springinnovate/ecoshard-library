@@ -1016,7 +1016,7 @@ def initalize_geoserver(database_path):
     if not os.path.exists(DATABASE_PATH):
         build_schema(DATABASE_PATH)
     else:
-        LOGGER.info('geoserver previously initalized')
+        LOGGER.info('geoserver previously initialized')
         return
 
     # make new random password if one does not exist
