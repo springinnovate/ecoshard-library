@@ -1023,15 +1023,19 @@ def initalize_geoserver(database_path):
         with open(PASSWORD_FILE, 'w') as password_file:
             # i can't get this to work now so just do this
             ##master_geoserver_password = secrets.token_urlsafe(16)
-            master_geoserver_password = 'geoserver'
-            password_file.write(master_geoserver_password)
+            geoserver_password = 'geoserver'
+            password_file.write(geoserver_password)
 
+        session = requests.Session()
+        # 'geoserver' is the default geoserver password, we'll need to be
+        # authenticated to do the push
+        session.auth = (GEOSERVER_USER, 'geoserver')
         password_update_request = do_rest_action(
             session.put,
             f'http://localhost:{GEOSERVER_PORT}',
             'geoserver/rest/security/self/password',
             json={
-                'newPassword': master_geoserver_password
+                'newPassword': geoserver_password
             })
         if not password_update_request:
             raise RuntimeError(
@@ -1039,10 +1043,10 @@ def initalize_geoserver(database_path):
                 password_update_request.text)
 
     with open(PASSWORD_FILE, 'r') as password_file:
-        master_geoserver_password = password_file.read()
+        geoserver_password = password_file.read()
     session = requests.Session()
-    session.auth = (GEOSERVER_USER, master_geoserver_password)
-    del master_geoserver_password
+    session.auth = (GEOSERVER_USER, geoserver_password)
+    del geoserver_password
 
     # check if database exists
     # * set up so that if geoserver goes down it can reconstruct from database
