@@ -1066,12 +1066,12 @@ def initalize_geoserver(database_path):
         'geoserver/rest/workspaces.json').json()
     LOGGER.debug(layers_result)
     workspace_name_list = [
-        layer['name'] for layer in layers_result['workspaces']['workspace']]
+        ws['name'] for ws in layers_result['workspaces']['workspace']]
 
     for workspace_name in workspace_name_list:
         delete_result = do_rest_action(
             session.delete,
-            f'http://localhost:{GEOSERVER_PORT}',
+            f'http://localhost:{GEOSERVER_PORT}/',
             f'geoserver/rest/workspaces/{workspace_name}?recurse=true')
         if not delete_result:
             LOGGER.error(delete_result.text)
