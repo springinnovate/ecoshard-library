@@ -1029,12 +1029,23 @@ def initalize_geoserver(database_path):
         }
         session = requests.Session()
         session.auth = (GEOSERVER_USER, 'geoserver')
-        password_update_request = do_rest_action(
+        master_password_update_request = do_rest_action(
             session.put,
             f'http://localhost:{GEOSERVER_PORT}',
             'geoserver/rest/security/masterpw',
             json=update_pw_body)
+        if not master_password_update_request:
+            raise RuntimeError(
+                'could not reset master password: ' +
+                master_password_update_request.text)
 
+        password_update_request = do_rest_action(
+            session.put,
+            f'http://localhost:{GEOSERVER_PORT}',
+            'geoserver/rest/security/self/password',
+            json={
+                'newPassword': master_geoserver_password
+            })
         if not password_update_request:
             raise RuntimeError(
                 'could not reset master password: ' +
