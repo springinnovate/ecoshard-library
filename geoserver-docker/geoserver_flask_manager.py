@@ -1015,7 +1015,7 @@ def initalize_geoserver(database_path):
     #     * if not create new random password
     #     * change password via REST
     try:
-        os.makedirs(os.dirname(PASSWORD_FILE))
+        os.makedirs(os.path.dirname(PASSWORD_FILE))
     except OSError:
         pass
 
