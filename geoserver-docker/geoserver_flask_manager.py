@@ -1021,7 +1021,9 @@ def initalize_geoserver(database_path):
 
     if not os.path.exists(PASSWORD_FILE):
         with open(PASSWORD_FILE, 'w') as password_file:
-            master_geoserver_password = secrets.token_urlsafe(16)
+            # i can't get this to work now so just do this
+            ##master_geoserver_password = secrets.token_urlsafe(16)
+            master_geoserver_password = 'geoserver'
             password_file.write(master_geoserver_password)
         update_pw_body = {
           'oldMasterPassword': 'geoserver',
