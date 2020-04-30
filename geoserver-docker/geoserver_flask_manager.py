@@ -1050,7 +1050,7 @@ def initalize_geoserver(database_path):
             })
         # we need to reload the configuration file
         password_update_request = do_rest_action(
-            session.put,
+            session.post,
             f'http://localhost:{GEOSERVER_PORT}',
             'geoserver/rest/reload')
         if not password_update_request:
