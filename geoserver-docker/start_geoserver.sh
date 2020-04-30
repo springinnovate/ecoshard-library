@@ -1,7 +1,7 @@
 #!/bin/bash -x
 export GEOSERVER_HOME=/usr/local/geoserver
 export GEOSERVER_DATA_DIR=${GEOSERVER_HOME}/data_dir
-export JAVA_OPTS="-Xms512m -Xmx2g -XX:SoftRefLRUPolicyMSPerMB=36000"
+export JAVA_OPTS="-Xms512m -Xmx11g -XX:SoftRefLRUPolicyMSPerMB=36000"
 export JAVA_BIN=/usr/bin/java
 export EXTERNAL_IP=$1
 cd $GEOSERVER_HOME
