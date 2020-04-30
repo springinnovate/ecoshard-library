@@ -297,9 +297,10 @@ def publish_to_geoserver(
         # coverstore exists, delete it
         delete_coverstore_result = do_rest_action(
             session.delete,
-            f'http://localhost:{GEOSERVER_PORT}',
-            f'geoserver/rest/workspaces/{catalog}/'
-            f'coveragestores/{cover_id}/?purge=all&recurse=true')
+            urllib.parse.quote(
+                f'http://localhost:{GEOSERVER_PORT}',
+                f'geoserver/rest/workspaces/{catalog}/'
+                f'coveragestores/{cover_id}/?purge=all&recurse=true'))
         if not delete_coverstore_result:
             LOGGER.error(delete_coverstore_result.text)
             raise RuntimeError(delete_coverstore_result.text)
