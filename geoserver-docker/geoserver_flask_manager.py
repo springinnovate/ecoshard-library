@@ -259,7 +259,20 @@ def do_rest_action(
 def publish_to_geoserver(
         geoserver_raster_path, local_raster_path, catalog, raster_id,
         mediatype):
-    """Publish the layer to the geoserver."""
+    """Publish the layer to the geoserver.
+
+    Args:
+        geoserver_raster_path (str): path to the local file w/r/t the
+            geoserver's data dir (i.e. the data dir is the root)
+        local_raster_path (str): path to the raster on the local filesystem.
+        catalog (str): STAC catalog to publish to
+        raster_id (str): unique raster id to publish to.
+        medatype (str): STAC mediatype for this raster.
+
+    Returns:
+        None
+
+    """
     with open(PASSWORD_FILE, 'r') as password_file:
         master_geoserver_password = password_file.read()
     session = requests.Session()
@@ -337,12 +350,7 @@ def publish_to_geoserver(
 
     raster_srs = osr.SpatialReference()
     raster_srs.ImportFromWkt(raster_info['projection'])
-
-    wgs84_srs = osr.SpatialReference()
-    wgs84_srs.ImportFromEPSG(4326)
-    lat_lng_bounding_box = pygeoprocessing.transform_bounding_box(
-        raster_info['bounding_box'],
-        raster_info['projection'], wgs84_srs.ExportToWkt())
+    lat_lng_bounding_box = get_lat_lng_bounding_box(local_raster_path)
 
     epsg_crs = ':'.join(
         [raster_srs.GetAttrValue('AUTHORITY', i) for i in [0, 1]])
@@ -474,9 +482,19 @@ def publish_to_geoserver(
         raise RuntimeError(create_cover_result.text)
 
 
+def get_lat_lng_bounding_box(raster_path):
+    """Calculate WGS84 projected bounding box for the raster."""
+    raster_info = pygeoprocessing.get_raster_info(raster_path)
+    wgs84_srs = osr.SpatialReference()
+    wgs84_srs.ImportFromEPSG(4326)
+    lat_lng_bounding_box = pygeoprocessing.transform_bounding_box(
+        raster_info['bounding_box'],
+        raster_info['projection'], wgs84_srs.ExportToWkt())
+    return lat_lng_bounding_box
+
+
 def add_raster_worker(
-        uri_path, mediatype, catalog, raster_id, asset_description, job_id,
-        lat_lng_bounding_box):
+        uri_path, mediatype, catalog, raster_id, asset_description, job_id):
     """This is used to copy and update a coverage set asynchronously.
 
     Args:
@@ -564,11 +582,11 @@ def add_raster_worker(
             ''', DATABASE_PATH, argument_list=[utc_now(), job_id],
             mode='modify', execute='execute')
 
-        publish_to_geoserver()
+        publish_to_geoserver(
+            geoserver_raster_path, local_raster_path, catalog, raster_id,
+            mediatype)
 
-        LOGGER.debug('construct the preview url')
-
-        LOGGER.debug('update job_table with complete and cover url')
+        LOGGER.debug('update job_table with complete')
         _execute_sqlite(
             '''
             UPDATE job_table
@@ -579,7 +597,8 @@ def add_raster_worker(
             ''', DATABASE_PATH, argument_list=[utc_now(), job_id],
             mode='modify', execute='execute')
 
-        LOGGER.debug('update catalog_table with complete and cover url')
+        LOGGER.debug('update catalog_table with complete')
+        lat_lng_bounding_box = get_lat_lng_bounding_box(local_raster_path)
         _execute_sqlite(
             '''
             INSERT OR REPLACE INTO catalog_table (
