@@ -24,12 +24,12 @@ import requests
 import retrying
 
 APP = flask.Flask(__name__)
-DATABASE_PATH = 'manager.db'
 # relative to the geoserver 'data_dir'
 
 INTER_DATA_DIR = 'data'
 FULL_DATA_DIR = os.path.abspath(
     os.path.join('..', 'data_dir', INTER_DATA_DIR))
+DATABASE_PATH = os.path.join(FULL_DATA_DIR, 'flask_manager.db')
 GEOSERVER_PORT = '8080'
 MANAGER_PORT = '8888'
 PASSWORD_FILE = './secrets/adminpass'
