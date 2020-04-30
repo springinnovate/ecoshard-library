@@ -1048,15 +1048,28 @@ def initalize_geoserver(database_path):
             json={
                 'newPassword': geoserver_password
             })
+        if not password_update_request:
+            raise RuntimeError(
+                'could not reset admin password: ' +
+                password_update_request.text)
+
+        master_password_update_requeset = do_rest_action(
+            session.put,
+            f'http://localhost:{GEOSERVER_PORT}',
+            'geoserver/rest/security/self/password',
+            json={
+                "oldMasterPassword": "geoserver",
+                "newMasterPassword": geoserver_password
+            })
+        if not master_password_update_requeset:
+            raise RuntimeError(
+                'could not reset master password: ' +
+                password_update_request.text)
         # we need to reload the configuration file
         password_update_request = do_rest_action(
             session.post,
             f'http://localhost:{GEOSERVER_PORT}',
             'geoserver/rest/reload')
-        if not password_update_request:
-            raise RuntimeError(
-                'could not reset master password: ' +
-                password_update_request.text)
 
     with open(PASSWORD_FILE, 'r') as password_file:
         geoserver_password = password_file.read()
