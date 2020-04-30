@@ -32,7 +32,7 @@ FULL_DATA_DIR = os.path.abspath(
 DATABASE_PATH = os.path.join(FULL_DATA_DIR, 'flask_manager.db')
 GEOSERVER_PORT = '8080'
 MANAGER_PORT = '8888'
-PASSWORD_FILE = './secrets/adminpass'
+PASSWORD_FILE_PATH = os.path.join(FULL_DATA_DIR, 'secrets', 'adminpass')
 GEOSERVER_USER = 'admin'
 
 logging.basicConfig(
@@ -273,7 +273,7 @@ def publish_to_geoserver(
         None
 
     """
-    with open(PASSWORD_FILE, 'r') as password_file:
+    with open(PASSWORD_FILE_PATH, 'r') as password_file:
         master_geoserver_password = password_file.read()
     session = requests.Session()
     session.auth = (GEOSERVER_USER, master_geoserver_password)
@@ -1002,7 +1002,7 @@ def build_schema(database_path):
 
 def get_geoserver_layers():
     """Return list of [workspace]:[layername] registered in the geoserver."""
-    with open(PASSWORD_FILE, 'r') as password_file:
+    with open(PASSWORD_FILE_PATH, 'r') as password_file:
         master_geoserver_password = password_file.read()
 
     session = requests.Session()
@@ -1051,12 +1051,12 @@ def initalize_geoserver(database_path):
     #     * if not create new random password
     #     * change password via REST
     try:
-        os.makedirs(os.path.dirname(PASSWORD_FILE))
+        os.makedirs(os.path.dirname(PASSWORD_FILE_PATH))
     except OSError:
         pass
 
-    if not os.path.exists(PASSWORD_FILE):
-        with open(PASSWORD_FILE, 'w') as password_file:
+    if not os.path.exists(PASSWORD_FILE_PATH):
+        with open(PASSWORD_FILE_PATH, 'w') as password_file:
             # i can't get this to work now so just do this
             geoserver_password = secrets.token_urlsafe(16)
             password_file.write(geoserver_password)
@@ -1095,7 +1095,7 @@ def initalize_geoserver(database_path):
             f'http://localhost:{GEOSERVER_PORT}',
             'geoserver/rest/reload')
 
-    with open(PASSWORD_FILE, 'r') as password_file:
+    with open(PASSWORD_FILE_PATH, 'r') as password_file:
         geoserver_password = password_file.read()
     session = requests.Session()
     session.auth = (GEOSERVER_USER, geoserver_password)
