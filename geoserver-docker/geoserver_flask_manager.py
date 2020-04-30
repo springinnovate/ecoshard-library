@@ -1073,7 +1073,7 @@ def initalize_geoserver(database_path):
         delete_result = do_rest_action(
             session.delete,
             f'http://localhost:{GEOSERVER_PORT}/',
-            f'geoserver/rest/workspaces/{workspace_name}?recurse=true')
+            f'geoserver/rest/workspaces/{workspace_name}.json?recurse=true')
         if not delete_result:
             LOGGER.error(delete_result.text)
             raise RuntimeError(delete_result.text)
