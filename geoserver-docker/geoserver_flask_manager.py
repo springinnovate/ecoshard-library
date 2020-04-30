@@ -306,7 +306,7 @@ def publish_to_geoserver(
         f'coverstore_exists_result: {str(coverstore_exists_result)}')
 
     if coverstore_exists_result:
-        LOGGER.warn(f'{catalog}:{cover_id}, so deleting it')
+        LOGGER.warning(f'{catalog}:{cover_id}, so deleting it')
         # coverstore exists, delete it
         delete_coverstore_result = do_rest_action(
             session.delete,
