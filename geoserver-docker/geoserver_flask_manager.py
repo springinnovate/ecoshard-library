@@ -1082,24 +1082,6 @@ def initalize_geoserver(database_path):
     session.auth = (GEOSERVER_USER, geoserver_password)
     del geoserver_password
 
-    # get list of workspaces on the geoserver and delete them
-    layers_result = do_rest_action(
-        session.get,
-        f'http://localhost:{GEOSERVER_PORT}',
-        'geoserver/rest/workspaces.json').json()
-    LOGGER.debug(layers_result)
-    workspace_name_list = [
-        ws['name'] for ws in layers_result['workspaces']['workspace']]
-
-    for workspace_name in workspace_name_list:
-        delete_result = do_rest_action(
-            session.delete,
-            f'http://localhost:{GEOSERVER_PORT}/',
-            f'geoserver/rest/workspaces/{workspace_name}.json?recurse=true')
-        if not delete_result:
-            LOGGER.error(delete_result.text)
-            raise RuntimeError(delete_result.text)
-
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
