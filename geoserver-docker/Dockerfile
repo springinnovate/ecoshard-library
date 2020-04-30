@@ -164,9 +164,8 @@ RUN rm /usr/local/salo-api-5de978810708.json
 
 WORKDIR /usr/local
 COPY geoserver-2.17.0-bin.zip .
-RUN unzip geoserver-2.17.0-bin.zip
+RUN unzip geoserver-2.17.0-bin.zip -d geoserver
 RUN rm geoserver-2.17.0-bin.zip
-RUN mv ./geoserver-2.17.0 ./geoserver
 
 RUN pip3 install git+https://github.com/natcap/pygeoprocessing.git@release/2.0
 RUN pip3 install ecoshard==0.4.0
