@@ -8,8 +8,10 @@ import uuid
 
 import retrying
 
-
-DATABASE_PATH = 'manager.db'
+INTER_DATA_DIR = 'data'
+FULL_DATA_DIR = os.path.abspath(
+    os.path.join('..', 'data_dir', INTER_DATA_DIR))
+DATABASE_PATH = os.path.join(FULL_DATA_DIR, 'flask_manager.db')
 
 @retrying.retry(
     wait_exponential_multiplier=100, wait_exponential_max=500,
