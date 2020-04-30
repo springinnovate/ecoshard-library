@@ -1011,6 +1011,10 @@ def get_database_layers():
 
 def initalize_geoserver(database_path):
     """Ensure database exists, set security, and set server initial stores."""
+    try:
+        os.path.makedirs(FULL_DATA_DIR)
+    except OSError:
+        pass
 
     # check if database exists, if it does, everything is already initialized
     # * set up so that if geoserver goes down it can reconstruct from database
