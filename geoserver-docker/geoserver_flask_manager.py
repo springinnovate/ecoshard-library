@@ -1056,7 +1056,7 @@ def initalize_geoserver(database_path):
         master_password_update_requeset = do_rest_action(
             session.put,
             f'http://localhost:{GEOSERVER_PORT}',
-            'geoserver/rest/security/self/password',
+            'geoserver/rest/security/masterpw',
             json={
                 "oldMasterPassword": "geoserver",
                 "newMasterPassword": geoserver_password
