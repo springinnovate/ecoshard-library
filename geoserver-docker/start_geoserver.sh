@@ -1,7 +1,6 @@
 #!/bin/bash -x
 export GEOSERVER_HOME=/usr/local/geoserver
 export GEOSERVER_DATA_DIR=${GEOSERVER_HOME}/data_dir
-export STAC_DATABASE_PATH=${GEOSERVER_DATA_DIR}/data/stac_database.db
 export JAVA_OPTS="-Xms512m -Xmx2g -XX:SoftRefLRUPolicyMSPerMB=36000"
 export JAVA_BIN=/usr/bin/java
 export EXTERNAL_IP=$1
@@ -10,7 +9,7 @@ nohup $JAVA_BIN $JAVA_OPTS -DGEOSERVER_DATA_DIR=$GEOSERVER_DATA_DIR -Djava.awt.h
 touch geo_log.txt
 tail -n +0 --pid=$$ -f ./geo_log.txt | { sed "/Server:main: Started/ q" && kill $$ ;}
 cd bin
-nohup python3 geoserver_flask_manager.py --external_ip $EXTERNAL_IP --debug_api_key debug_api --db_path $STAC_DATABASE_PATH &
+nohup python3 geoserver_flask_manager.py --external_ip $EXTERNAL_IP --debug_api_key debug_api &
 sleep 2
 python3 api_key_manager.py --create --add_permission WRITE:salo READ:salo >> api_key
 bash

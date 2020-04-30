@@ -1090,13 +1090,11 @@ if __name__ == '__main__':
         '--external_ip', type=str, required=True,
         help='external ip of this host')
     parser.add_argument(
-        '--db_path', required=True, type=str, help='path to database')
-    parser.add_argument(
         '--debug_api_key', type=str, help='a debug api key with full access')
 
     args = parser.parse_args()
     LOGGER.debug('starting up!')
-    initalize_geoserver(args.db_path)
+    initalize_geoserver(DATABASE_PATH)
 
     # set the external IP so we can return correct contexts
     _execute_sqlite(
