@@ -921,6 +921,7 @@ def publish():
 
 def build_schema(database_path):
     """Build the database schema to `database_path`."""
+    LOGGER.debug(f'build schema for {database_path}')
     if os.path.exists(database_path):
         raise ValueError('database already exists: ' + database_path)
 
@@ -1012,14 +1013,14 @@ def get_database_layers():
 def initalize_geoserver(database_path):
     """Ensure database exists, set security, and set server initial stores."""
     try:
-        os.path.makedirs(FULL_DATA_DIR)
+        os.makedirs(os.path.dirname(database_path))
     except OSError:
         pass
 
     # check if database exists, if it does, everything is already initialized
     # * set up so that if geoserver goes down it can reconstruct from database
-    if not os.path.exists(DATABASE_PATH):
-        build_schema(DATABASE_PATH)
+    if not os.path.exists(database_path):
+        build_schema(database_path)
     else:
         LOGGER.info('geoserver previously initialized')
         return
