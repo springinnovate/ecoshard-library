@@ -221,7 +221,7 @@ def viewer():
 
     return flask.render_template('viewer.html', **{
         'catalog': catalog,
-        'asset_id': asset_id
+        'asset_id': asset_id,
         'style_css_url': flask.url_for('static', filename='style.css'),
         'geoserver_url': (
             f"http://{external_ip}:8080/"
@@ -229,8 +229,6 @@ def viewer():
         'pixel_pick_url': flask.url_for('pixel_pick', _external=True),
         'x_center': x_center,
         'y_center': y_center}, _external=True)
-
-
 
 
 @retrying.retry(
