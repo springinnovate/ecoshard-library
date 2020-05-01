@@ -70,11 +70,11 @@
           picker.innerHTML += `.Error ${xhr.status}: ${xhr.statusText}`;
         } else {
           console.log(xhr.response);
-          let val = xhr.response['result'][0];
-          let x_coord = xhr.response['result'][1];
-          let y_coord = xhr.response['result'][2];
+          let val = xhr.response['val'][0];
+          let x_coord = xhr.response['x'][1];
+          let y_coord = xhr.response['y'][2];
           picker.innerHTML = (
-            'val: ' + xhr.response['result'][0] + "<br/>" +
+            'val: ' + val + "<br/>" +
             'raster coord: (' + x_coord + ', ' + y_coord + ')<br/>' +
             'lat/lng: (' + e.latlng + ')');
         }
