@@ -179,7 +179,7 @@ RUN if test "${GDAL_VERSION}" = "master"; then \
         export GDAL_SHA1SUM=${GDAL_VERSION}; \
     fi \
     && mkdir gdal \
-    && wget -q https://github.com/OSGeo/gdal/archive/${GDAL_VERSION}.tar.gz -O - \
+    && wget -q https://github.com/OSGeo/gdal/releases/download/v${GDAL_VERSION}/gdal-${GDAL_VERSION}.tar.gz -O - \
         | tar xz -C gdal --strip-components=1 \
     && cd gdal/gdal \
     && if test "${RSYNC_REMOTE}" != ""; then \
