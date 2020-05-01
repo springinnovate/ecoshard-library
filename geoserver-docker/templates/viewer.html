@@ -9,9 +9,22 @@
    <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
    integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
    crossorigin=""></script>
+   <style type="text/css">
+     #mapid {
+      z-index: -1;
+    }
+    #picker {
+      background: rgba(0,0,0, .5);
+      padding: 5px;
+      border-radius: 5px;
+      color: white;
+      position: absolute;
+    }
+   </style>
 </head>
 <body>
    <div id="mapid"></div>
+   <div id="picker"></div>
    <script>
     var mymap = L.map('mapid', {
       crs: L.CRS.EPSG4326
@@ -23,6 +36,27 @@
       format: 'image/png'
     });
     wms_layer.addTo(mymap);
+
+    var picker = document.getElementById('picker');
+    document.addEventListener("mousemove", function(e) {
+      picker.style.left = e.clientX+"px";
+      picker.style.top = 20+e.clientY+"px";
+      var val = -123.2343289;
+      var x_pos = e.clientX;
+      var y_pos = e.clientY;
+      var lat = -23.23;
+      var lng = 124.2324;
+
+      var tileSize = [256, 256]
+var pixelPoint = map.project(e.latlng, map.getZoom()).floor()
+var coords = pixelPoint.unscaleBy(tileSize).floor()
+coords.z = map.getZoom() // { x: 212, y: 387, z: 10 }
+
+      picker.innerHTML = (
+        'val: ' + val + "<br/>" +
+        'coord: (' + x_pos + ', ' + y_pos + ')<br/>' +
+        'lat/lng: (' + lat + ', ' + lng + ')<br/>');
+    });
   </script>
 </body>
 </html>

@@ -19,6 +19,7 @@ from osgeo import gdal
 from osgeo import osr
 import flask
 import ecoshard
+import numpy
 import pygeoprocessing
 import requests
 import retrying
@@ -46,6 +47,62 @@ LOGGER = logging.getLogger(__name__)
 def utc_now():
     """Return string of current time in UTC."""
     return str(datetime.datetime.now(datetime.timezone.utc))
+
+
+@APP.route('/api/v1/pixel_pick', methods=["POST"])
+def pixel_pick():
+    """Pick the value from a pixel.
+
+    Args:
+        body parameters:
+            catalog (str): catalog to query
+            asset_id (str): asset id to query
+            lng (float): longitude coordinate
+            lat (float): latitude coordinate
+
+    Returns:
+        {'val': val, 'x': x, 'y': y} if pixel in valid range otherwise
+        {'val': 'out of range', 'x': x, 'y': y} if pixel in valid range
+            otherwise
+
+    """
+    picker_data = json.loads(flask.request.json)
+    local_path_payload = _execute_sqlite(
+        '''
+        SELECT local_path
+        FROM catalog_table
+        WHERE asset_id=? AND catalog=?
+        ''', DATABASE_PATH, argument_list=[
+            picker_data["asset_id"], picker_data["catalog"]],
+        execute='execute', fetch='one')
+    r = gdal.OpenEx(local_path_payload, gdal.OF_RASTER)
+    b = r.GetRasterBand(1)
+    gt = r.GetGeoTransform()
+    inv_gt = gdal.InvGeoTransform(gt)
+    x_coord, y_coord = [
+        int(p) for p in gdal.ApplyGeoTransform(
+            inv_gt, picker_data['lng'], picker_data['lat'])]
+    if (x_coord < 0 or y_coord < 0 or
+            x_coord >= b.XSize or y_coord >= b.YSize):
+        return {
+                'val': 'out of range',
+                'x': x_coord,
+                'y': y_coord
+            }
+    val = r.ReadAsArray(x_coord, y_coord, 1, 1)[0, 0]
+    nodata = b.GetNoDataValue()
+    if numpy.isclose(val, nodata):
+        return {
+            'val': 'nodata',
+            'x': x_coord,
+            'y': y_coord
+        }
+    else:
+        return {
+            'val': val,
+            'x': x_coord,
+            'y': y_coord
+        }
 
 
 @APP.route('/api/v1/fetch', methods=["POST"])
@@ -969,6 +1026,9 @@ def build_schema(database_path):
             mediatype TEXT NOT NULL,
             description TEXT NOT NULL,
             uri TEXT NOT NULL,
+            local_path TEXT NOT NULL,
+            min_val REAL NOT NULL,
+            max_val REAL NOT NULL,
             PRIMARY KEY (asset_id, catalog)
             );
         CREATE INDEX asset_id_index ON catalog_table(asset_id);
@@ -1036,7 +1096,7 @@ def initalize_geoserver(database_path):
         pass
 
     # check if database exists, if it does, everything is already initialized
-    # * set up so that if geoserver goes down it can reconstruct from database
+    # including master passwords so we can quit
     if not os.path.exists(database_path):
         build_schema(database_path)
     else:
@@ -1044,61 +1104,37 @@ def initalize_geoserver(database_path):
         return
 
     # make new random password if one does not exist
-
-    # * change default geoserver password
-    #   * check if password on disk
-    #     * if not create new random password
-    #     * change password via REST
     try:
         os.makedirs(os.path.dirname(PASSWORD_FILE_PATH))
     except OSError:
         pass
+    with open(PASSWORD_FILE_PATH, 'w') as password_file:
+        # i can't get this to work now so just do this
+        geoserver_password = secrets.token_urlsafe(16)
+        password_file.write(geoserver_password)
 
-    if not os.path.exists(PASSWORD_FILE_PATH):
-        with open(PASSWORD_FILE_PATH, 'w') as password_file:
-            # i can't get this to work now so just do this
-            geoserver_password = secrets.token_urlsafe(16)
-            password_file.write(geoserver_password)
-
-        session = requests.Session()
-        # 'geoserver' is the default geoserver password, we'll need to be
-        # authenticated to do the push
-        session.auth = (GEOSERVER_USER, 'geoserver')
-        password_update_request = do_rest_action(
-            session.put,
-            f'http://localhost:{GEOSERVER_PORT}',
-            'geoserver/rest/security/self/password',
-            json={
-                'newPassword': geoserver_password
-            })
-        if not password_update_request:
-            raise RuntimeError(
-                'could not reset admin password: ' +
-                password_update_request.text)
-
-        # master_password_update_requeset = do_rest_action(
-        #     session.put,
-        #     f'http://localhost:{GEOSERVER_PORT}',
-        #     'geoserver/rest/security/masterpw',
-        #     json={
-        #         "oldMasterPassword": "geoserver",
-        #         "newMasterPassword": geoserver_password
-        #     })
-        # if not master_password_update_requeset:
-        #     raise RuntimeError(
-        #         'could not reset master password: ' +
-        #         password_update_request.text)
-        # we need to reload the configuration file
-        password_update_request = do_rest_action(
-            session.post,
-            f'http://localhost:{GEOSERVER_PORT}',
-            'geoserver/rest/reload')
-
-    with open(PASSWORD_FILE_PATH, 'r') as password_file:
-        geoserver_password = password_file.read()
     session = requests.Session()
-    session.auth = (GEOSERVER_USER, geoserver_password)
-    del geoserver_password
+    # 'geoserver' is the default geoserver password, we'll need to be
+    # authenticated to do the push
+    session.auth = (GEOSERVER_USER, 'geoserver')
+    password_update_request = do_rest_action(
+        session.put,
+        f'http://localhost:{GEOSERVER_PORT}',
+        'geoserver/rest/security/self/password',
+        json={
+            'newPassword': geoserver_password
+        })
+    if not password_update_request:
+        raise RuntimeError(
+            'could not reset admin password: ' +
+            password_update_request.text)
+
+    # there's a bug in GeoServer 2.17 that requires a reload of the
+    # configuration before the new password is used
+    password_update_request = do_rest_action(
+        session.post,
+        f'http://localhost:{GEOSERVER_PORT}',
+        'geoserver/rest/reload')
 
 
 if __name__ == '__main__':
