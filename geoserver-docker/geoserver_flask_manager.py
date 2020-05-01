@@ -67,7 +67,7 @@ def pixel_pick():
 
     """
     try:
-        picker_data = json.loads(flask.request.json)
+        picker_data = json.loads(flask.request.get_json(force=True))
         local_path_payload = _execute_sqlite(
             '''
             SELECT local_path
