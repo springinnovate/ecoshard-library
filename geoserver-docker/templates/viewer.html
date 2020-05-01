@@ -70,9 +70,9 @@
           picker.innerHTML += `.Error ${xhr.status}: ${xhr.statusText}`;
         } else {
           console.log(xhr.response);
-          let val = xhr.response['val'][0];
-          let x_coord = xhr.response['x'][1];
-          let y_coord = xhr.response['y'][2];
+          let val = xhr.response['val'];
+          let x_coord = xhr.response['x'];
+          let y_coord = xhr.response['y'];
           picker.innerHTML = (
             'val: ' + val + "<br/>" +
             'raster coord: (' + x_coord + ', ' + y_coord + ')<br/>' +
