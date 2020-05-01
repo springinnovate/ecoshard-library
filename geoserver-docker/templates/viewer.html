@@ -45,7 +45,7 @@
         return
       }
       querying_server = true;
-      picker.innerHTML += '<br/>querying...';
+      picker.innerHTML = 'querying...';
       console.log(e.latlng);
       let xhr = new XMLHttpRequest();
       xhr.responseType = 'json';
