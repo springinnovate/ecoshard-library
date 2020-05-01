@@ -46,6 +46,7 @@
       }
       querying_server = true;
       picker.innerHTML = 'querying...';
+      picker.style.background = rgba(0.0,0,0.2, .5)
       console.log(e.latlng);
       let xhr = new XMLHttpRequest();
       xhr.responseType = 'json';
@@ -78,6 +79,7 @@
             'val: ' + val + "<br/>" +
             'raster coord: (' + x_coord + ', ' + y_coord + ')<br/>' +
             'lat/lng: (' + e.latlng + ')');
+          picker.style.background = rgba(0.0,0.5,0, .5)
         }
         querying_server = false;
       };
