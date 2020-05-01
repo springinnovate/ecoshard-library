@@ -10,8 +10,8 @@
    integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
    crossorigin=""></script>
    <style type="text/css">
-     #mapid {
-      z-index: -1;
+    #mapid {
+      z-index: 0;
     }
     #picker {
       background: rgba(0,0,0, .5);
@@ -19,44 +19,83 @@
       border-radius: 5px;
       color: white;
       position: absolute;
+      z-index: 1;
     }
    </style>
 </head>
 <body>
-   <div id="mapid"></div>
-   <div id="picker"></div>
-   <script>
-    var mymap = L.map('mapid', {
+  <div id="picker">hi</div>
+  <div id="mapid"></div>
+
+  <script>
+    var map = L.map('mapid', {
       crs: L.CRS.EPSG4326
     }).setView(
         [{{ y_center }}, {{ x_center }}], 3);
     var wms_layer = L.tileLayer.wms(
       '{{ geoserver_url }}', {
-      layers: '{{ layer }}',
+      layers: '{{ catalog }}:{{ asset_id }}',
       format: 'image/png'
     });
-    wms_layer.addTo(mymap);
-
+    wms_layer.addTo(map);
     var picker = document.getElementById('picker');
+    var querying_server = false;
+    map.on("mousemove", function(e) {
+      if (querying_server) {
+        return
+      }
+      querying_server = true;
+      picker.innerHTML += '<br/>querying...';
+      console.log(e.latlng);
+      let xhr = new XMLHttpRequest();
+      xhr.open(
+        'POST',
+        '{{ pixel_pick_url }}');
+      xhr.setRequestHeader("Content-Type", "text/plain; charset=utf-8");
+      xhr.timeout = 5000;
+
+      xhr.onerror = function(e) { // only triggers if the request couldn't be made at all
+        console.log("bad xhr error, picker failed " + e);
+        picker.innerHTML += '...failed';
+        picker.innerHTML += `.Error ${xhr.status}: ${xhr.statusText}`;
+        querying_server = false;
+      };
+      xhr.ontimeout = function() {
+        picker.innerHTML += '...timeout';
+        querying_server = false;
+      }
+
+      xhr.onload = function() {
+        if (xhr.status != 200) {
+          picker.innerHTML += `.Error ${xhr.status}: ${xhr.statusText}`;
+        } else {
+          console.log(xhr.response);
+          let val = xhr.response['result'][0];
+          let x_coord = xhr.response['result'][1];
+          let y_coord = xhr.response['result'][2];
+          picker.innerHTML = (
+            'val: ' + xhr.response['result'][0] + "<br/>" +
+            'raster coord: (' + x_coord + ', ' + y_coord + ')<br/>' +
+            'lat/lng: (' + e.latlng + ')');
+        }
+        querying_server = false;
+      };
+
+      xhr.send(JSON.stringify({
+        "catalog": "{{ catalog }}",
+        "asset_id": "{{ asset_id }}",
+        "lng": e.latlng.lng,
+        "lat": e.latlng.lat
+      }));
+
+
+    });
+
     document.addEventListener("mousemove", function(e) {
       picker.style.left = e.clientX+"px";
       picker.style.top = 20+e.clientY+"px";
-      var val = -123.2343289;
-      var x_pos = e.clientX;
-      var y_pos = e.clientY;
-      var lat = -23.23;
-      var lng = 124.2324;
-
-      var tileSize = [256, 256]
-var pixelPoint = map.project(e.latlng, map.getZoom()).floor()
-var coords = pixelPoint.unscaleBy(tileSize).floor()
-coords.z = map.getZoom() // { x: 212, y: 387, z: 10 }
-
-      picker.innerHTML = (
-        'val: ' + val + "<br/>" +
-        'coord: (' + x_pos + ', ' + y_pos + ')<br/>' +
-        'lat/lng: (' + lat + ', ' + lng + ')<br/>');
     });
+
   </script>
 </body>
 </html>
