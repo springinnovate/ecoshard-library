@@ -48,6 +48,7 @@
       picker.innerHTML += '<br/>querying...';
       console.log(e.latlng);
       let xhr = new XMLHttpRequest();
+      xhr.responseType = 'json';
       xhr.open(
         'POST',
         '{{ pixel_pick_url }}');
