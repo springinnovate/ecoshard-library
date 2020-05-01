@@ -660,11 +660,15 @@ def add_raster_worker(
 
         LOGGER.debug('update catalog_table with complete')
         lat_lng_bounding_box = get_lat_lng_bounding_box(local_raster_path)
+        band = raster.GetRasterBand(1)
+        raster_min, raster_max, raster_mean, raster_stdev = \
+            band.GetStatistics(0, 1)
         _execute_sqlite(
             '''
             INSERT OR REPLACE INTO catalog_table (
                 asset_id, catalog, xmin, ymin, xmax, ymax,
-                utc_datetime, mediatype, description, uri)
+                utc_datetime, mediatype, description, uri, local_path,
+                raster_min, raster_max, raster_mean, raster_stdev)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             ''', DATABASE_PATH, argument_list=[
                 raster_id, catalog,
@@ -672,7 +676,9 @@ def add_raster_worker(
                 lat_lng_bounding_box[1],
                 lat_lng_bounding_box[2],
                 lat_lng_bounding_box[3],
-                utc_now(), mediatype, asset_description, uri_path],
+                utc_now(), mediatype, asset_description, uri_path,
+                local_raster_path,
+                raster_min, raster_max, raster_mean, raster_stdev],
             mode='modify', execute='execute')
         LOGGER.debug(f'successful publish of {catalog}:{raster_id}')
 
@@ -1032,8 +1038,10 @@ def build_schema(database_path):
             description TEXT NOT NULL,
             uri TEXT NOT NULL,
             local_path TEXT NOT NULL,
-            min_val REAL NOT NULL,
-            max_val REAL NOT NULL,
+            raster_min REAL NOT NULL,
+            raster_max REAL NOT NULL,
+            raster_mean REAL NOT NULL,
+            raster_stdev REAL NOT NULL,
             PRIMARY KEY (asset_id, catalog)
             );
         CREATE INDEX asset_id_index ON catalog_table(asset_id);
