@@ -86,11 +86,11 @@ def pixel_pick():
                 inv_gt, picker_data['lng'], picker_data['lat'])]
         if (x_coord < 0 or y_coord < 0 or
                 x_coord >= b.XSize or y_coord >= b.YSize):
-            return {
+            return json.dumps({
                     'val': 'out of range',
                     'x': x_coord,
                     'y': y_coord
-                }
+                })
         # must cast the right type for json
         val = r.ReadAsArray(x_coord, y_coord, 1, 1)[0, 0]
         if numpy.issubdtype(val, numpy.integer):
@@ -99,17 +99,17 @@ def pixel_pick():
             val = float(val)
         nodata = b.GetNoDataValue()
         if numpy.isclose(val, nodata):
-            return {
+            return json.dumps({
                 'val': 'nodata',
                 'x': x_coord,
                 'y': y_coord
-            }
+            })
         else:
-            return {
+            return json.dumps({
                 'val': val,
                 'x': x_coord,
                 'y': y_coord
-            }
+            })
     except Exception as e:
         LOGGER.exception('something bad happened')
         return str(e), 500
