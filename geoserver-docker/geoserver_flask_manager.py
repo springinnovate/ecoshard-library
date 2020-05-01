@@ -86,7 +86,7 @@ def pixel_pick():
                 inv_gt, picker_data['lng'], picker_data['lat'])]
         if (x_coord < 0 or y_coord < 0 or
                 x_coord >= b.XSize or y_coord >= b.YSize):
-            return json.dumps({
+            return flask.jsonify({
                     'val': 'out of range',
                     'x': x_coord,
                     'y': y_coord
@@ -99,13 +99,13 @@ def pixel_pick():
             val = float(val)
         nodata = b.GetNoDataValue()
         if numpy.isclose(val, nodata):
-            return json.dumps({
+            return flask.jsonify({
                 'val': 'nodata',
                 'x': x_coord,
                 'y': y_coord
             })
         else:
-            return json.dumps({
+            return flask.jsonify({
                 'val': val,
                 'x': x_coord,
                 'y': y_coord
