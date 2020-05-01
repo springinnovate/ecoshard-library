@@ -66,44 +66,48 @@ def pixel_pick():
             otherwise
 
     """
-    LOGGER.debug('got requst' + flask.request.text)
-    picker_data = json.loads(flask.request.json)
-    local_path_payload = _execute_sqlite(
-        '''
-        SELECT local_path
-        FROM catalog_table
-        WHERE asset_id=? AND catalog=?
-        ''', DATABASE_PATH, argument_list=[
-            picker_data["asset_id"], picker_data["catalog"]],
-        execute='execute', fetch='one')
-    r = gdal.OpenEx(local_path_payload[0], gdal.OF_RASTER)
-    b = r.GetRasterBand(1)
-    gt = r.GetGeoTransform()
-    inv_gt = gdal.InvGeoTransform(gt)
-    x_coord, y_coord = [
-        int(p) for p in gdal.ApplyGeoTransform(
-            inv_gt, picker_data['lng'], picker_data['lat'])]
-    if (x_coord < 0 or y_coord < 0 or
-            x_coord >= b.XSize or y_coord >= b.YSize):
-        return {
-                'val': 'out of range',
+    try:
+        LOGGER.debug('got requst' + flask.request.text)
+        picker_data = json.loads(flask.request.json)
+        local_path_payload = _execute_sqlite(
+            '''
+            SELECT local_path
+            FROM catalog_table
+            WHERE asset_id=? AND catalog=?
+            ''', DATABASE_PATH, argument_list=[
+                picker_data["asset_id"], picker_data["catalog"]],
+            execute='execute', fetch='one')
+        r = gdal.OpenEx(local_path_payload[0], gdal.OF_RASTER)
+        b = r.GetRasterBand(1)
+        gt = r.GetGeoTransform()
+        inv_gt = gdal.InvGeoTransform(gt)
+        x_coord, y_coord = [
+            int(p) for p in gdal.ApplyGeoTransform(
+                inv_gt, picker_data['lng'], picker_data['lat'])]
+        if (x_coord < 0 or y_coord < 0 or
+                x_coord >= b.XSize or y_coord >= b.YSize):
+            return {
+                    'val': 'out of range',
+                    'x': x_coord,
+                    'y': y_coord
+                }
+        val = r.ReadAsArray(x_coord, y_coord, 1, 1)[0, 0]
+        nodata = b.GetNoDataValue()
+        if numpy.isclose(val, nodata):
+            return {
+                'val': 'nodata',
                 'x': x_coord,
                 'y': y_coord
             }
-    val = r.ReadAsArray(x_coord, y_coord, 1, 1)[0, 0]
-    nodata = b.GetNoDataValue()
-    if numpy.isclose(val, nodata):
-        return {
-            'val': 'nodata',
-            'x': x_coord,
-            'y': y_coord
-        }
-    else:
-        return {
-            'val': val,
-            'x': x_coord,
-            'y': y_coord
-        }
+        else:
+            return {
+                'val': val,
+                'x': x_coord,
+                'y': y_coord
+            }
+    except Exception as e:
+        LOGGER.exception('something bad happened')
+        return str(e), 500
 
 
 @APP.route('/api/v1/fetch', methods=["POST"])
