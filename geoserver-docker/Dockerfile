@@ -292,7 +292,7 @@ RUN apt-get install -y \
 RUN apt update && apt upgrade
 RUN apt install libspatialindex-dev -y
 
-RUN apt install python3-pip
+RUN apt install python3-pip -y
 RUN pip3 install --no-cache-dir \
     Cython \
     flask \
