@@ -46,8 +46,7 @@
       }
       querying_server = true;
       picker.innerHTML = 'querying...';
-      picker.style.background = "rgba(0.0,0,0.2, .5)";
-      console.log(e.latlng);
+      picker.style.background = "rgba(0.0,0,40, .5)";
       let xhr = new XMLHttpRequest();
       xhr.responseType = 'json';
       xhr.open(
@@ -71,7 +70,6 @@
         if (xhr.status != 200) {
           picker.innerHTML += `.Error ${xhr.status}: ${xhr.statusText}`;
         } else {
-          console.log(xhr.response);
           let val = xhr.response['val'];
           let x_coord = xhr.response['x'];
           let y_coord = xhr.response['y'];
@@ -79,7 +77,7 @@
             'val: ' + val + "<br/>" +
             'raster coord: (' + x_coord + ', ' + y_coord + ')<br/>' +
             'lat/lng: (' + e.latlng + ')');
-          picker.style.background = "rgba(0.0,0.5,0, .5)";
+          picker.style.background = "rgba(0.0,128,0, .5)";
         }
         querying_server = false;
       };
