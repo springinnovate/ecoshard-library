@@ -66,6 +66,7 @@ def pixel_pick():
             otherwise
 
     """
+    LOGGER.debug('got requst' + flask.request.text)
     picker_data = json.loads(flask.request.json)
     local_path_payload = _execute_sqlite(
         '''
@@ -75,7 +76,7 @@ def pixel_pick():
         ''', DATABASE_PATH, argument_list=[
             picker_data["asset_id"], picker_data["catalog"]],
         execute='execute', fetch='one')
-    r = gdal.OpenEx(local_path_payload, gdal.OF_RASTER)
+    r = gdal.OpenEx(local_path_payload[0], gdal.OF_RASTER)
     b = r.GetRasterBand(1)
     gt = r.GetGeoTransform()
     inv_gt = gdal.InvGeoTransform(gt)
