@@ -16,6 +16,7 @@ import time
 import threading
 
 from osgeo import gdal
+from osgeo import ogr
 from osgeo import osr
 import flask
 import ecoshard
@@ -81,9 +82,28 @@ def pixel_pick():
         b = r.GetRasterBand(1)
         gt = r.GetGeoTransform()
         inv_gt = gdal.InvGeoTransform(gt)
+
+        # transform lat/lng to raster coordinate space
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromEPSG(4326)
+        raster_srs = osr.SpatialReference()
+        raster_srs.ImportFromWkt(r.GetProjection())
+        # put in x/y order
+        raster_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+        wgs84_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
+        # Create a coordinate transformation
+        wgs84_to_raster_trans = osr.CoordinateTransformation(
+            wgs84_srs, raster_srs)
+        point = ogr.Geometry(ogr.wkbPoint)
+        point.AddPoint(picker_data['lng'], picker_data['lat'])
+        error_code = point.Transform(wgs84_to_raster_trans)
+        if error_code != 0:  # error
+            return "error on transform", 500
+
+        # convert to raster space
         x_coord, y_coord = [
             int(p) for p in gdal.ApplyGeoTransform(
-                inv_gt, picker_data['lng'], picker_data['lat'])]
+                inv_gt, point.GetX(), point.GetY())]
         if (x_coord < 0 or y_coord < 0 or
                 x_coord >= b.XSize or y_coord >= b.YSize):
             return flask.jsonify({
@@ -91,6 +111,7 @@ def pixel_pick():
                     'x': x_coord,
                     'y': y_coord
                 })
+
         # must cast the right type for json
         val = r.ReadAsArray(x_coord, y_coord, 1, 1)[0, 0]
         if numpy.issubdtype(val, numpy.integer):
