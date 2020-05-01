@@ -669,7 +669,7 @@ def add_raster_worker(
                 asset_id, catalog, xmin, ymin, xmax, ymax,
                 utc_datetime, mediatype, description, uri, local_path,
                 raster_min, raster_max, raster_mean, raster_stdev)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             ''', DATABASE_PATH, argument_list=[
                 raster_id, catalog,
                 lat_lng_bounding_box[0],
