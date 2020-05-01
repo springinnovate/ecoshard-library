@@ -283,8 +283,6 @@ COPY --from=builder  /build_gdal_version_changing/usr/ /usr/
 
 RUN ldconfig
 
-# making directory to avoid this JDK installation bug: https://github.com/geerlingguy/ansible-role-java/issues/64
-RUN mkdir /usr/share/man/man1
 RUN apt-get install -y openjdk-11-jdk-headless
 
 RUN apt-get install -y \
