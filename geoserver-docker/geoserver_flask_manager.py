@@ -91,7 +91,12 @@ def pixel_pick():
                     'x': x_coord,
                     'y': y_coord
                 }
+        # must cast the right type for json
         val = r.ReadAsArray(x_coord, y_coord, 1, 1)[0, 0]
+        if numpy.issubdtype(val, numpy.integer):
+            val = int(val)
+        else:
+            val = float(val)
         nodata = b.GetNoDataValue()
         if numpy.isclose(val, nodata):
             return {
