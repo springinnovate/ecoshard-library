@@ -316,7 +316,6 @@ RUN echo "export PATH=$PATH:/usr/local/gcloud-sdk/google-cloud-sdk/bin" >> /root
 
 COPY salo-api-5de978810708.json /usr/local/salo-api-5de978810708.json
 RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=/usr/local/salo-api-5de978810708.json
-RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud config set project natgeo-dams
 RUN rm /usr/local/salo-api-5de978810708.json
 
 WORKDIR /usr/local

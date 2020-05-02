@@ -222,7 +222,7 @@ def viewer():
 
     fetch_payload = _execute_sqlite(
         '''
-        SELECT xmin, ymin, xmax, ymax
+        SELECT xmin, ymin, xmax, ymax, raster_min, raster_max
         FROM catalog_table
         WHERE asset_id=? AND catalog=?
         ''', DATABASE_PATH, argument_list=[asset_id, catalog],
@@ -237,6 +237,11 @@ def viewer():
     xmax = fetch_payload[2]
     ymax = fetch_payload[3]
 
+    raster_min = fetch_payload[4]
+    raster_max = fetch_payload[5]
+    raster_p2 = raster_min + 0.02 * (raster_max - raster_min)
+    raster_p98 = raster_min + 0.98 * (raster_max - raster_min)
+
     x_center = (xmax+xmin)/2
     y_center = (ymax+ymin)/2
 
@@ -247,6 +252,11 @@ def viewer():
         'geoserver_url': (
             f"http://{external_ip}:8080/"
             f"geoserver/{catalog}/wms"),
+        'style': 'salo',
+        'min': raster_min,
+        'max': raster_max,
+        'p2': raster_p2,
+        'p98': raster_p98,
         'pixel_pick_url': flask.url_for('pixel_pick', _external=True),
         'x_center': x_center,
         'y_center': y_center}, _external=True)
@@ -737,6 +747,7 @@ def search():
             datetime =
                 "exact time" | "low_time/high_time" | "../high time" |
                 "low time/.."
+            description --- partial match
 
     Responses:
         json:
