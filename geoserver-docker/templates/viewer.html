@@ -35,7 +35,15 @@
     var wms_layer = L.tileLayer.wms(
       '{{ geoserver_url }}', {
       layers: '{{ catalog }}:{{ asset_id }}',
-      format: 'image/png'
+      format: 'image/png',
+      styles: '{{ raster_style }}',
+      min: '{{ raster_min }}',
+      max: '{{ raster_max }}',
+      p2: '{{ raster_p2 }}',
+      p98: '{{ raster_p8 }}',
+
+      CQL_FILTER: 'user_id=1'CQL_FILTER: 'user_id=1'
+
     });
     wms_layer.addTo(map);
     var picker = document.getElementById('picker');
