@@ -37,10 +37,7 @@
       layers: '{{ catalog }}:{{ asset_id }}',
       format: 'image/png',
       styles: '{{ raster_style }}',
-      min: '{{ raster_min }}',
-      max: '{{ raster_max }}',
-      p2: '{{ raster_p2 }}',
-      p98: '{{ raster_p98 }}'
+      ENV: 'min:{{ raster_min }};max:{{ raster_max }};p2:{{ raster_p2 }};p98:{{ raster_p98 }}'
     });
     wms_layer.addTo(map);
     var picker = document.getElementById('picker');
