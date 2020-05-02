@@ -253,10 +253,10 @@ def viewer():
             f"http://{external_ip}:8080/"
             f"geoserver/{catalog}/wms"),
         'style': 'salo',
-        'min': raster_min,
-        'max': raster_max,
-        'p2': raster_p2,
-        'p98': raster_p98,
+        'raster_min': raster_min,
+        'raster_max': raster_max,
+        'raster_p2': raster_p2,
+        'raster_p98': raster_p98,
         'pixel_pick_url': flask.url_for('pixel_pick', _external=True),
         'x_center': x_center,
         'y_center': y_center}, _external=True)
