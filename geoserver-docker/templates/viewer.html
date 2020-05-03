@@ -65,7 +65,7 @@
       p98 = p0 + (p100-p0)*0.98;
 
       wms_layer.setParams({
-        ENV: 'min:'+p0+';max:'+p100+';p2:'+raster_p2+';p98:'+raster_p98
+        ENV: 'min:'+p0+';max:'+p100+';p2:'+p2+';p98:'+p98
       });
     }
 
@@ -78,7 +78,7 @@
       layers: '{{ catalog }}:{{ asset_id }}',
       format: 'image/png',
       styles: '{{ raster_style }}',
-      ENV: 'min:'+p0+';max:'+p100+';p2:'+raster_p2+';p98:'+raster_p98
+      ENV: 'min:'+p0+';max:'+p100+';p2:'+p2+';p98:'+p98
     });
     wms_layer.addTo(map);
     var picker = document.getElementById('picker');
