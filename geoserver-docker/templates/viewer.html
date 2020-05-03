@@ -37,14 +37,38 @@
 <body>
   <div id="picker"></div>
   <div id="style-control">
-    <label for="min">min (original {{ raster_min }})</label>
+    <label for="min" oninput="update_style()")>
+      min (original {{ raster_min }}</label>
     <input id="min"><br/>
-    <label for="max">max (original {{ raster_max }})</label>
+    <label for="max" oninput="update_style()")>
+      max (original {{ raster_max }}</label>
     <input id="max">
   </div>
   <div id="mapid"></div>
 
   <script>
+    var raster_min = {{ raster_min }};
+    var raster_max = {{ raster_max }};
+    var p2 = raster_min + (raster_max-raster_min)*0.02;
+    var p98 = raster_min + (raster_max-raster_min)*0.98;
+
+    def update_style() {
+      var raw_min = parseFloat(document.getElementById("min").value);
+      var raw_max = parseFloat(document.getElementById("max").value);
+
+      if(isNaN(min) || isNaN(max))
+          return;
+
+      raster_min = raw_min;
+      raster_max = raw_max;
+      p2 = raster_min + (raster_max-raster_min)*0.02;
+      p98 = raster_min + (raster_max-raster_min)*0.98;
+
+      wms_layer.setParams({
+        ENV: 'min:'+raster_min+';max:'+raster_max+';p2:'+raster_p2+';p98:'+raster_p98
+      });
+    }
+
     var map = L.map('mapid', {
       crs: L.CRS.EPSG4326
     }).setView(
@@ -54,7 +78,7 @@
       layers: '{{ catalog }}:{{ asset_id }}',
       format: 'image/png',
       styles: '{{ raster_style }}',
-      ENV: 'min:{{ raster_min }};max:{{ raster_max }};p2:{{ raster_p2 }};p98:{{ raster_p98 }}'
+      ENV: 'min:'+raster_min+';max:'+raster_max+';p2:'+raster_p2+';p98:'+raster_p98
     });
     wms_layer.addTo(map);
     var picker = document.getElementById('picker');
