@@ -155,12 +155,17 @@ def fetch():
                 "uri": gives a URI that is the direct link to the dataset,
                     this may be a gs:// or https:// or other url. The caller
                     will infer this from context.
+                "WMS": just the WMS link.
 
     Responses:
         json:
             {
-                type (str): "WMS" or "herf" depending on body type passed
+                type (str): "WMS" or "uri" depending on body type passed
                 link (str): url for the specified type
+                raster_min (float): min stats
+                raster_max (float): max stats
+                raster_mean (float): mean stats
+                raster_stdev (float):  stdev stats
             }
 
         400 if invalid api key or catalog:asset_id not found
@@ -177,7 +182,7 @@ def fetch():
 
     fetch_payload = _execute_sqlite(
         '''
-        SELECT uri, xmin, ymin, xmax, ymax
+        SELECT uri, raster_min, raster_max, raster_mean, raster_stdev
         FROM catalog_table
         WHERE asset_id=? AND catalog=?
         ''', DATABASE_PATH, argument_list=[
@@ -188,20 +193,37 @@ def fetch():
         return (
             f'{fetch_data["asset_id"]}:{fetch_data["catalog"]} not found', 400)
 
+    raster_min, raster_max, raster_mean, raster_stdev = fetch_payload[1:4]
+
     if fetch_data["type"] == 'uri':
-        return {
-            'type': fetch_data['type'],
-            'link': fetch_payload[0],
-           }
+       link = fetch_payload[0]
 
     if fetch_data['type'] == 'WMS_preview':
-        return {
-            'type': fetch_data['type'],
-            'link': flask.url_for(
-                'viewer', catalog=fetch_data['catalog'],
-                asset_id=fetch_data['asset_id'], api_key=api_key,
-                _external=True)
-            }
+        link = flask.url_for(
+            'viewer', catalog=fetch_data['catalog'],
+            asset_id=fetch_data['asset_id'], api_key=api_key,
+            _external=True)
+
+    if fetch_data['type'] == 'WMS':
+        external_ip = pickle.loads(
+            _execute_sqlite(
+                '''
+                SELECT value
+                FROM global_variables
+                WHERE key='external_ip'
+                ''', DATABASE_PATH, mode='read_only', execute='execute',
+                argument_list=[], fetch='one')[0])
+        link = (
+            f"http://{external_ip}:8080/geoserver/{fetch_data["catalog"]}/wms")
+
+    return {
+        'type': fetch_data['type'],
+        'link': link,
+        'raster_min': raster_min,
+        'raster_max': raster_max,
+        'raster_mean': raster_mean,
+        'raster_stdev': raster_stdev,
+    }
 
 
 @APP.route('/api/v1/viewer')
