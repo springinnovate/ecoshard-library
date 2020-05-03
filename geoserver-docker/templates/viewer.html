@@ -39,10 +39,10 @@
   <div id="style-control">
     <label for="min")>
       min (original {{ p0 }}</label>
-    <input id="min" placeholder="{{ p0 }}" oninput="update_style()"><br/>
+    <input id="min" oninput="update_style()"><br/>
     <label for="max")>
       max (original {{ p100 }}</label>
-    <input id="max" placeholder="{{ p100 }}" oninput="update_style()">
+    <input id="max" oninput="update_style()">
   </div>
   <div id="mapid"></div>
 
@@ -52,6 +52,9 @@
     var p2 = p0 + (p100-p0)*0.02;
     var p98 = p0 + (p100-p0)*0.98;
 
+    document.getElementById("min").value = p0;
+    document.getElementById("max").value = p100;
+
     function update_style() {
       var parsed_min = parseFloat(document.getElementById("min").value);
       var parsed_max = parseFloat(document.getElementById("max").value);
@@ -59,11 +62,9 @@
       if(isNaN(parsed_min) || isNaN(parsed_max)) {
           return;
       }
-
-      if (parsed_min < parsed_max) {
+      if (parsed_min > parsed_max) {
         return;
       }
-
 
       p0 = parsed_min;
       p100 = parsed_max;
