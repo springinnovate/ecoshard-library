@@ -37,12 +37,12 @@
 <body>
   <div id="picker"></div>
   <div id="style-control">
-    <label for="min" oninput="update_style()")>
+    <label for="min")>
       min (original {{ p0 }}</label>
-    <input id="min"><br/>
-    <label for="max" oninput="update_style()")>
+    <input id="min" oninput="update_style()"><br/>
+    <label for="max")>
       max (original {{ p100 }}</label>
-    <input id="max">
+    <input id="max" oninput="update_style()">
   </div>
   <div id="mapid"></div>
 
@@ -53,11 +53,16 @@
     var p98 = p0 + (p100-p0)*0.98;
 
     function update_style() {
-      var raw_min = parseFloat(document.getElementById("min").value);
-      var raw_max = parseFloat(document.getElementById("max").value);
+      var parsed_min = parseFloat(document.getElementById("min").value);
+      var parsed_max = parseFloat(document.getElementById("max").value);
 
-      if(isNaN(min) || isNaN(max))
+      if(isNaN(parsed_min) || isNaN(parsed_max))
           return;
+
+      if (parsed_min < parsed_max) {
+        return
+      }
+
 
       p0 = raw_min;
       p100 = raw_max;
