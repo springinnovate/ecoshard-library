@@ -19,12 +19,29 @@
       border-radius: 5px;
       color: white;
       position: absolute;
+      z-index: 2;
+    }
+    #style-control {
+      background: rgba(0,0,0, .5);
+      padding: 5px;
+      border-radius: 5px;
+      color: white;
+      position: absolute;
+      height: auto;
+      right: 0;
+      top: 0;
       z-index: 1;
     }
    </style>
 </head>
 <body>
-  <div id="picker">hi</div>
+  <div id="picker"></div>
+  <div id="style-control">
+    <label for="min">min (original {{ raster_min }})</label>
+    <input id="min"><br/>
+    <label for="max">max (original {{ raster_max }})</label>
+    <input id="max">
+  </div>
   <div id="mapid"></div>
 
   <script>
