@@ -196,7 +196,7 @@ def fetch():
     raster_min, raster_max, raster_mean, raster_stdev = fetch_payload[1:4]
 
     if fetch_data["type"] == 'uri':
-       link = fetch_payload[0]
+        link = fetch_payload[0]
 
     if fetch_data['type'] == 'WMS_preview':
         link = flask.url_for(
@@ -214,7 +214,7 @@ def fetch():
                 ''', DATABASE_PATH, mode='read_only', execute='execute',
                 argument_list=[], fetch='one')[0])
         link = (
-            f"http://{external_ip}:8080/geoserver/{fetch_data["catalog"]}/wms")
+            f"http://{external_ip}:8080/geoserver/{fetch_data['catalog']}/wms")
 
     return {
         'type': fetch_data['type'],
