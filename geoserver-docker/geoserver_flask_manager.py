@@ -193,6 +193,7 @@ def fetch():
         return (
             f'{fetch_data["asset_id"]}:{fetch_data["catalog"]} not found', 400)
 
+    LOGGER.debug(fetch_payload)
     raster_min, raster_max, raster_mean, raster_stdev = fetch_payload[1:4]
 
     if fetch_data["type"] == 'uri':
