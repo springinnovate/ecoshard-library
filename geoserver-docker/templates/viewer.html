@@ -64,7 +64,7 @@
         function () {
           update_style();
           edit_timeout = null;
-        }, 400);
+        }, 1000);
     }
 
     function update_style() {
@@ -168,7 +168,7 @@
         function () {
           pick_point(cur_latlng.lng, cur_latlng.lat);
           mousestop_timeout = null;
-        }, 100);
+        }, 200);
     });
 
     // move the picker window around with the mouse
