@@ -102,7 +102,7 @@
       style_control.style.background = "rgba(0, 0, 0, .5)";
     }
 
-    var raster_style = {{ original_style }};
+    var raster_style = "{{ original_style }}";
     var map = L.map("mapid", {
       crs: L.CRS.EPSG4326
     }).setView(
