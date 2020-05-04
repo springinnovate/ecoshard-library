@@ -95,7 +95,7 @@
       p100 = parsed_max;
       p2 = p0 + (p100-p0)*0.02;
       p98 = p0 + (p100-p0)*0.98;
-      p50 = parsed_max+parsed_min;
+      p50 = (parsed_max+parsed_min)/2.0;
 
       let raster_style = document.getElementById("style").value;
       wms_layer.setParams({
