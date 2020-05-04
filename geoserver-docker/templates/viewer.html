@@ -32,17 +32,25 @@
       top: 0;
       z-index: 1;
     }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: auto auto;
+      padding: 5px;
+      grid-gap: 5px;
+    }
+
    </style>
 </head>
 <body>
   <div id="picker"></div>
   <div id="style-control">
-    <label for="min")>
-      min (original {{ p0 }}</label>
-    <input id="min" oninput="style_changed()"><br/>
-    <label for="max")>
-      max (original {{ p100 }}</label>
-    <input id="max" oninput="style_changed()">
+    <div class="grid-container">
+      <div><input id="min" oninput="style_changed()"></div>
+      <div><label for="min")>min (original {{ p0 }}</label></div>
+      <div><input id="max" oninput="style_changed()"></div>
+      <div><label for="max")>max (original {{ p100 }}</label></div>
+    </div>
   </div>
   <div id="mapid"></div>
 
@@ -65,6 +73,8 @@
           update_style();
           edit_timeout = null;
         }, 1000);
+      var style_control = document.getElementById("style-control");
+      style_control.style.background = "rgba(0,128,0, .5)";
     }
 
     function update_style() {
@@ -86,6 +96,7 @@
       wms_layer.setParams({
         ENV: "min:"+p0+";max:"+p100+";p2:"+p2+";p98:"+p98
       });
+      style_control.style.background = "rgba(0,0,0,.5)";
     }
 
     var map = L.map("mapid", {
@@ -115,7 +126,8 @@
       xhr.setRequestHeader("Content-Type", "text/plain; charset=utf-8");
       xhr.timeout = 5000;
 
-      xhr.onerror = function(e) { // only triggers if the request couldn"t be made at all
+      // only triggers if the request couldn"t be made at all
+      xhr.onerror = function(e) {
         console.log("bad xhr error, picker failed " + e);
         picker.innerHTML += "...failed";
         picker.innerHTML += `.Error ${xhr.status}: ${xhr.statusText}`;
