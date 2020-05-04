@@ -39,10 +39,10 @@
   <div id="style-control">
     <label for="min")>
       min (original {{ p0 }}</label>
-    <input id="min" oninput="update_style()"><br/>
+    <input id="min" oninput="style_changed()"><br/>
     <label for="max")>
       max (original {{ p100 }}</label>
-    <input id="max" oninput="update_style()">
+    <input id="max" oninput="style_changed()">
   </div>
   <div id="mapid"></div>
 
@@ -51,9 +51,17 @@
     var p100 = {{ p100 }};
     var p2 = p0 + (p100-p0)*0.02;
     var p98 = p0 + (p100-p0)*0.98;
+    var edit_timeout = null;
 
     document.getElementById("min").value = p0;
     document.getElementById("max").value = p100;
+
+    function style_changed() {
+      if (edit_timeout != null) {
+        clearTimeout(edit_timeout);
+      }
+      edit_timeout = setTimeout(update_style, 400);
+    }
 
     function update_style() {
       var parsed_min = parseFloat(document.getElementById("min").value);
