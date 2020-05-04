@@ -73,13 +73,13 @@
           update_style();
           edit_timeout = null;
         }, 1000);
-      var style_control = document.getElementById("style-control");
-      style_control.style.background = "rgba(0,128,0, .5)";
+      let style_control = document.getElementById("style-control");
+      style_control.style.background = "rgba(153, 51, 51, .5)";
     }
 
     function update_style() {
-      var parsed_min = parseFloat(document.getElementById("min").value);
-      var parsed_max = parseFloat(document.getElementById("max").value);
+      let parsed_min = parseFloat(document.getElementById("min").value);
+      let parsed_max = parseFloat(document.getElementById("max").value);
 
       if(isNaN(parsed_min) || isNaN(parsed_max)) {
           return;
@@ -96,7 +96,8 @@
       wms_layer.setParams({
         ENV: "min:"+p0+";max:"+p100+";p2:"+p2+";p98:"+p98
       });
-      style_control.style.background = "rgba(0,0,0,.5)";
+      let style_control = document.getElementById("style-control");
+      style_control.style.background = "rgba(0, 0, 0, .5)";
     }
 
     var map = L.map("mapid", {
@@ -168,7 +169,7 @@
       previous_latlng = cur_latlng;
 
       picker.innerHTML = "querying...";
-      picker.style.background = "rgba(0.0,0,40, .5)";
+      picker.style.background = "rgba(153, 51, 51, .5)";
 
       if (mousestop_timeout != null) {
         clearTimeout(mousestop_timeout);
