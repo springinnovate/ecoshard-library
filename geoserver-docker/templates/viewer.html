@@ -99,7 +99,7 @@
 
       let raster_style = document.getElementById("style").value;
       wms_layer.setParams({
-        ENV: "min:"+p0+";max:"+p100+";p2:"+p2+";p98:"+p98+";p50:"+p50,
+        ENV: "p0:"+p0+";p100:"+p100+";p2:"+p2+";p98:"+p98+";p50:"+p50,
         styles: raster_style
       });
 
