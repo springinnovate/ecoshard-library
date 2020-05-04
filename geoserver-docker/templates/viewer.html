@@ -60,7 +60,11 @@
       if (edit_timeout != null) {
         clearTimeout(edit_timeout);
       }
-      edit_timeout = setTimeout(update_style, 400);
+      edit_timeout = setTimeout(
+        function () {
+          update_style();
+          edit_timeout = null;
+        }, 400);
     }
 
     function update_style() {
@@ -80,76 +84,95 @@
       p98 = p0 + (p100-p0)*0.98;
 
       wms_layer.setParams({
-        ENV: 'min:'+p0+';max:'+p100+';p2:'+p2+';p98:'+p98
+        ENV: "min:"+p0+";max:"+p100+";p2:"+p2+";p98:"+p98
       });
     }
 
-    var map = L.map('mapid', {
+    var map = L.map("mapid", {
       crs: L.CRS.EPSG4326
     }).setView(
         [{{ y_center }}, {{ x_center }}], 3);
     var wms_layer = L.tileLayer.wms(
-      '{{ geoserver_url }}', {
-      layers: '{{ catalog }}:{{ asset_id }}',
-      format: 'image/png',
-      styles: '{{ raster_style }}',
-      ENV: 'min:'+p0+';max:'+p100+';p2:'+p2+';p98:'+p98
+      "{{ geoserver_url }}", {
+      layers: "{{ catalog }}:{{ asset_id }}",
+      format: "image/png",
+      styles: "{{ raster_style }}",
+      ENV: "min:"+p0+";max:"+p100+";p2:"+p2+";p98:"+p98
     });
     wms_layer.addTo(map);
-    var picker = document.getElementById('picker');
-    var querying_server = false;
-    map.on("mousemove", function(e) {
-      if (querying_server) {
-        return
-      }
-      querying_server = true;
-      picker.innerHTML = 'querying...';
-      picker.style.background = "rgba(0.0,0,40, .5)";
+
+    var mousestop_timeout = null;
+    var previous_latlng = null;
+
+    // set a timeout to see if the pointer stopped moving, if so, pick the
+    // point at the cursor
+    function pick_point(lng, lat) {
       let xhr = new XMLHttpRequest();
-      xhr.responseType = 'json';
+      xhr.responseType = "json";
       xhr.open(
-        'POST',
-        '{{ pixel_pick_url }}');
+        "POST",
+        "{{ pixel_pick_url }}");
       xhr.setRequestHeader("Content-Type", "text/plain; charset=utf-8");
       xhr.timeout = 5000;
 
-      xhr.onerror = function(e) { // only triggers if the request couldn't be made at all
+      xhr.onerror = function(e) { // only triggers if the request couldn"t be made at all
         console.log("bad xhr error, picker failed " + e);
-        picker.innerHTML += '...failed';
+        picker.innerHTML += "...failed";
         picker.innerHTML += `.Error ${xhr.status}: ${xhr.statusText}`;
-        querying_server = false;
       };
       xhr.ontimeout = function() {
-        picker.innerHTML += '...timeout';
-        querying_server = false;
+        picker.innerHTML += "...timeout";
       }
 
       xhr.onload = function() {
         if (xhr.status != 200) {
           picker.innerHTML += `.Error ${xhr.status}: ${xhr.statusText}`;
         } else {
-          let val = xhr.response['val'];
-          let x_coord = xhr.response['x'];
-          let y_coord = xhr.response['y'];
+          let val = xhr.response["val"];
+          let x_coord = xhr.response["x"];
+          let y_coord = xhr.response["y"];
           picker.innerHTML = (
-            'val: ' + val + "<br/>" +
-            'raster coord: (' + x_coord + ', ' + y_coord + ')<br/>' +
-            'lat/lng: (' + e.latlng + ')');
+            "val: " + val + "<br/>" +
+            "raster coord: (" + x_coord + ", " + y_coord + ")<br/>" +
+            "lat/lng: (" + lat + ", " + lng + ")");
           picker.style.background = "rgba(0.0,128,0, .5)";
         }
-        querying_server = false;
       };
 
       xhr.send(JSON.stringify({
         "catalog": "{{ catalog }}",
         "asset_id": "{{ asset_id }}",
-        "lng": e.latlng.lng,
-        "lat": e.latlng.lat
+        "lng": lng,
+        "lat": lat
       }));
+    }
 
+    map.on("mousemove", function(e) {
+      let cur_latlng = e.latlng;
+      if (previous_latlng == cur_latlng) {
+        // the timeout will trigger it
+        return;
+      }
+      previous_latlng = cur_latlng;
 
+      picker.innerHTML = "querying...";
+      picker.style.background = "rgba(0.0,0,40, .5)";
+
+      if (mousestop_timeout != null) {
+        clearTimeout(mousestop_timeout);
+      }
+
+      // pick the point in 100ms, this can get disrupted if the mouse moves
+      // otherwise we know it was sampled there
+      mousestop_timeout = setTimeout(
+        function () {
+          pick_point(cur_latlng.lng, cur_latlng.lat);
+          mousestop_timeout = null;
+        }, 100);
     });
 
+    // move the picker window around with the mouse
+    var picker = document.getElementById("picker");
     document.addEventListener("mousemove", function(e) {
       picker.style.left = e.clientX+"px";
       picker.style.top = 20+e.clientY+"px";
