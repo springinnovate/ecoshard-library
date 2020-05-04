@@ -65,6 +65,7 @@
 
     document.getElementById("min").value = p0;
     document.getElementById("max").value = p100;
+    document.getElementById("style").value = "{{ original_style }}";
 
     function style_changed() {
       if (edit_timeout != null) {
@@ -96,14 +97,16 @@
       p98 = p0 + (p100-p0)*0.98;
       p50 = parsed_max+parsed_min;
 
+      let raster_style = document.getElementById("style").value;
       wms_layer.setParams({
-        ENV: "min:"+p0+";max:"+p100+";p2:"+p2+";p98:"+p98+";p50:"+p50
+        ENV: "min:"+p0+";max:"+p100+";p2:"+p2+";p98:"+p98+";p50:"+p50,
+        styles: raster_style
       });
+
       let style_control = document.getElementById("style-control");
       style_control.style.background = "rgba(0, 0, 0, .5)";
     }
 
-    var raster_style = "{{ original_style }}";
     var map = L.map("mapid", {
       crs: L.CRS.EPSG4326
     }).setView(
@@ -112,7 +115,7 @@
       "{{ geoserver_url }}", {
       layers: "{{ catalog }}:{{ asset_id }}",
       format: "image/png",
-      styles: raster_style,
+      styles: "{{ original_style }}",
       ENV: "min:"+p0+";max:"+p100+";p2:"+p2+";p98:"+p98
     });
     wms_layer.addTo(map);
