@@ -336,8 +336,8 @@ RUN mkdir /usr/local/geoserver/bin/templates
 COPY templates/viewer.html /usr/local/geoserver/bin/templates
 RUN mkdir /usr/local/geoserver/bin/static
 COPY static/style.css /usr/local/geoserver/bin/static
-RUN mkdir /usr/local/geoserver/bin/styles
-COPY styles /usr/local/geoserver/bin/styles
+RUN mkdir /usr/local/geoserver/bin/raster_styles
+COPY raster_styles /usr/local/geoserver/bin/raster_styles
 
 
 WORKDIR /usr/local/geoserver
