@@ -47,24 +47,20 @@
   <div id="style-control">
     <div class="grid-container">
       <div><input id="min" oninput="style_changed()"></div>
-      <div><label for="min")>min (original {{ p0 }}</label></div>
+      <div><label for="min">style min (original {{ p0 }})</label></div>
       <div><input id="max" oninput="style_changed()"></div>
-      <div><label for="max")>max (original {{ p100 }}</label></div>
-      <div><label for="style")>style (original {{ original_style }}</label></div>
+      <div><label for="max">style max (original {{ p100 }})</label></div>
       <div><input id="style" oninput="style_changed()"></div>
+      <div><label for="style">style id (original {{ original_style }})</label></div>
     </div>
   </div>
   <div id="mapid"></div>
 
   <script>
-    var p0 = {{ p0 }};
-    var p100 = {{ p100 }};
-    var p2 = p0 + (p100-p0)*0.02;
-    var p98 = p0 + (p100-p0)*0.98;
     var edit_timeout = null;
 
-    document.getElementById("min").value = p0;
-    document.getElementById("max").value = p100;
+    document.getElementById("min").value = {{ p0 }};
+    document.getElementById("max").value = {{ p100 }};
     document.getElementById("style").value = "{{ original_style }}";
 
     function style_changed() {
@@ -77,7 +73,7 @@
           edit_timeout = null;
         }, 1000);
       let style_control = document.getElementById("style-control");
-      style_control.style.background = "rgba(153, 51, 51, .5)";
+      style_control.style.background = "rgba(100, 20, 20, .5)";
     }
 
     function update_style() {
@@ -94,18 +90,28 @@
       p0 = parsed_min;
       p100 = parsed_max;
       p2 = p0 + (p100-p0)*0.02;
+      p25 = p0 + (p100-p0)*0.25;
+      p50 = p0 + (p100-p0)*0.5;
+      p75 = p0 + (p100-p0)*0.75;
       p98 = p0 + (p100-p0)*0.98;
-      p50 = (parsed_max+parsed_min)/2.0;
 
       let raster_style = document.getElementById("style").value;
       wms_layer.setParams({
-        ENV: "p0:"+p0+";p100:"+p100+";p2:"+p2+";p98:"+p98+";p50:"+p50,
+        ENV: "p0:"+p0+";p2:"+p2+";p25:"+p25+";p50:"+p50+";p75:"+p75+";p98:"+p98+";p100:"+p100,
         styles: raster_style
       });
 
       let style_control = document.getElementById("style-control");
       style_control.style.background = "rgba(0, 0, 0, .5)";
     }
+
+    let p0 = {{ p0 }};
+    let p100 = {{ p100 }};
+    let p2 = p0 + (p100-p0)*0.02;
+    let p25 = p0 + (p100-p0)*0.25;
+    let p50 = p0 + (p100-p0)*0.5;
+    let p75 = p0 + (p100-p0)*0.75;
+    let p98 = p0 + (p100-p0)*0.98;
 
     var map = L.map("mapid", {
       crs: L.CRS.EPSG4326
@@ -116,7 +122,7 @@
       layers: "{{ catalog }}:{{ asset_id }}",
       format: "image/png",
       styles: "{{ original_style }}",
-      ENV: "min:"+p0+";max:"+p100+";p2:"+p2+";p98:"+p98
+      ENV: "p0:"+p0+";p2:"+p2+";p25:"+p25+";p50:"+p50+";p75:"+p75+";p98:"+p98+";p100:"+p100,
     });
     wms_layer.addTo(map);
 

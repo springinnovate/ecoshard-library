@@ -6,18 +6,16 @@
     xmlns:xlink="http://www.w3.org/1999/xlink"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <NamedLayer>
-    <Name>plasma</Name>
+    <Name>reds</Name>
     <UserStyle>
-      <Title>plasma</Title>
+      <Title>reds</Title>
       <FeatureTypeStyle>
         <Rule>
           <RasterSymbolizer>
             <ColorMap>
-              <ColorMapEntry quantity="${env('p0', 0.0)}" label="${env('p0', 0.0)}" color="#0d0887"/>
-              <ColorMapEntry quantity="${env('p2', 0.02)}" label="${env('p2', 0.02)}" color="#5901a5"/>
-              <ColorMapEntry quantity="${env('p50', 0.5)}" label="${env('p50', 0.5)}" color="#c43e7f"/>
-              <ColorMapEntry quantity="${env('p98', 0.98)}" label="${env('p98', 0.98)}" color="#fcce25"/>
-              <ColorMapEntry quantity="${env('p100', 1.0)}" label="${env('p100', 1.0)}" color="#f0f921"/>
+              <ColorMapEntry quantity="${env('p0', 0.0)}" label="${env('p0', 0.0)}" color="#fff5f0"/>
+              <ColorMapEntry quantity="${env('p50', 0.5)}" label="${env('p50', 0.5)}" color="#fb6a4a"/>
+              <ColorMapEntry quantity="${env('p100', 1.0)}" label="${env('p100', 1.0)}" color="#67000d"/>
             </ColorMap>
           </RasterSymbolizer>
         </Rule>
