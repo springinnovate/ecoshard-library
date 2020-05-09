@@ -116,7 +116,12 @@
     var map = L.map("mapid", {
       crs: L.CRS.EPSG3857
     }).setView(
-        [{{ y_center }}, {{ x_center }}], 3);
+        [{{ y_center }}, {{ x_center }}], 0);
+
+    map.fitBounds([
+      [{{ min_lat }}, {{ min_lng }}],
+      [{{ max_lat }}, {{ max_lng }}]]);
+
     var wms_layer = L.tileLayer.wms(
       "{{ geoserver_url }}", {
       layers: "{{ catalog }}:{{ asset_id }}",

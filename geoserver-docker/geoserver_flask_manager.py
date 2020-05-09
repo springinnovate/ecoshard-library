@@ -278,7 +278,12 @@ def viewer():
         'p100': raster_max,
         'pixel_pick_url': flask.url_for('pixel_pick', _external=True),
         'x_center': x_center,
-        'y_center': y_center}, _external=True)
+        'y_center': y_center,
+        'min_lat': ymin,
+        'min_lng': xmin,
+        'max_lat': ymax,
+        'max_lng': xmax,
+    }, _external=True)
 
 
 @retrying.retry(
