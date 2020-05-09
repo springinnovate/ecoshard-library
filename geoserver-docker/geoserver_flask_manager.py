@@ -18,8 +18,8 @@ import threading
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-import flask
 import ecoshard
+import flask
 import numpy
 import pygeoprocessing
 import requests
@@ -612,7 +612,8 @@ def get_lat_lng_bounding_box(raster_path):
 
 
 def add_raster_worker(
-        uri_path, mediatype, catalog, raster_id, asset_description, job_id):
+        uri_path, mediatype, catalog, raster_id, asset_description,
+        utc_datetime, job_id):
     """This is used to copy and update a coverage set asynchronously.
 
     Args:
@@ -621,6 +622,7 @@ def add_raster_worker(
         catalog (str): catalog for asset
         raster_id (str): raster id for asset
         asset_description (str): asset description to record
+        utc_datetime (str): an ISO standard UTC utc_datetime
         job_id (str): used to identify entry in job_table
 
     Returns:
@@ -733,7 +735,7 @@ def add_raster_worker(
                 lat_lng_bounding_box[1],
                 lat_lng_bounding_box[2],
                 lat_lng_bounding_box[3],
-                utc_now(), mediatype, asset_description, uri_path,
+                utc_datetime, mediatype, asset_description, uri_path,
                 local_raster_path,
                 raster_min, raster_max, raster_mean, raster_stdev],
             mode='modify', execute='execute')
@@ -969,6 +971,10 @@ def publish():
             description (str): description of the asset
             force (bool): (optional) if True, will overwrite existing
                 catalog:id asset
+            datetime (str): if present sets the datetime to this string,
+                if absent sets the datetime of the asset to the UTC time at
+                publishing. String must be formatted as "Y-m-d H:M:S TZ",
+                ex: '2018-06-29 17:08:00 UTC'.
 
     Returns:
         {'callback_uri': ...}, 200 if successful. The `callback_uri` can be
@@ -979,6 +985,13 @@ def publish():
     try:
         api_key = flask.request.args['api_key']
         asset_args = json.loads(flask.request.json)
+
+        if 'datetime' in asset_args:
+            utc_datetime = str(datetime.datetime.strptime(
+                asset_args['datetime'], '%Y-%m-%d %H:%M:%S %Z'))
+        else:
+            utc_datetime = str(datetime.datetime.now(datetime.timezone.utc))
+
         LOGGER.debug(f"asset args: {str(asset_args)}")
         valid_check = validate_api(
             api_key, f"WRITE:{asset_args['catalog']}")
@@ -1048,7 +1061,8 @@ def publish():
             target=add_raster_worker,
             args=(asset_args['uri'], asset_args['mediatype'],
                   asset_args['catalog'], asset_args['asset_id'],
-                  asset_args['description'], job_id))
+                  asset_args['description'],
+                  utc_datetime, job_id))
         raster_worker_thread.start()
         return callback_payload
     except Exception:
