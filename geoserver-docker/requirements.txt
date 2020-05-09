@@ -1,0 +1,9 @@
+# requirements.txt
+# --------------------
+datetime
+ecoshard
+flask
+gdal
+pygeoprocessing
+requests
+retrying

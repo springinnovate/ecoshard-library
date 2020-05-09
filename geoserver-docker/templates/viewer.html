@@ -114,7 +114,7 @@
     let p98 = p0 + (p100-p0)*0.98;
 
     var map = L.map("mapid", {
-      crs: L.CRS.EPSG4326
+      crs: L.CRS.EPSG3857
     }).setView(
         [{{ y_center }}, {{ x_center }}], 3);
     var wms_layer = L.tileLayer.wms(
