@@ -971,7 +971,7 @@ def publish():
             description (str): description of the asset
             force (bool): (optional) if True, will overwrite existing
                 catalog:id asset
-            datetime (str): if present sets the datetime to this string,
+            utc_datetime (str): if present sets the datetime to this string,
                 if absent sets the datetime of the asset to the UTC time at
                 publishing. String must be formatted as "Y-m-d H:M:S TZ",
                 ex: '2018-06-29 17:08:00 UTC'.
@@ -986,9 +986,9 @@ def publish():
         api_key = flask.request.args['api_key']
         asset_args = json.loads(flask.request.json)
 
-        if 'datetime' in asset_args:
+        if 'utc_datetime' in asset_args:
             utc_datetime = str(datetime.datetime.strptime(
-                asset_args['datetime'], '%Y-%m-%d %H:%M:%S %Z'))
+                asset_args['utc_datetime'], '%Y-%m-%d %H:%M:%S %Z'))
         else:
             utc_datetime = str(datetime.datetime.now(datetime.timezone.utc))
 
