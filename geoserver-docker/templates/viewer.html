@@ -23,6 +23,7 @@
     #picker {
       position: absolute;
       z-index: 2;
+      padding: 5px;
     }
     #style-control {
       position: absolute;
@@ -42,9 +43,9 @@
    </style>
 </head>
 <body>
-  <div id="picker"  class="ui-widget ui-widget-content ui-corner-all ui-widget-shadow"></div>
+  <div id="picker"  class="ui-widget ui-widget-content ui-state-default ui-corner-all"></div>
   <div id="style-control">
-    <div class="grid-container ui-widget ui-widget-content ui-corner-all">
+    <div class="grid-container ui-widget ui-state-default ui-widget-content ui-corner-all">
       <div><input id="min" oninput="style_changed()"></div>
       <div><label for="min">style min (original {{ p0 }})</label></div>
       <div><input id="max" oninput="style_changed()"></div>
@@ -58,9 +59,9 @@
   <script>
     var edit_timeout = null;
 
-    document.getElementById("min").value = {{ p0 }};
-    document.getElementById("max").value = {{ p100 }};
-    document.getElementById("style").value = "{{ original_style }}";
+    $("#min").value = {{ p0 }};
+    $("#max").value = {{ p100 }};
+    $("#style").value = "{{ original_style }}";
 
     function style_changed() {
       if (edit_timeout != null) {
@@ -71,13 +72,14 @@
           update_style();
           edit_timeout = null;
         }, 1000);
-      let style_control = document.getElementById("style-control");
+      $("#style-control").addClass("ui-state-disabled");
+      let style_control = $("#style-control");
       style_control.style.background = "rgba(100, 20, 20, .5)";
     }
 
     function update_style() {
-      let parsed_min = parseFloat(document.getElementById("min").value);
-      let parsed_max = parseFloat(document.getElementById("max").value);
+      let parsed_min = parseFloat($("#min").value);
+      let parsed_max = parseFloat($("#max").value);
 
       if(isNaN(parsed_min) || isNaN(parsed_max)) {
           return;
@@ -94,14 +96,12 @@
       p75 = p0 + (p100-p0)*0.75;
       p98 = p0 + (p100-p0)*0.98;
 
-      let raster_style = document.getElementById("style").value;
+      let raster_style = $("#style").value;
       wms_layer.setParams({
         ENV: "p0:"+p0+";p2:"+p2+";p25:"+p25+";p50:"+p50+";p75:"+p75+";p98:"+p98+";p100:"+p100,
         styles: raster_style
       });
-
-      let style_control = document.getElementById("style-control");
-      style_control.style.background = "rgba(0, 0, 0, 0.75)";
+      $("#style-control").removeClass("ui-state-disabled");
     }
 
     let p0 = {{ p0 }};
@@ -158,6 +158,7 @@
             "val: " + val + "<br/>" +
             "raster coord: (" + x_coord + ", " + y_coord + ")<br/>" +
             "lat/lng: (" + lat + ", " + lng + ")");
+          $("#picker").removeClass("ui-state-disabled");
         })};
 
     map.on("mousemove", function(e) {
@@ -167,7 +168,7 @@
         return;
       }
       previous_latlng = cur_latlng;
-
+      $("#picker").addClass("ui-state-disabled");
       $("#picker").empty().append("querying...");
 
       if (mousestop_timeout != null) {
@@ -184,7 +185,7 @@
     });
 
     // move the picker window around with the mouse
-    var picker = document.getElementById("picker");
+    var picker = $("#picker");
     document.addEventListener("mousemove", function(e) {
       picker.style.left = e.clientX+"px";
       picker.style.top = 20+e.clientY+"px";
