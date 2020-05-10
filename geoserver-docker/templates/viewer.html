@@ -145,8 +145,11 @@
           "lng": lng,
           "lat": lat
         },
-        timeout: 5000,
-        success: function (response) {
+        timeout: 5000
+      }).fail(function(e) {
+          console.log("picker failed " + e);
+          $("#picker").append("...failed" + e);
+      }).done(function (response) {
           let val = response.val;
           let x_coord = response.x;
           let y_coord = response.y;
@@ -154,12 +157,7 @@
             "val: " + val + "<br/>" +
             "raster coord: (" + x_coord + ", " + y_coord + ")<br/>" +
             "lat/lng: (" + lat + ", " + lng + ")");
-        },
-        fail: function(e) {
-          console.log("picker failed " + e);
-          $("#picker").append("...failed" + e);
-        }
-      })};
+        })};
 
     map.on("mousemove", function(e) {
       let cur_latlng = e.latlng;
