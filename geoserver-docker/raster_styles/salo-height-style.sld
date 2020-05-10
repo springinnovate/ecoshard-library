@@ -13,10 +13,10 @@
         <Rule>
           <RasterSymbolizer>
             <ColorMap>
-              <ColorMapEntry quantity="$env{'p0', 0)}" label="$env{'p0', 0)}" color="#ffffff"/>
-              <ColorMapEntry quantity="$env{'p75', 18)}" label="$env{'p75', 18)}" color="#292663"/>
-              <ColorMapEntry quantity="$env{'p98', 19)}" label="$env{'p98', 19)}" color="#fdb515"/>
-              <ColorMapEntry quantity="$env{'p100', 20)}" label="$env{'p100', 20)}" color="#fdb515"/>
+              <ColorMapEntry quantity="${env('p0', 0)}" label="${env('p0', 0)}" color="#ffffff"/>
+              <ColorMapEntry quantity="${env('p75', 18)}" label="${env('p75', 18)}" color="#292663"/>
+              <ColorMapEntry quantity="${env('p98', 19)}" label="${env('p98', 19)}" color="#fdb515"/>
+              <ColorMapEntry quantity="${env('p100', 20)}" label="${env('p100', 20)}" color="#fdb515"/>
             </ColorMap>
           </RasterSymbolizer>
         </Rule>
