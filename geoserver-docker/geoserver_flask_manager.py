@@ -257,7 +257,8 @@ def styles():
 
     return {'styles': [
         style['name']
-        for style in available_styles['styles']['style']]}
+        for style in available_styles['styles']['style']
+        if style['name'] not in ['generic', 'line', 'point', 'polygon']]}
 
 
 @APP.route('/api/v1/viewer')

@@ -214,9 +214,8 @@
       }).fail(function(e) {
           console.log("style fetch failed " + e);
           $("#style-control").addClass('ui-state-error');
-      }).done(function (data) {
+      }).done(function (json_payload) {
           var $dropdown = $("#style");
-          var json_payload = $.parseJSON(data);
           $.each(json_payload.styles, function(idx, style_name){
               $dropdown.append($("<option />").val(style_name).text(
                 style_name));
