@@ -151,11 +151,12 @@
             "val: " + val + "<br/>" +
             "raster coord: (" + x_coord + ", " + y_coord + ")<br/>" +
             "lat/lng: (" + lat + ", " + lng + ")");
-        }, "json"
+        },
+        "json"
       }).fail(function(e) {
-        console.log("bad xhr error, picker failed " + e);
+        console.log("picker failed " + e);
         $("#picker").append("...failed" + e);
-      });
+      })};
 
     map.on("mousemove", function(e) {
       let cur_latlng = e.latlng;
