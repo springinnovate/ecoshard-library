@@ -863,7 +863,11 @@ def search():
 
         where_query_list = []
         argument_list = []
-        search_data = json.loads(flask.request.json)
+        if not isinstance(flask.request.json, dict):
+            search_data = json.loads(flask.request.json)
+        else:
+            search_data = flask.request.json
+
         if search_data['bounding_box']:
             s_xmin, s_ymin, s_xmax, s_ymax = [
                 float(val) for val in search_data['bounding_box'].split(',')]
