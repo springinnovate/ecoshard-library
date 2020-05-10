@@ -333,7 +333,7 @@ COPY start_geoserver.sh /usr/local/geoserver/bin
 COPY geoserver_flask_manager.py /usr/local/geoserver/bin
 COPY api_key_manager.py /usr/local/geoserver/bin
 RUN mkdir /usr/local/geoserver/bin/templates
-COPY templates/viewer.html /usr/local/geoserver/bin/templates
+COPY templates/ /usr/local/geoserver/bin/templates/
 RUN mkdir /usr/local/geoserver/bin/static
 COPY static/ /usr/local/geoserver/bin/static/
 RUN mkdir /usr/local/geoserver/bin/raster_styles
