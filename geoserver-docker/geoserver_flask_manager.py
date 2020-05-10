@@ -1291,14 +1291,17 @@ def update_styles():
             style_dir, os.path.basename(local_raster_style_path))
         shutil.copyfile(local_raster_style_path, target_raster_style_path)
 
+        style_path = os.path.join(
+            INTER_DATA_DIR, os.path.basename(local_raster_style_path))
+        LOGGER.debug(
+            f'posting new style {missing_style_name} at {style_path}')
         new_style_request = do_rest_action(
             session.post,
             f'http://localhost:{GEOSERVER_PORT}',
             'geoserver/rest/styles',
             json={
                 "name": missing_style_name,
-                "filename": os.path.join(
-                    INTER_DATA_DIR, os.path.basename(local_raster_style_path))
+                "filename": style_path
             })
         if not new_style_request:
             raise ValueError(
