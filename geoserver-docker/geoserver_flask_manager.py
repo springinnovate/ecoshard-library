@@ -1255,6 +1255,8 @@ def initalize_geoserver(database_path):
         f'http://localhost:{GEOSERVER_PORT}',
         'geoserver/rest/reload')
 
+    # TODO: delete original styles
+
 
 def update_styles():
     """Updates the GeoServer styles if there are new ones."""
@@ -1299,7 +1301,7 @@ def update_styles():
         new_style_request = do_rest_action(
             session.put,
             f'http://localhost:{GEOSERVER_PORT}',
-            f'geoserver/rest/styles/{missing_style_name}',
+            f'geoserver/rest/styles/{missing_style_name}.json',
             json={
                 "name": missing_style_name,
                 "filename": style_path
