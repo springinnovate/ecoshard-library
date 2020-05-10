@@ -263,9 +263,7 @@ def styles():
 def render_list():
     """Render a listing webpage."""
     try:
-        LOGGER.debug('api_key' in flask.request.args)
         api_key = flask.request.args['api_key']
-        LOGGER.debug(api_key)
         return flask.render_template('list.html', **{
             'search_url': flask.url_for(
                 'search', api_key=api_key, _external=True)
