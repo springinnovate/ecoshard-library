@@ -694,13 +694,14 @@ def add_raster_worker(
                     'take some time',
                     utc_now(), job_id],
                 mode='modify', execute='execute')
-            compressed_tmp_file = os.path.join(
+            needs_compression_tmp_file = os.path.join(
                 os.path.dirname(catalog_data_dir),
-                f'COMPRESSION_{job_id}')
-            os.rename(local_raster_path, compressed_tmp_file)
+                f'NEEDS_COMPRESSIONs_{job_id}.tif')
+            os.rename(local_raster_path, needs_compression_tmp_file)
             ecoshard.compress_raster(
-                compressed_tmp_file, local_raster_path,
+                needs_compression_tmp_file, local_raster_path,
                 compression_algorithm='LZW', compression_predictor=None)
+            os.remove(needs_compression_tmp_file)
 
         _execute_sqlite(
             '''
