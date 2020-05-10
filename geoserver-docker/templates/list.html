@@ -45,15 +45,16 @@
   <script>
     /* do list based on API key */
     function style_changed() {
-      if (edit_timeout != null) {
-        clearTimeout(edit_timeout);
+      if (search_type_timeout != null) {
+        clearTimeout(search_type_timeout);
       }
-      edit_timeout = setTimeout(
+      search_type_timeout = setTimeout(
         function () {
-          update_style();
-          edit_timeout = null;
+          search();
+          search_type_timeout = null;
         }, 2000);
       $("#search-control").addClass("ui-state-disabled");
+      $("#search-results").addClass("ui-state-disabled");
     }
 
     function search() {
@@ -74,7 +75,8 @@
           $("#search-results").addClass('ui-state-error').append(
             "...failed" + e);
       }).done(function (response) {
-        $("#search-results").val(response).removeClass('ui-state-error');
+        $("#search-results").val(response).removeClass(
+          "ui-state-error").removeClass("ui-state-disabled");;
         $("#search-control").removeClass("ui-state-disabled");
       });
     }
