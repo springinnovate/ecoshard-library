@@ -1277,34 +1277,22 @@ def update_styles():
         for raster_style_path in glob.glob('raster_styles/*.sld')
     }
 
-    style_dir = os.path.join(FULL_DATA_DIR, '..', 'styles')
-    try:
-        os.makedirs(style_dir)
-    except OSError:
-        pass
-
     for missing_style_name in local_raster_style_set.difference(
             existing_style_set):
         local_raster_style_path = os.path.join(
             'raster_styles', f'{missing_style_name}.sld')
-        target_raster_style_path = os.path.join(
-            style_dir, f'{missing_style_name}.sld')
-        shutil.copyfile(local_raster_style_path, target_raster_style_path)
+
+        with open(local_raster_style_path, 'r') as style_file:
+            style_raw = style_file.read()
 
         LOGGER.debug(
             f'posting new style {missing_style_name}')
         new_style_request = do_rest_action(
             session.post,
             f'http://localhost:{GEOSERVER_PORT}',
-            f'geoserver/rest/styles/{missing_style_name}.json',
-            json={
-                'style': {
-                    'name': missing_style_name,
-                    'filename': f'{missing_style_name}.sld',
-                    'format': 'sld',
-                    'languageVersion': {'version': '1.0.0'}
-                }
-            })
+            f'geoserver/rest/styles/{missing_style_name}.sld?raw=true',
+            data=style_raw,
+            headers={'accept': 'application/vnd.ogc.sld+xml'})
         if not new_style_request:
             raise ValueError(
                 f"error in new style request: {str(new_style_request)} "
