@@ -1265,7 +1265,8 @@ def update_styles():
 
     styles_request = do_rest_action(
         session.get,
-        f'http://localhost:{GEOSERVER_PORT}/geoserver/rest/styles').json()
+        f'http://localhost:{GEOSERVER_PORT}',
+        '/geoserver/rest/styles').json()
 
     existing_style_set = {
         style_name['name'] for style_name in styles_request['styles']['style']
