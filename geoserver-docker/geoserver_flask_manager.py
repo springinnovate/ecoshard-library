@@ -243,7 +243,7 @@ def fetch():
     }
 
 
-@APP.route('api/v1/styles')
+@APP.route('/api/v1/styles')
 def styles():
     """Return available styles."""
     with open(PASSWORD_FILE_PATH, 'r') as password_file:
