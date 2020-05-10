@@ -1273,7 +1273,7 @@ def update_styles():
     }
 
     local_raster_style_set = {
-        os.path.basename(os.path.splitext(raster_style_path))
+        os.path.basename(os.path.splitext(raster_style_path)[0])
         for raster_style_path in glob.glob('raster_styles/*.sld')
     }
 
