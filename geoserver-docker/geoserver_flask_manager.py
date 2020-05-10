@@ -1255,8 +1255,6 @@ def initalize_geoserver(database_path):
         f'http://localhost:{GEOSERVER_PORT}',
         'geoserver/rest/reload')
 
-    # TODO: delete original styles
-
 
 def update_styles():
     """Updates the GeoServer styles if there are new ones."""
@@ -1279,7 +1277,7 @@ def update_styles():
         for raster_style_path in glob.glob('raster_styles/*.sld')
     }
 
-    style_dir = os.path.join(FULL_DATA_DIR, 'styles')
+    style_dir = os.path.join(FULL_DATA_DIR, '..', 'styles')
     try:
         os.makedirs(style_dir)
     except OSError:
@@ -1288,23 +1286,22 @@ def update_styles():
     for missing_style_name in local_raster_style_set.difference(
             existing_style_set):
         local_raster_style_path = os.path.join(
-            f'raster_styles/{missing_style_name}.sld')
+            'raster_styles', f'{missing_style_name}.sld')
         target_raster_style_path = os.path.join(
-            style_dir, os.path.basename(local_raster_style_path))
+            style_dir, f'{missing_style_name}.sld')
         shutil.copyfile(local_raster_style_path, target_raster_style_path)
 
-        style_path = os.path.join(
-            INTER_DATA_DIR, 'styles',
-            os.path.basename(local_raster_style_path))
         LOGGER.debug(
-            f'posting new style {missing_style_name} at {style_path}')
+            f'posting new style {missing_style_name}')
         new_style_request = do_rest_action(
             session.put,
             f'http://localhost:{GEOSERVER_PORT}',
             f'geoserver/rest/styles/{missing_style_name}.json',
             json={
-                "name": missing_style_name,
-                "filename": style_path
+                'style': {
+                    'name': missing_style_name,
+                    'filename': f'{missing_style_name}.sld'
+                }
             })
         if not new_style_request:
             raise ValueError(
