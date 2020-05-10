@@ -379,7 +379,7 @@ def _execute_sqlite(
     wait_exponential_multiplier=1000, wait_exponential_max=5000,
     stop_max_attempt_number=5)
 def do_rest_action(
-        session_fn, host, suburl, data=None, json=None):
+        session_fn, host, suburl, data=None, json=None, headers=None):
     """A wrapper around HTML functions to make for easy retry.
 
     Args:
@@ -392,7 +392,8 @@ def do_rest_action(
     """
     try:
         return session_fn(
-            urllib.parse.urljoin(host, suburl), data=data, json=json)
+            urllib.parse.urljoin(host, suburl), data=data, json=json,
+            headers=headers)
     except Exception:
         LOGGER.exception('error in function')
         raise
