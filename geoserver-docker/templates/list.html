@@ -59,17 +59,19 @@
     }
 
     function search() {
+      let json_data = JSON.stringify({
+        "bounding_box": $("bbox").val(),
+        "catalog_list": $("catalog_list").val(),
+        "asset_id": $("asset_list").val(),
+        "datetime": $("datetime").val(),
+        "description": $("description").val(),
+      };
       $.ajax({
         type: "POST"  ,
         url: "{{ search_url }}",
-        data: JSON.stringify({
-          "bounding_box": $("bbox").val(),
-          "catalog_list": $("catalog_list").val(),
-          "asset_id": $("asset_list").val(),
-          "datetime": $("datetime").val(),
-          "description": $("description").val(),
-        }),
+        data: json_data),
         contentType: 'application/json',
+        dataType: 'json',
         timeout: 5000
       }).fail(function(e) {
           console.log("search failed " + e);
