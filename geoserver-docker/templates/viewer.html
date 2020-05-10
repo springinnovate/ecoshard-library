@@ -209,6 +209,7 @@
       $.ajax({
         type: "GET",
         url: "{{ geoserver_style_url }}",
+        crossDomain: true,
         timeout: 5000
       }).fail(function(e) {
           console.log("style fetch failed " + e);
