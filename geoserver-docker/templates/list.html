@@ -25,9 +25,9 @@
     }
 
     <style type="text/css">
-    .grid-container-4 {
+    .grid-container-3 {
       display: grid;
-      grid-template-columns: auto auto auto auto;
+      grid-template-columns: auto auto auto;
       padding: 5px;
       grid-gap: 5px;
     }
@@ -49,7 +49,7 @@
       <div><input id="description" oninput="search_changed()"></div>
       <div><label for="description">description (comma separated))</label></div>
   </div>
-  <div id="search-results" class="grid-container-4 ui-widget ui-state-default ui-widget-content ui-corner-all ui-priority-primary"></div>
+  <div id="search-results" class="grid-container-3 ui-widget ui-state-default ui-widget-content ui-corner-all ui-priority-primary"></div>
   <script>
     /* do list based on API key */
     var search_type_timeout = null;
@@ -87,10 +87,9 @@
             "...failed" + e.responseText);
       }).done(function (response) {
         $("#search-results").empty().append(
-          "<div>Bounding Box</div>"+
-          "<div>description</div>"+
-          "<div>asset_id</div>"+
-          "<div>datetime</div>");
+          "<div>Link to Viewer</div>"+
+          "<div>Description</div>"+
+          "<div>UTC datetime</div>");
         $.each(response.features, function(idx, search_result){
           var id_catalog_list = search_result["id"].split(":");
           search_json = JSON.stringify({
@@ -116,12 +115,11 @@
               "<div>"+"<a href=\""+response["link"]+ "\">"+
               search_result["id"]+"</a></div>"+
               "<div>"+search_result["description"]+"</div>"+
-              "<div>"+search_result["datetime"]+"</div>"+
-              "<div>"+search_result["bbox"]+"</div>");
+              "<div>"+search_result["utc_datetime"]+"</div>");
           });
         });
-        $("#search-results").empty().append(response).removeClass(
-          "ui-state-error").removeClass("ui-state-disabled");;
+        $("#search-results").removeClass("ui-state-error").removeClass(
+          "ui-state-disabled");;
         $("#search-control").removeClass("ui-state-disabled");
       });
     }
