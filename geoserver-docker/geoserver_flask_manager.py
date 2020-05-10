@@ -301,6 +301,8 @@ def viewer():
         'min_lng': xmin,
         'max_lat': ymax,
         'max_lng': xmax,
+        'geoserver_style_url': (
+            f"http://{external_ip}:8080/geoserver/rest/styles.json")
     }, _external=True)
 
 
