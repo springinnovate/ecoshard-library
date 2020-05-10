@@ -261,10 +261,13 @@ def styles():
 @APP.route('/list')
 def render_list():
     """Render a listing webpage."""
-    api_key = flask.request.args['api_key']
-    return flask.render_template('list.html', **{
-        'search_url': flask.url_for('search', api_key=api_key, _external=True)
-    }, _external=True)
+    try:
+        api_key = flask.request.args['api_key']
+        return flask.render_template('list.html', **{
+            'search_url': flask.url_for('search', api_key=api_key, _external=True)
+        }, _external=True)
+    except Exception:
+        LOGGER.exception('error on render list')
 
 
 @APP.route('/viewer')
