@@ -243,6 +243,23 @@ def fetch():
     }
 
 
+@APP.route('api/v1/styles')
+def styles():
+    """Return available styles."""
+    with open(PASSWORD_FILE_PATH, 'r') as password_file:
+        master_geoserver_password = password_file.read()
+    session = requests.Session()
+    session.auth = (GEOSERVER_USER, master_geoserver_password)
+    available_styles = do_rest_action(
+        session.get,
+        f'http://localhost:{GEOSERVER_PORT}',
+        f'geoserver/rest/styles.json').json()
+
+    return {'styles': [
+        style['name']
+        for style in available_styles['styles']['style']]}
+
+
 @APP.route('/api/v1/viewer')
 def viewer():
     """Render a viewer webpage."""
@@ -301,8 +318,7 @@ def viewer():
         'min_lng': xmin,
         'max_lat': ymax,
         'max_lng': xmax,
-        'geoserver_style_url': (
-            f"http://{external_ip}:8080/geoserver/rest/styles.json")
+        'geoserver_style_url': flask.url_for('styles', _external=True),
     }, _external=True)
 
 
