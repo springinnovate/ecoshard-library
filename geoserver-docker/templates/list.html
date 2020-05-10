@@ -40,17 +40,15 @@
 <body>
   <div id="search-control" class="grid-container-2 ui-widget ui-state-default ui-widget-content ui-corner-all ui-priority-secondary">
       <div><input id="bbox" oninput="search_changed()"></div>
-      <div><label for="bbox">bounding box [xmin, ymin, xmax, ymax]</label></div>
-      <div><input id="asset_list" oninput="search_changed()"></div>
-      <div><label for="asset_list">list of assets (comma separated))</label></div>
+      <div><label for="bbox">bounding box xmin, ymin, xmax, ymax</label></div>
+      <div><input id="asset_id" oninput="search_changed()"></div>
+      <div><label for="asset_id">partial asset id</label></div>
       <div><input id="catalog_list" oninput="search_changed()"></div>
-      <div><label for="catalog_list">list of catalogs (comma separated))</label></div>
-      <div><input id="asset_id_list" oninput="search_changed()"></div>
-      <div><label for="asset_id_list">list of asset ids (comma separated))</label></div>
+      <div><label for="catalog_list">list of catalogs (comma separated)</label></div>
       <div><input id="datetime" oninput="search_changed()"></div>
-      <div><label for="datetime">UTC datetime range (comma separated))</label></div>
+      <div><label for="datetime">UTC datetime range</label></div>
       <div><input id="description" oninput="search_changed()"></div>
-      <div><label for="description">description (comma separated))</label></div>
+      <div><label for="description">partial description</label></div>
   </div>
   <div id="search-results" class="grid-container-3 ui-widget ui-state-default ui-widget-content ui-corner-all ui-priority-primary"></div>
   <script>
@@ -73,7 +71,7 @@
       let json_data = JSON.stringify({
         "bounding_box": $("#bbox").val(),
         "catalog_list": $("#catalog_list").val(),
-        "asset_id": $("#asset_list").val(),
+        "asset_id": $("#asset_id").val(),
         "datetime": $("#datetime").val(),
         "description": $("#description").val(),
       });
