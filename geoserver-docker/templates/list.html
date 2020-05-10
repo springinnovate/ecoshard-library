@@ -24,12 +24,15 @@
       grid-gap: 5px;
     }
 
-    <style type="text/css">
     .grid-container-3 {
       display: grid;
       grid-template-columns: auto auto auto;
       padding: 5px;
       grid-gap: 5px;
+    }
+
+    a {
+
     }
 
    </style>
@@ -112,8 +115,8 @@
               "<div>"+search_result["bbox"]+"</div>");
           }).done(function (response) {
             $("#search-results").append(
-              "<div>"+"<button href=\""+response["link"]+ "\">"+
-              search_result["id"]+"</button></div>"+
+              "<div>"+"<a class=\"ui-button ui-widget ui-corner-all\" href=\""+response["link"]+ "\">"+
+              search_result["id"]+"</a></div>"+
               "<div>"+search_result["description"]+"</div>"+
               "<div>"+search_result["utc_datetime"]+"</div>");
           });
