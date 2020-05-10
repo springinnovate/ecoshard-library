@@ -78,7 +78,7 @@
           $("#search-results").addClass('ui-state-error').append(
             "...failed" + e.responseText);
       }).done(function (response) {
-        $("#search-results").val(response).removeClass(
+        $("#search-results").empty().append(response).removeClass(
           "ui-state-error").removeClass("ui-state-disabled");;
         $("#search-control").removeClass("ui-state-disabled");
       });
