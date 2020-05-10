@@ -1292,7 +1292,8 @@ def update_styles():
         shutil.copyfile(local_raster_style_path, target_raster_style_path)
 
         style_path = os.path.join(
-            INTER_DATA_DIR, os.path.basename(local_raster_style_path))
+            INTER_DATA_DIR, 'styles',
+            os.path.basename(local_raster_style_path))
         LOGGER.debug(
             f'posting new style {missing_style_name} at {style_path}')
         new_style_request = do_rest_action(
