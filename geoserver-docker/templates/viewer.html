@@ -207,7 +207,25 @@
     })();
 
     // query geoserver for styles
-
+    (function (){
+      $.ajax({
+        type: "GET",
+        url: "{{ geoserver_style_url }}",
+        dataType: 'json',
+        timeout: 5000
+      }).fail(function(e) {
+          console.log("style fetch failed " + e);
+          $("#style-control").addClass('ui-state-error');
+      }).done(function (json) {
+          var availableStyles = [];
+           $.each(json.styles.style, function(idx, style){
+            if (!style.name.contains("default")) {
+              availableStyles.append(style.name);
+            }
+          });
+          $("#style").autocomplete({source: availableStyles});
+        })};
+    });
   </script>
 </body>
 </html>
