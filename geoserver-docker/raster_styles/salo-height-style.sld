@@ -6,15 +6,17 @@
     xmlns:xlink="http://www.w3.org/1999/xlink"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <NamedLayer>
-    <Name>Red/Green</Name>
+    <Name>salo: height-style</Name>
     <UserStyle>
-      <Title>Red/Green</Title>
+      <Title>salo: height-style</Title>
       <FeatureTypeStyle>
         <Rule>
           <RasterSymbolizer>
             <ColorMap>
-              <ColorMapEntry quantity="${env('p0', 0.0)}" label="${env('p0', 0.0)}" color="#ff0000"/>
-              <ColorMapEntry quantity="${env('p100', 1.0)}" label="${env('p100', 1)}" color="#00ff00"/>
+              <ColorMapEntry quantity="$env{'p0', 0)}" label="$env{'p0', 0)}" color="#ffffff"/>
+              <ColorMapEntry quantity="$env{'p75', 18)}" label="$env{'p75', 18)}" color="#292663"/>
+              <ColorMapEntry quantity="$env{'p98', 19)}" label="$env{'p98', 19)}" color="#fdb515"/>
+              <ColorMapEntry quantity="$env{'p100', 20)}" label="$env{'p100', 20)}" color="#fdb515"/>
             </ColorMap>
           </RasterSymbolizer>
         </Rule>

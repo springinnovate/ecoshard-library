@@ -1257,49 +1257,6 @@ def initalize_geoserver(database_path):
         'geoserver/rest/reload')
 
 
-def update_styles():
-    """Updates the GeoServer styles if there are new ones."""
-    with open(PASSWORD_FILE_PATH, 'r') as password_file:
-        master_geoserver_password = password_file.read()
-    session = requests.Session()
-    session.auth = (GEOSERVER_USER, master_geoserver_password)
-
-    styles_request = do_rest_action(
-        session.get,
-        f'http://localhost:{GEOSERVER_PORT}',
-        '/geoserver/rest/styles').json()
-
-    existing_style_set = {
-        style_name['name'] for style_name in styles_request['styles']['style']
-    }
-
-    local_raster_style_set = {
-        os.path.basename(os.path.splitext(raster_style_path)[0])
-        for raster_style_path in glob.glob('raster_styles/*.sld')
-    }
-
-    for missing_style_name in local_raster_style_set.difference(
-            existing_style_set):
-        local_raster_style_path = os.path.join(
-            'raster_styles', f'{missing_style_name}.sld')
-
-        with open(local_raster_style_path, 'r') as style_file:
-            style_raw = style_file.read()
-
-        LOGGER.debug(
-            f'posting new style {missing_style_name}')
-        new_style_request = do_rest_action(
-            session.put,
-            f'http://localhost:{GEOSERVER_PORT}',
-            f'geoserver/rest/styles/{missing_style_name}?raw=true',
-            data=style_raw,
-            headers={'accept': 'application/vnd.ogc.sld+xml'})
-        if not new_style_request:
-            raise ValueError(
-                f"error in new style request: {str(new_style_request)} "
-                f"{new_style_request.text}")
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Start GeoServer REST API server.')
@@ -1312,7 +1269,6 @@ if __name__ == '__main__':
     args = parser.parse_args()
     LOGGER.debug('starting up!')
     initalize_geoserver(DATABASE_PATH)
-    update_styles()
 
     # set the external IP so we can return correct contexts
     _execute_sqlite(
