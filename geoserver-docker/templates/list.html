@@ -60,11 +60,11 @@
 
     function search() {
       let json_data = JSON.stringify({
-        "bounding_box": $("bbox").val(),
-        "catalog_list": $("catalog_list").val(),
-        "asset_id": $("asset_list").val(),
-        "datetime": $("datetime").val(),
-        "description": $("description").val(),
+        "bounding_box": $("#bbox").val(),
+        "catalog_list": $("#catalog_list").val(),
+        "asset_id": $("#asset_list").val(),
+        "datetime": $("#datetime").val(),
+        "description": $("#description").val(),
       });
       $.ajax({
         type: "POST"  ,
