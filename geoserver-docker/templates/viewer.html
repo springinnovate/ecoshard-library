@@ -209,6 +209,8 @@
       $.ajax({
         type: "GET",
         url: "{{ geoserver_style_url }}",
+        headers: {'Access-Control-Allow-Origin': '{{ geoserver_style_url }}'},
+        crossDomain: true,
         datatype: "jsonp",
         timeout: 5000
       }).fail(function(e) {
