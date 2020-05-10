@@ -2,6 +2,7 @@
 import argparse
 import datetime
 import hashlib
+import glob
 import json
 import logging
 import os
@@ -9,11 +10,12 @@ import pathlib
 import pickle
 import re
 import secrets
+import shutil
 import sqlite3
 import subprocess
-import urllib.parse
-import time
 import threading
+import time
+import urllib.parse
 
 from osgeo import gdal
 from osgeo import ogr
@@ -696,7 +698,7 @@ def add_raster_worker(
                 mode='modify', execute='execute')
             needs_compression_tmp_file = os.path.join(
                 os.path.dirname(catalog_data_dir),
-                f'NEEDS_COMPRESSIONs_{job_id}.tif')
+                f'NEEDS_COMPRESSION_{job_id}.tif')
             os.rename(local_raster_path, needs_compression_tmp_file)
             ecoshard.compress_raster(
                 needs_compression_tmp_file, local_raster_path,
@@ -1221,13 +1223,12 @@ def initalize_geoserver(database_path):
         LOGGER.info('geoserver previously initialized')
         return
 
-    # make new random password if one does not exist
+    # make new random admin password
     try:
         os.makedirs(os.path.dirname(PASSWORD_FILE_PATH))
     except OSError:
         pass
     with open(PASSWORD_FILE_PATH, 'w') as password_file:
-        # i can't get this to work now so just do this
         geoserver_password = secrets.token_urlsafe(16)
         password_file.write(geoserver_password)
 
@@ -1255,6 +1256,55 @@ def initalize_geoserver(database_path):
         'geoserver/rest/reload')
 
 
+def update_styles():
+    """Updates the GeoServer styles if there are new ones."""
+    with open(PASSWORD_FILE_PATH, 'r') as password_file:
+        master_geoserver_password = password_file.read()
+    session = requests.Session()
+    session.auth = (GEOSERVER_USER, master_geoserver_password)
+
+    styles_request = do_rest_action(
+        session.get,
+        f'http://localhost:{GEOSERVER_PORT}/geoserver/rest/styles').json()
+
+    existing_style_set = {
+        style_name['name'] for style_name in styles_request['styles']['style']
+    }
+
+    local_raster_style_set = {
+        os.path.basename(os.path.splitext(raster_style_path))
+        for raster_style_path in glob.glob('raster_styles/*.sld')
+    }
+
+    style_dir = os.path.join(FULL_DATA_DIR, 'styles')
+    try:
+        os.makedirs(style_dir)
+    except OSError:
+        pass
+
+    for missing_style_name in local_raster_style_set.difference(
+            existing_style_set):
+        local_raster_style_path = os.path.join(
+            f'raster_styles/{missing_style_name}.sld')
+        target_raster_style_path = os.path.join(
+            style_dir, os.path.basename(local_raster_style_path))
+        shutil.copyfile(local_raster_style_path, target_raster_style_path)
+
+        new_style_request = do_rest_action(
+            session.post,
+            f'http://localhost:{GEOSERVER_PORT}',
+            'geoserver/rest/styles',
+            json={
+                "name": missing_style_name,
+                "filename": os.path.join(
+                    INTER_DATA_DIR, os.path.basename(local_raster_style_path))
+            })
+        if not new_style_request:
+            raise ValueError(
+                f"error in new style request: {str(new_style_request)} "
+                f"{new_style_request.text}")
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Start GeoServer REST API server.')
@@ -1267,6 +1317,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     LOGGER.debug('starting up!')
     initalize_geoserver(DATABASE_PATH)
+    update_styles()
 
     # set the external IP so we can return correct contexts
     _execute_sqlite(
