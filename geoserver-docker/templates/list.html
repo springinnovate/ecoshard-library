@@ -44,6 +44,7 @@
   <div id="search-results" class="grid-container ui-widget ui-state-default ui-widget-content ui-corner-all ui-priority-primary"></div>
   <script>
     /* do list based on API key */
+    var search_type_timeout = null;
     function search_changed() {
       if (search_type_timeout != null) {
         clearTimeout(search_type_timeout);
