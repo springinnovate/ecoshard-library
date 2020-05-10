@@ -149,7 +149,8 @@
         timeout: 5000
       }).fail(function(e) {
           console.log("picker failed " + e);
-          $("#picker").append("...failed" + e);
+          $("#picker").append("...failed" + e).addClass('ui-state-error');
+
       }).done(function (response) {
           let val = response.val;
           let x_coord = response.x;
@@ -158,7 +159,7 @@
             "val: " + val + "<br/>" +
             "raster coord: (" + x_coord + ", " + y_coord + ")<br/>" +
             "lat/lng: (" + lat + ", " + lng + ")");
-          $("#picker").removeClass("ui-state-disabled");
+          $("#picker").removeClass("ui-state-disabled").removeClass("ui-state-error");
         })};
 
     map.on("mousemove", function(e) {
@@ -185,10 +186,10 @@
     });
 
     // move the picker window around with the mouse
-    var picker = $("#picker");
     document.addEventListener("mousemove", function(e) {
-      picker.style.left = e.clientX+"px";
-      picker.style.top = 20+e.clientY+"px";
+      $("#picker").css({
+        left: e.clientX+"px",
+        right: 20+e.clientY+"px"});
     });
 
     // This code fixes the lines seen between tiles on some browsers
