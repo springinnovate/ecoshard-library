@@ -262,7 +262,7 @@ def styles():
 @APP.route('/list')
 def render_list():
     """Render a listing webpage."""
-    return 'hi'
+    return 'api_key' in flask.request.args
     try:
         api_key = flask.request.args['api_key']
         return 'hi'
