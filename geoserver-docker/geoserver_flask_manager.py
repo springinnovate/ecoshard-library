@@ -259,7 +259,7 @@ def styles():
         if style['name'] not in ['generic', 'line', 'point', 'polygon']]}
 
 @APP.route('/list')
-def list():
+def render_list():
     """Render a listing webpage."""
     api_key = flask.request.args['api_key']
     return flask.render_template('list.html', **{
