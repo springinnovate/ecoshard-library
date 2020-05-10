@@ -1289,7 +1289,7 @@ def update_styles():
         LOGGER.debug(
             f'posting new style {missing_style_name}')
         new_style_request = do_rest_action(
-            session.post,
+            session.put,
             f'http://localhost:{GEOSERVER_PORT}',
             f'geoserver/rest/styles/{missing_style_name}.sld?raw=true',
             data=style_raw,
