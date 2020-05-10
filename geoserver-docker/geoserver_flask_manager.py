@@ -867,6 +867,7 @@ def search():
             search_data = json.loads(flask.request.json)
         else:
             search_data = flask.request.json
+        LOGGER.debug(f'incoming search data: {search_data}')
 
         if search_data['bounding_box']:
             s_xmin, s_ymin, s_xmax, s_ymax = [
