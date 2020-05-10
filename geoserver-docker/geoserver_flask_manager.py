@@ -259,7 +259,7 @@ def viewer():
 
     fetch_payload = _execute_sqlite(
         '''
-        SELECT xmin, ymin, xmax, ymax, raster_min, raster_max
+        SELECT xmin, ymin, xmax, ymax, raster_min, raster_max, default_style
         FROM catalog_table
         WHERE asset_id=? AND catalog=?
         ''', DATABASE_PATH, argument_list=[asset_id, catalog],
@@ -277,6 +277,8 @@ def viewer():
     raster_min = fetch_payload[4]
     raster_max = fetch_payload[5]
 
+    default_style = fetch_payload[6]
+
     x_center = (xmax+xmin)/2
     y_center = (ymax+ymin)/2
 
@@ -287,7 +289,7 @@ def viewer():
         'geoserver_url': (
             f"http://{external_ip}:8080/"
             f"geoserver/{catalog}/wms"),
-        'original_style': 'salo',
+        'original_style': default_style,
         'p0': raster_min,
         'p100': raster_max,
         'pixel_pick_url': flask.url_for('pixel_pick', _external=True),

@@ -2,6 +2,10 @@
 <html>
 <head>
   <title>Viewer</title>
+  <link rel="stylesheet" href="static/le-frog/jquery-ui.min.css">
+  <script src="static/jquery-3.5.1.min.js"></script>
+  <script src="static/le-frog/jquery-ui.min.js"></script>
+
   <link rel="stylesheet" href="{{ style_css_url }}">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
    integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
@@ -14,18 +18,10 @@
       z-index: 0;
     }
     #picker {
-      background: rgba(0, 0, 0, 0.75);
-      padding: 5px;
-      border-radius: 5px;
-      color: white;
       position: absolute;
       z-index: 2;
     }
     #style-control {
-      background: rgba(0, 0, 0, 0.75);
-      padding: 5px;
-      border-radius: 5px;
-      color: white;
       position: absolute;
       height: auto;
       right: 0;
@@ -43,9 +39,9 @@
    </style>
 </head>
 <body>
-  <div id="picker"></div>
+  <div id="picker"  class="ui-widget ui-corner-all ui-widget-shadow"></div>
   <div id="style-control">
-    <div class="grid-container">
+    <div class="grid-container ui-widget ui-corner-all">
       <div><input id="min" oninput="style_changed()"></div>
       <div><label for="min">style min (original {{ p0 }})</label></div>
       <div><input id="max" oninput="style_changed()"></div>
@@ -216,14 +212,14 @@
       L.GridLayer.include({
           _initTile: function (tile) {
               originalInitTile.call(this, tile);
-
               var tileSize = this.getTileSize();
-
               tile.style.width = tileSize.x + 1 + 'px';
               tile.style.height = tileSize.y + 1 + 'px';
           }
       });
-    })()
+    })();
+
+    // query geoserver for styles
 
   </script>
 </body>
