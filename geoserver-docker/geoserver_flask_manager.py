@@ -266,7 +266,9 @@ def render_list():
         api_key = flask.request.args['api_key']
         return flask.render_template('list.html', **{
             'search_url': flask.url_for(
-                'search', api_key=api_key, _external=True)
+                'search', api_key=api_key, _external=True),
+            'fetch_url': flask.url_for(
+                'fetch', api_key=api_key, _external=True),
         }, _external=True)
     except Exception:
         LOGGER.exception('error on render list')

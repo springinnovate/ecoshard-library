@@ -92,12 +92,34 @@
           "<div>asset_id</div>"+
           "<div>datetime</div>");
         $.each(response.features, function(idx, search_result){
-          $("#search-results").append(
-            "<div>"+search_result["bbbox"]+"</div>"+
-            "<div>"+search_result["description"]+"</div>"+
-            "<div>"+search_result["id"]+"</div>"+
-            "<div>"+search_result["datetime"]+"</div>");
+          var id_catalog_list = search_result["id"].split(":");
+          search_json = JSON.stringify({
+            "catalog": id_catalog_list[0],
+            "asset_id": id_catalog_list[1],
+            "type": "wms_preview",
           });
+          $.ajax({
+            type: "POST",
+            url: "{{ fetch_url }}",
+            data: search_json,
+            contentType: 'application/json',
+            dataType: 'json',
+            timeout: 5000,
+          }).fail(function(e) {
+            $("#search-results").append(
+              "<div>"+"no link found for: "+ search_result["id"]+"</div>"+
+              "<div>"+search_result["description"]+"</div>"+
+              "<div>"+search_result["datetime"]+"</div>"+
+              "<div>"+search_result["bbox"]+"</div>");
+          }).done(function (response) {
+            $("#search-results").append(
+              "<div>"+"<a href="+response["link"]">"+
+              search_result["id"]+"</a></div>"+
+              "<div>"+search_result["description"]+"</div>"+
+              "<div>"+search_result["datetime"]+"</div>"+
+              "<div>"+search_result["bbox"]+"</div>");
+          });
+        });
         $("#search-results").empty().append(response).removeClass(
           "ui-state-error").removeClass("ui-state-disabled");;
         $("#search-control").removeClass("ui-state-disabled");
