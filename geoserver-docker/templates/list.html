@@ -28,23 +28,23 @@
 </head>
 <body>
   <div id="search-control" class="grid-container ui-widget ui-state-default ui-widget-content ui-corner-all ui-priority-secondary">
-      <div><input id="bbox" oninput="search()"></div>
+      <div><input id="bbox" oninput="search_changed()"></div>
       <div><label for="bbox">bounding box [xmin, ymin, xmax, ymax]</label></div>
-      <div><input id="asset_list" oninput="search()"></div>
+      <div><input id="asset_list" oninput="search_changed()"></div>
       <div><label for="asset_list">list of assets (comma separated))</label></div>
-      <div><input id="catalog_list" oninput="search()"></div>
+      <div><input id="catalog_list" oninput="search_changed()"></div>
       <div><label for="catalog_list">list of catalogs (comma separated))</label></div>
-      <div><input id="asset_id_list" oninput="search()"></div>
+      <div><input id="asset_id_list" oninput="search_changed()"></div>
       <div><label for="asset_id_list">list of asset ids (comma separated))</label></div>
-      <div><input id="datetime" oninput="search()"></div>
+      <div><input id="datetime" oninput="search_changed()"></div>
       <div><label for="datetime">UTC datetime range (comma separated))</label></div>
-      <div><input id="description" oninput="search()"></div>
+      <div><input id="description" oninput="search_changed()"></div>
       <div><label for="description">description (comma separated))</label></div>
   </div>
   <div id="search-results" class="grid-container ui-widget ui-state-default ui-widget-content ui-corner-all ui-priority-primary"></div>
   <script>
     /* do list based on API key */
-    function style_changed() {
+    function search_changed() {
       if (search_type_timeout != null) {
         clearTimeout(search_type_timeout);
       }

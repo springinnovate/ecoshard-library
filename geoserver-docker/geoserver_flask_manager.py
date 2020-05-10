@@ -847,87 +847,91 @@ def search():
         None.
 
     """
-    api_key = flask.request.args['api_key']
+    try:
+        api_key = flask.request.args['api_key']
 
-    allowed_permissions = _execute_sqlite(
-        '''
-        SELECT permissions
-        FROM api_keys
-        WHERE api_key=?
-        ''', DATABASE_PATH, argument_list=[api_key],
-        mode='read_only', execute='execute', fetch='one')
+        allowed_permissions = _execute_sqlite(
+            '''
+            SELECT permissions
+            FROM api_keys
+            WHERE api_key=?
+            ''', DATABASE_PATH, argument_list=[api_key],
+            mode='read_only', execute='execute', fetch='one')
 
-    if not allowed_permissions:
-        return 'invalid api key', 400
+        if not allowed_permissions:
+            return 'invalid api key', 400
 
-    where_query_list = []
-    argument_list = []
-    search_data = json.loads(flask.request.json)
-    if search_data['bounding_box']:
-        s_xmin, s_ymin, s_xmax, s_ymax = [
-            float(val) for val in search_data['bounding_box'].split(',')]
-        where_query_list.append('(xmax>? and ymax>? and xmin<? and ymin<?)')
-        argument_list.extend([s_xmin, s_ymin, s_xmax, s_ymax])
+        where_query_list = []
+        argument_list = []
+        search_data = json.loads(flask.request.json)
+        if search_data['bounding_box']:
+            s_xmin, s_ymin, s_xmax, s_ymax = [
+                float(val) for val in search_data['bounding_box'].split(',')]
+            where_query_list.append('(xmax>? and ymax>? and xmin<? and ymin<?)')
+            argument_list.extend([s_xmin, s_ymin, s_xmax, s_ymax])
 
-    if search_data['datetime']:
-        min_time, max_time = search_data.split('/')
-        if min_time != '..':
-            where_query_list.append('(utc_datetime>=?)')
-            argument_list.append(min_time)
-        if max_time != '..':
-            where_query_list.append('(utc_datetime<=?)')
-            argument_list.append(max_time)
+        if search_data['datetime']:
+            min_time, max_time = search_data.split('/')
+            if min_time != '..':
+                where_query_list.append('(utc_datetime>=?)')
+                argument_list.append(min_time)
+            if max_time != '..':
+                where_query_list.append('(utc_datetime<=?)')
+                argument_list.append(max_time)
 
-    allowed_catalog_set = set([
-        permission.split(':')[1]
-        for permission in allowed_permissions[0].split(' ')
-        if permission.startswith('READ:')])
-    all_catalogs_allowed = '*' in allowed_catalog_set
+        allowed_catalog_set = set([
+            permission.split(':')[1]
+            for permission in allowed_permissions[0].split(' ')
+            if permission.startswith('READ:')])
+        all_catalogs_allowed = '*' in allowed_catalog_set
 
-    if search_data['catalog_list']:
-        catalog_set = set(search_data['catalog_list'].split(','))
-        if not all_catalogs_allowed:
-            # if not allowed to read everything, restrict query
-            catalog_set = catalog_set.union(allowed_catalog_set)
-        where_query_list.append(
-            f"""(catalog IN ({','.join([f"'{x}'" for x in catalog_set])}))""")
-    elif not all_catalogs_allowed:
-        where_query_list.append(
-            f"""(catalog IN ({
-                ','.join([f"'{x}'" for x in allowed_catalog_set])}))""")
+        if search_data['catalog_list']:
+            catalog_set = set(search_data['catalog_list'].split(','))
+            if not all_catalogs_allowed:
+                # if not allowed to read everything, restrict query
+                catalog_set = catalog_set.union(allowed_catalog_set)
+            where_query_list.append(
+                f"""(catalog IN ({','.join([f"'{x}'" for x in catalog_set])}))""")
+        elif not all_catalogs_allowed:
+            where_query_list.append(
+                f"""(catalog IN ({
+                    ','.join([f"'{x}'" for x in allowed_catalog_set])}))""")
 
-    if search_data['asset_id']:
-        where_query_list.append('(asset_id LIKE ?)')
-        argument_list.append(f"%{search_data['asset_id']}%")
+        if search_data['asset_id']:
+            where_query_list.append('(asset_id LIKE ?)')
+            argument_list.append(f"%{search_data['asset_id']}%")
 
-    if search_data['description']:
-        where_query_list.append('(description LIKE ?)')
-        argument_list.append(f"%{search_data['description']}%")
+        if search_data['description']:
+            where_query_list.append('(description LIKE ?)')
+            argument_list.append(f"%{search_data['description']}%")
 
-    base_query_string = (
-        'SELECT asset_id, catalog, utc_datetime, description, '
-        'xmin, ymin, xmax, ymax '
-        'FROM catalog_table')
+        base_query_string = (
+            'SELECT asset_id, catalog, utc_datetime, description, '
+            'xmin, ymin, xmax, ymax '
+            'FROM catalog_table')
 
-    if where_query_list:
-        base_query_string += f" WHERE {' AND '.join(where_query_list)}"
+        if where_query_list:
+            base_query_string += f" WHERE {' AND '.join(where_query_list)}"
 
-    bounding_box_search = _execute_sqlite(
-        base_query_string,
-        DATABASE_PATH, argument_list=argument_list,
-        mode='read_only', execute='execute', fetch='all')
+        bounding_box_search = _execute_sqlite(
+            base_query_string,
+            DATABASE_PATH, argument_list=argument_list,
+            mode='read_only', execute='execute', fetch='all')
 
-    feature_list = []
-    for (asset_id, catalog, utc_datetime, description,
-            xmin, ymin, xmax, ymax) in bounding_box_search:
-        feature_list.append(
-            {
-                'id': f'{catalog}:{asset_id}',
-                'bbox': [xmin, ymin, xmax, ymax],
-                'utc_datetime': utc_datetime,
-                'description': description,
-            })
-    return {'features': feature_list}
+        feature_list = []
+        for (asset_id, catalog, utc_datetime, description,
+                xmin, ymin, xmax, ymax) in bounding_box_search:
+            feature_list.append(
+                {
+                    'id': f'{catalog}:{asset_id}',
+                    'bbox': [xmin, ymin, xmax, ymax],
+                    'utc_datetime': utc_datetime,
+                    'description': description,
+                })
+        return {'features': feature_list}
+    except Exception as e:
+        LOGGER.exception('something went wrong')
+        return str(e), 500
 
 
 @APP.route('/api/v1/get_status/<job_id>')
