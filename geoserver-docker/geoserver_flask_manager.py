@@ -258,13 +258,15 @@ def styles():
         for style in available_styles['styles']['style']
         if style['name'] not in ['generic', 'line', 'point', 'polygon']]}
 
+
 @APP.route('/list')
 def render_list():
     """Render a listing webpage."""
     try:
         api_key = flask.request.args['api_key']
         return flask.render_template('list.html', **{
-            'search_url': flask.url_for('search', api_key=api_key, _external=True)
+            'search_url': flask.url_for(
+                'search', api_key=api_key, _external=True)
         }, _external=True)
     except Exception:
         LOGGER.exception('error on render list')
@@ -314,7 +316,6 @@ def viewer():
     return flask.render_template('viewer.html', **{
         'catalog': catalog,
         'asset_id': asset_id,
-        'style_css_url': flask.url_for('static', filename='style.css'),
         'geoserver_url': (
             f"http://{external_ip}:8080/"
             f"geoserver/{catalog}/wms"),
