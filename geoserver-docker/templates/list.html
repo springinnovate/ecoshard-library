@@ -63,9 +63,9 @@
         type: "POST"  ,
         url: "{{ search_url }}",
         data: JSON.stringify({
-          "bbox": $("bbox").val(),
-          "catalogs": $("catalog_list").val(),
-          "ids": $("asset_list").val(),
+          "bounding_box": $("bbox").val(),
+          "catalog_list": $("catalog_list").val(),
+          "asset_id": $("asset_list").val(),
           "datetime": $("datetime").val(),
           "description": $("description").val(),
         }),

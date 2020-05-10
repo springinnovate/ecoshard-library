@@ -819,9 +819,9 @@ def search():
             api_key, used to filter query results, must have READ:* or
                 READ:[catalog] access to get results from that catalog.
         body parameters include:
-            bbox = [xmin, ymin, xmax, ymax]
-            catalogs = ['list', 'of', 'catalogs']
-            ids = ['list', 'of', 'asset', 'ids']
+            bounding_box = xmin, ymin, xmax, ymax
+            catalog_list = 'list', 'of', 'catalogs'
+            asset_id = complete or partial asset id
             datetime =
                 "exact time" | "low_time/high_time" | "../high time" |
                 "low time/.."
