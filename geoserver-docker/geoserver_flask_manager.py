@@ -2,7 +2,6 @@
 import argparse
 import datetime
 import hashlib
-import glob
 import json
 import logging
 import os
@@ -10,7 +9,6 @@ import pathlib
 import pickle
 import re
 import secrets
-import shutil
 import sqlite3
 import subprocess
 import threading
