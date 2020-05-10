@@ -36,6 +36,7 @@ GEOSERVER_PORT = '8080'
 MANAGER_PORT = '8888'
 PASSWORD_FILE_PATH = os.path.join(FULL_DATA_DIR, 'secrets', 'adminpass')
 GEOSERVER_USER = 'admin'
+DEFAULT_STYLE = 'raster'
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -631,7 +632,7 @@ def get_lat_lng_bounding_box(raster_path):
 
 def add_raster_worker(
         uri_path, mediatype, catalog, raster_id, asset_description,
-        utc_datetime, job_id):
+        utc_datetime, default_style, job_id):
     """This is used to copy and update a coverage set asynchronously.
 
     Args:
@@ -641,6 +642,7 @@ def add_raster_worker(
         raster_id (str): raster id for asset
         asset_description (str): asset description to record
         utc_datetime (str): an ISO standard UTC utc_datetime
+        default_style (str): default style to record with this asset
         job_id (str): used to identify entry in job_table
 
     Returns:
@@ -745,8 +747,9 @@ def add_raster_worker(
             INSERT OR REPLACE INTO catalog_table (
                 asset_id, catalog, xmin, ymin, xmax, ymax,
                 utc_datetime, mediatype, description, uri, local_path,
-                raster_min, raster_max, raster_mean, raster_stdev)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                raster_min, raster_max, raster_mean, raster_stdev,
+                default_style)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             ''', DATABASE_PATH, argument_list=[
                 raster_id, catalog,
                 lat_lng_bounding_box[0],
@@ -755,7 +758,8 @@ def add_raster_worker(
                 lat_lng_bounding_box[3],
                 utc_datetime, mediatype, asset_description, uri_path,
                 local_raster_path,
-                raster_min, raster_max, raster_mean, raster_stdev],
+                raster_min, raster_max, raster_mean, raster_stdev,
+                default_style],
             mode='modify', execute='execute')
         LOGGER.debug(f'successful publish of {catalog}:{raster_id}')
 
@@ -993,6 +997,8 @@ def publish():
                 if absent sets the datetime of the asset to the UTC time at
                 publishing. String must be formatted as "Y-m-d H:M:S TZ",
                 ex: '2018-06-29 17:08:00 UTC'.
+            default_style (str): if present sets the default style when
+                "fetch"ed by a future REST API call.
 
     Returns:
         {'callback_uri': ...}, 200 if successful. The `callback_uri` can be
@@ -1009,6 +1015,11 @@ def publish():
                 asset_args['utc_datetime'], '%Y-%m-%d %H:%M:%S %Z'))
         else:
             utc_datetime = str(datetime.datetime.now(datetime.timezone.utc))
+
+        if 'default_style' in asset_args:
+            default_style = asset_args['default_style']
+        else:
+            default_style = DEFAULT_STYLE
 
         LOGGER.debug(f"asset args: {str(asset_args)}")
         valid_check = validate_api(
@@ -1080,7 +1091,7 @@ def publish():
             args=(asset_args['uri'], asset_args['mediatype'],
                   asset_args['catalog'], asset_args['asset_id'],
                   asset_args['description'],
-                  utc_datetime, job_id))
+                  utc_datetime, default_style, job_id))
         raster_worker_thread.start()
         return callback_payload
     except Exception:
@@ -1132,6 +1143,7 @@ def build_schema(database_path):
             raster_max REAL NOT NULL,
             raster_mean REAL NOT NULL,
             raster_stdev REAL NOT NULL,
+            default_style TEXT NOT NULL,
             PRIMARY KEY (asset_id, catalog)
             );
         CREATE INDEX asset_id_index ON catalog_table(asset_id);
