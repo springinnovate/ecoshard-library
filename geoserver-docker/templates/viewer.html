@@ -139,13 +139,12 @@
       $.ajax({
         type: "POST",
         url: "{{ pixel_pick_url }}",
-        data: {
+        data: JSON.stringify({
           "catalog": "{{ catalog }}",
           "asset_id": "{{ asset_id }}",
           "lng": lng,
           "lat": lat
-        },
-        dataType: 'json',
+        }),
         contentType: 'application/json',
         timeout: 5000
       }).fail(function(e) {
