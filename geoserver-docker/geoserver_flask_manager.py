@@ -258,8 +258,16 @@ def styles():
         for style in available_styles['styles']['style']
         if style['name'] not in ['generic', 'line', 'point', 'polygon']]}
 
+@APP.route('/list')
+def list():
+    """Render a listing webpage."""
+    api_key = flask.request.args['api_key']
+    return flask.render_template('list.html', **{
+        'search_url': flask.url_for('search', api_key=api_key, _external=True)
+    }, _external=True)
 
-@APP.route('/api/v1/viewer')
+
+@APP.route('/viewer')
 def viewer():
     """Render a viewer webpage."""
     catalog = flask.request.args['catalog']

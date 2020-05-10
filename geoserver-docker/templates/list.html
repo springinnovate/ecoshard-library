@@ -27,11 +27,57 @@
    </style>
 </head>
 <body>
-  <div class="grid-container">
-    List of available assets. {{ api_key }}
+  <div id="search-control" class="grid-container ui-widget ui-state-default ui-widget-content ui-corner-all ui-priority-secondary">
+      <div><input id="bbox" oninput="search()"></div>
+      <div><label for="bbox">bounding box [xmin, ymin, xmax, ymax]</label></div>
+      <div><input id="asset_list" oninput="search()"></div>
+      <div><label for="asset_list">list of assets (comma separated))</label></div>
+      <div><input id="catalog_list" oninput="search()"></div>
+      <div><label for="catalog_list">list of catalogs (comma separated))</label></div>
+      <div><input id="asset_id_list" oninput="search()"></div>
+      <div><label for="asset_id_list">list of asset ids (comma separated))</label></div>
+      <div><input id="datetime" oninput="search()"></div>
+      <div><label for="datetime">UTC datetime range (comma separated))</label></div>
+      <div><input id="description" oninput="search()"></div>
+      <div><label for="description">description (comma separated))</label></div>
   </div>
+  <div id="search-results" class="grid-container ui-widget ui-state-default ui-widget-content ui-corner-all ui-priority-primary"></div>
   <script>
     /* do list based on API key */
+    function style_changed() {
+      if (edit_timeout != null) {
+        clearTimeout(edit_timeout);
+      }
+      edit_timeout = setTimeout(
+        function () {
+          update_style();
+          edit_timeout = null;
+        }, 2000);
+      $("#search-control").addClass("ui-state-disabled");
+    }
+
+    function search() {
+      $.ajax({
+        type: "POST"  ,
+        url: "{{ search_url }}",
+        data: JSON.stringify({
+          "bbox": $("bbox").val(),
+          "catalogs": $("catalog_list").val(),
+          "ids": $("asset_list").val(),
+          "datetime": $("datetime").val(),
+          "description": $("description").val(),
+        }),
+        contentType: 'application/json',
+        timeout: 5000
+      }).fail(function(e) {
+          console.log("search failed " + e);
+          $("#search-results").addClass('ui-state-error').append(
+            "...failed" + e);
+      }).done(function (response) {
+        $("#search-results").val(response).removeClass('ui-state-error');
+        $("#search-control").removeClass("ui-state-disabled");
+      });
+
   </script>
 </body>
 </html>
