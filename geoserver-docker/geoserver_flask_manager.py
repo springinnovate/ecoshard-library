@@ -174,7 +174,10 @@ def fetch():
         None.
 
     """
-    fetch_data = json.loads(flask.request.json)
+    if not isinstance(flask.request.json, dict):
+        fetch_data = json.loads(flask.request.json)
+    else:
+        fetch_data = flask.request.json
     api_key = flask.request.args['api_key']
     valid_check = validate_api(api_key, f'READ:{fetch_data["catalog"]}')
     if valid_check != 'valid':
