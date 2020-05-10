@@ -1298,7 +1298,7 @@ def update_styles():
         new_style_request = do_rest_action(
             session.post,
             f'http://localhost:{GEOSERVER_PORT}',
-            'geoserver/rest/styles',
+            f'geoserver/rest/styles/{missing_style_name}',
             json={
                 "name": missing_style_name,
                 "filename": style_path
