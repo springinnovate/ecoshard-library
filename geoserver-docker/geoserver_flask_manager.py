@@ -1291,7 +1291,7 @@ def update_styles():
         new_style_request = do_rest_action(
             session.put,
             f'http://localhost:{GEOSERVER_PORT}',
-            f'geoserver/rest/styles/{missing_style_name}.sld?raw=true',
+            f'geoserver/rest/styles/{missing_style_name}?raw=true',
             data=style_raw,
             headers={'accept': 'application/vnd.ogc.sld+xml'})
         if not new_style_request:
