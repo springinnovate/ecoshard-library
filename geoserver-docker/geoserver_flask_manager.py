@@ -200,7 +200,7 @@ def fetch():
 
     LOGGER.debug(fetch_payload)
     raster_min, raster_max, raster_mean, raster_stdev, default_style = \
-        fetch_payload[1:5]
+        fetch_payload[1:6]
 
     if fetch_data["type"].lower() == 'uri':
         link = fetch_payload[0]
