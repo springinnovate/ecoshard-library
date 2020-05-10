@@ -152,10 +152,11 @@
             "raster coord: (" + x_coord + ", " + y_coord + ")<br/>" +
             "lat/lng: (" + lat + ", " + lng + ")");
         },
+        fail: function(e) {
+          console.log("picker failed " + e);
+          $("#picker").append("...failed" + e);
+        },
         "json"
-      }).fail(function(e) {
-        console.log("picker failed " + e);
-        $("#picker").append("...failed" + e);
       })};
 
     map.on("mousemove", function(e) {
