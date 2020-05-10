@@ -91,7 +91,7 @@
           "<div>description</div>"+
           "<div>asset_id</div>"+
           "<div>datetime</div>");
-        $.each(response, function(idx, search_result){
+        $.each(response.features, function(idx, search_result){
           $("#search-results").empty().append(
             "<div>"+search_result["bbbox"]+"</div>"+
             "<div>"+search_result["description"]+"</div>"+
