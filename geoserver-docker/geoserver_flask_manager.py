@@ -1300,7 +1300,9 @@ def update_styles():
             json={
                 'style': {
                     'name': missing_style_name,
-                    'filename': f'{missing_style_name}.sld'
+                    'filename': f'{missing_style_name}.sld',
+                    'format': 'sld',
+                    'languageVersion': {'version': '1.0.0'}
                 }
             })
         if not new_style_request:
