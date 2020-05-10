@@ -133,46 +133,29 @@
     // set a timeout to see if the pointer stopped moving, if so, pick the
     // point at the cursor
     function pick_point(lng, lat) {
-      let xhr = new XMLHttpRequest();
-      xhr.responseType = "json";
-      xhr.open(
-        "POST",
-        "{{ pixel_pick_url }}");
-      xhr.setRequestHeader("Content-Type", "text/plain; charset=utf-8");
-      xhr.timeout = 5000;
-
-      // only triggers if the request couldn"t be made at all
-      xhr.onerror = function(e) {
-        console.log("bad xhr error, picker failed " + e);
-        picker.innerHTML += "...failed";
-        picker.innerHTML += `.Error ${xhr.status}: ${xhr.statusText}`;
-      };
-      xhr.ontimeout = function() {
-        picker.innerHTML += "...timeout";
-      }
-
-      xhr.onload = function() {
-        if (xhr.status != 200) {
-          picker.innerHTML += `.Error ${xhr.status}: ${xhr.statusText}`;
-        } else {
-          let val = xhr.response["val"];
-          let x_coord = xhr.response["x"];
-          let y_coord = xhr.response["y"];
-          picker.innerHTML = (
+      $.ajax({
+        type: "POST",
+        url: "{{ pixel_pick_url }}",
+        data: {
+          "catalog": "{{ catalog }}",
+          "asset_id": "{{ asset_id }}",
+          "lng": lng,
+          "lat": lat
+        },
+        timeout: 5000,
+        success: function (response) {
+          let val = response.val;
+          let x_coord = response.x;
+          let y_coord = response.y;
+          $("#picker").empty().append(
             "val: " + val + "<br/>" +
             "raster coord: (" + x_coord + ", " + y_coord + ")<br/>" +
             "lat/lng: (" + lat + ", " + lng + ")");
-          picker.style.background = "rgba(0, 0, 0, 0.75)";
-        }
-      };
-
-      xhr.send(JSON.stringify({
-        "catalog": "{{ catalog }}",
-        "asset_id": "{{ asset_id }}",
-        "lng": lng,
-        "lat": lat
-      }));
-    }
+        }, "json"
+      }).fail(function(e) {
+        console.log("bad xhr error, picker failed " + e);
+        $("#picker").append("...failed" + e);
+      });
 
     map.on("mousemove", function(e) {
       let cur_latlng = e.latlng;
@@ -182,8 +165,7 @@
       }
       previous_latlng = cur_latlng;
 
-      picker.innerHTML = "querying...";
-      picker.style.background = "rgba(153, 51, 51, .5)";
+      $("#picker").empty().append("querying...");
 
       if (mousestop_timeout != null) {
         clearTimeout(mousestop_timeout);
