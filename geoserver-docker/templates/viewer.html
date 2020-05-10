@@ -50,7 +50,7 @@
       <div><label for="min">style min (original {{ p0 }})</label></div>
       <div><input id="max" oninput="style_changed()"></div>
       <div><label for="max">style max (original {{ p100 }})</label></div>
-      <div><input id="style" oninput="style_changed()"></div>
+      <div><select id="style" oninput="style_changed()"></select></div>
       <div><label for="style">style id (original {{ original_style }})</label></div>
     </div>
   </div>
@@ -215,15 +215,15 @@
           console.log("style fetch failed " + e);
           $("#style-control").addClass('ui-state-error');
       }).done(function (json) {
-          var availableStyles = [];
+          var $dropdown = $("#style");
            $.each(json.styles.style, function(idx, style){
             if (!style.name.contains("default")) {
-              availableStyles.append(style.name);
+              $dropdown.append($("<option />").val(style.name).text(style.name));
             }
           });
           $("#style").autocomplete({source: availableStyles});
         });
-    });
+    })();
   </script>
 </body>
 </html>
