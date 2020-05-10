@@ -59,9 +59,9 @@
   <script>
     var edit_timeout = null;
 
-    $("#min").value = {{ p0 }};
-    $("#max").value = {{ p100 }};
-    $("#style").value = "{{ original_style }}";
+    $("#min").val({{ p0 }});
+    $("#max").val({{ p100 }});
+    $("#style").val("{{ original_style }}");
 
     function style_changed() {
       if (edit_timeout != null) {
@@ -76,8 +76,8 @@
     }
 
     function update_style() {
-      let parsed_min = parseFloat($("#min").value);
-      let parsed_max = parseFloat($("#max").value);
+      let parsed_min = parseFloat($("#min").val());
+      let parsed_max = parseFloat($("#max").val());
 
       if(isNaN(parsed_min) || isNaN(parsed_max)) {
           return;
@@ -94,7 +94,7 @@
       p75 = p0 + (p100-p0)*0.75;
       p98 = p0 + (p100-p0)*0.98;
 
-      let raster_style = $("#style").value;
+      let raster_style = $("#style").val();
       wms_layer.setParams({
         ENV: "p0:"+p0+";p2:"+p2+";p25:"+p25+";p50:"+p50+";p75:"+p75+";p98:"+p98+";p100:"+p100,
         styles: raster_style
