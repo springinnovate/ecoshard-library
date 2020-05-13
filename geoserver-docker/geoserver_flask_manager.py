@@ -1242,7 +1242,7 @@ def build_schema(database_path):
             asset_id TEXT NOT NULL COLLATE NOCASE,
             catalog TEXT NOT NULL COLLATE NOCASE,
             key TEXT NOT NULL COLLATE NOCASE,
-            value TEXT NOT NULL COLLATE NOCASE
+            value TEXT NOT NULL COLLATE NOCASE,
             PRIMARY KEY (asset_id, catalog, key)
         );
 
