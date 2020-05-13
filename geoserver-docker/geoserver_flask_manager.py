@@ -1246,6 +1246,9 @@ def build_schema(database_path):
             PRIMARY KEY (asset_id, catalog, key)
         );
 
+        CREATE INDEX asset_catalog_attribute_index ON
+        attribute_table(asset_id, catalog);
+
         CREATE TABLE api_keys (
             api_key TEXT NOT NULL PRIMARY KEY,
             /* permissions is string of READ:catalog WRITE:catalog CREATE
