@@ -1308,10 +1308,6 @@ def initalize_geoserver(database_path):
         LOGGER.info('geoserver previously initialized')
         return
 
-    # overwrite style directory with pre-baked one
-    shutil.rmtree(STYLE_DIR_PATH, ignore_errors=True)
-    shutil.copytree('./styles', STYLE_DIR_PATH)
-
     # make new random admin password
     try:
         os.makedirs(os.path.dirname(PASSWORD_FILE_PATH))
