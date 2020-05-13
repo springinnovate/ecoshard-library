@@ -671,7 +671,7 @@ def get_lat_lng_bounding_box(raster_path):
 
 def add_raster_worker(
         uri_path, mediatype, catalog, raster_id, asset_description,
-        utc_datetime, default_style, job_id):
+        utc_datetime, default_style, job_id, attribute_dict):
     """This is used to copy and update a coverage set asynchronously.
 
     Args:
@@ -683,6 +683,8 @@ def add_raster_worker(
         utc_datetime (str): an ISO standard UTC utc_datetime
         default_style (str): default style to record with this asset
         job_id (str): used to identify entry in job_table
+        attribute_dict (dict): a key/value pair mapping of arbitrary attributes
+            for this asset, can be None.
 
     Returns:
         None.
@@ -801,6 +803,18 @@ def add_raster_worker(
                 raster_min, raster_max, raster_mean, raster_stdev,
                 default_style],
             mode='modify', execute='execute')
+
+        if attribute_dict:
+            for key, value in attribute_dict.items():
+                _execute_sqlite(
+                    '''
+                    INSERT OR REPLACE INTO attribute_table (
+                        asset_id, catalog, key, value)
+                    VALUES (?, ?, ?, ?);
+                    ''', DATABASE_PATH, argument_list=[
+                        raster_id, catalog, key, value],
+                    mode='modify', execute='execute')
+
         LOGGER.debug(f'successful publish of {catalog}:{raster_id}')
 
     except Exception as e:
@@ -1048,6 +1062,8 @@ def publish():
                 ex: '2018-06-29 17:08:00 UTC'.
             default_style (str): if present sets the default style when
                 "fetch"ed by a future REST API call.
+            attribute_dict (dict): an arbitrary set of key/value pairs to
+                associate with this asset.
 
     Returns:
         {'callback_uri': ...}, 200 if successful. The `callback_uri` can be
@@ -1135,12 +1151,17 @@ def publish():
                 utc_now()],
             mode='modify', execute='execute')
 
+        if 'attribute_dict' in asset_args:
+            attribute_dict = asset_args['attribute_dict']
+        else:
+            attribute_dict = None
+
         raster_worker_thread = threading.Thread(
             target=add_raster_worker,
             args=(asset_args['uri'], asset_args['mediatype'],
                   asset_args['catalog'], asset_args['asset_id'],
                   asset_args['description'],
-                  utc_datetime, default_style, job_id))
+                  utc_datetime, default_style, job_id, attribute_dict))
         raster_worker_thread.start()
         return callback_payload
     except Exception:
@@ -1178,14 +1199,14 @@ def build_schema(database_path):
         -- we may search by partial `id` so set NOCASE so we can use the index
         CREATE TABLE catalog_table (
             asset_id TEXT NOT NULL COLLATE NOCASE,
-            catalog TEXT NOT NULL,
+            catalog TEXT NOT NULL COLLATE NOCASE,
             xmin REAL NOT NULL,
             xmax REAL NOT NULL,
             ymin REAL NOT NULL,
             ymax REAL NOT NULL,
-            utc_datetime TEXT NOT NULL,
-            mediatype TEXT NOT NULL,
-            description TEXT NOT NULL,
+            utc_datetime TEXT NOT NULL COLLATE NOCASE,
+            mediatype TEXT NOT NULL COLLATE NOCASE,
+            description TEXT NOT NULL COLLATE NOCASE,
             uri TEXT NOT NULL,
             local_path TEXT NOT NULL,
             raster_min REAL NOT NULL,
@@ -1203,6 +1224,14 @@ def build_schema(database_path):
         CREATE INDEX ymax_index ON catalog_table(ymax);
         CREATE INDEX utctime_index ON catalog_table(utc_datetime);
         CREATE INDEX mediatype_index ON catalog_table(mediatype);
+
+        CREATE TABLE attribute_table (
+            asset_id TEXT NOT NULL COLLATE NOCASE,
+            catalog TEXT NOT NULL COLLATE NOCASE,
+            key TEXT NOT NULL COLLATE NOCASE,
+            value TEXT NOT NULL COLLATE NOCASE
+            PRIMARY KEY (asset_id, catalog, key)
+        );
 
         CREATE TABLE api_keys (
             api_key TEXT NOT NULL PRIMARY KEY,

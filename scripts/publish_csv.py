@@ -17,7 +17,7 @@ LOGGER = logging.getLogger(__name__)
 
 def publish(
         gs_uri, host_port, api_key, asset_id, catalog, mediatype,
-        description, force=False):
+        description, attribute_dict, force=False):
     """Publish a gs raster to an ecoserver.
 
     Args:
@@ -32,6 +32,8 @@ def publish(
         mediatype (str): STAC media type, only GeoTIFF supported
         description (str): description of the asset
         force (bool): if already exists on the server, request an overwrite.
+        attribute_dict (dict): these key/value pairs are added as additional
+            elements in the attribute database for this asset.
 
     Returns:
         None
@@ -49,7 +51,8 @@ def publish(
             'catalog': catalog,
             'mediatype': mediatype,
             'description': description,
-            'force': force
+            'force': force,
+            'attribute_dict': attribute_dict
         }))
     if not publish_response:
         LOGGER.error(f'response from server: {publish_response.text}')
@@ -90,20 +93,28 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    catalog_df = pandas.read_csv(args.catalog_csv)
+    # keep_default_na=False ensures empty cellsare  empty strings and not NaNs
+    catalog_df = pandas.read_csv(args.catalog_csv, keep_default_na=False)
+    table_headers = set(catalog_df)
     LOGGER.debug(set(catalog_df))
     required_headers = {
         'gs_uri', 'catalog', 'asset_id', 'description', 'utc_datetime'}
-    if required_headers.union(set(catalog_df)) != required_headers:
+    if required_headers.union(table_headers) != required_headers:
         raise ValueError(
             f'missing headers in catalog, expected {required_headers} '
             f'got {set(catalog_df)}')
 
+    extra_headers = table_headers.difference(required_headers)
+    attribute_dict = {}
     for index, row in catalog_df.iterrows():
         LOGGER.debug(f'row {index}: {row}')
         try:
+            for header in extra_headers:
+                if row[header] != '':
+                    attribute_dict[header] = row[header]
+
             publish(
                 row['gs_uri'], args.host_port, args.api_key, row['asset_id'],
-                row['catalog'], 'GeoTIFF', row['description'])
+                row['catalog'], 'GeoTIFF', row['description'], attribute_dict)
         except Exception:
             LOGGER.exception('publish failed')

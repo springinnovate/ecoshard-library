@@ -1,7 +1,7 @@
-gs_uri,catalog,asset_id,description,utc_datetime
-gs://salo-api/test_rasters/Copy of Mann-BurnProb-2001-2025-BAU.tif,salo,Mann-BurnProb-2001-2025-BAU,sample description a,2018-06-29 17:08:00 UTC
-gs://salo-api/test_rasters/Copy of ca-2019-fall-canopy-base-height-10m-salo.tif,salo,ca-2019-fall-canopy-base-height-10m-salo,sample description b,2018-06-29 7:08:00 UTC
-gs://salo-api/test_rasters/Copy of ca-2019-fall-canopy-bulk-density-10m-salo.tif,salo,ca-2019-fall-canopy-bulk-density-10m-salo,sample description c,
-gs://salo-api/test_rasters/Copy of ca-2019-fall-canopy-cover-10m-salo.tif,salo,ca-2019-fall-canopy-cover-10m-salo,sample description d,2018-06-29 17:18:00 UTC
-gs://salo-api/test_rasters/Copy of ca-2019-fall-canopy-height-10m-salo.tif,salo,ca-2019-fall-canopy-height-10m-salo,sample description e,2018-06-29 17:08:55 UTC
-gs://salo-api/test_rasters/Copy of ca-2019-fall-ladder-fuels-10m-salo.tif,salo,ca-2019-fall-ladder-fuels-10m-salo,sample description f,2019-06-29 17:08:00 UTC
+gs_uri,catalog,asset_id,description,utc_datetime,extra_field_a,extra_field_b
+gs://salo-api/test_rasters/Copy of Mann-BurnProb-2001-2025-BAU.tif,salo,Mann-BurnProb-2001-2025-BAU,sample description a,2018-06-29 17:08:00 UTC,a val,
+gs://salo-api/test_rasters/Copy of ca-2019-fall-canopy-base-height-10m-salo.tif,salo,ca-2019-fall-canopy-base-height-10m-salo,sample description b,2018-06-29 7:08:00 UTC,,b val
+gs://salo-api/test_rasters/Copy of ca-2019-fall-canopy-bulk-density-10m-salo.tif,salo,ca-2019-fall-canopy-bulk-density-10m-salo,sample description c,,,
+gs://salo-api/test_rasters/Copy of ca-2019-fall-canopy-cover-10m-salo.tif,salo,ca-2019-fall-canopy-cover-10m-salo,sample description d,2018-06-29 17:18:00 UTC,,
+gs://salo-api/test_rasters/Copy of ca-2019-fall-canopy-height-10m-salo.tif,salo,ca-2019-fall-canopy-height-10m-salo,sample description e,2018-06-29 17:08:55 UTC,,
+gs://salo-api/test_rasters/Copy of ca-2019-fall-ladder-fuels-10m-salo.tif,salo,ca-2019-fall-ladder-fuels-10m-salo,sample description f,2019-06-29 17:08:00 UTC,,
