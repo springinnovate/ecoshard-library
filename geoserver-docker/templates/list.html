@@ -119,10 +119,12 @@
               "<div>"+search_result["description"]+"</div>"+
               "<div>"+search_result["utc_datetime"]+"</div>");
             if ("attribute_dict" in search_result) {
+              $("#search-results").append("<div>");
               $.each(search_result["attribute_dict"], function(key, value) {
                 $("#search-results").append(
-                  "<div><div>"+key+"</div>: <div>"+value+"</div></div>");
+                  "<div>"+key+"</div>: <div>"+value+"</div>");
               });
+              $("#search-results").append("</div>");
             } else {
               $("#search-results").append("<div></div>");
             }
