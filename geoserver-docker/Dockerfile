@@ -336,6 +336,10 @@ RUN mkdir /usr/local/geoserver/bin/templates
 COPY templates/ /usr/local/geoserver/bin/templates/
 RUN mkdir /usr/local/geoserver/bin/static
 COPY static/ /usr/local/geoserver/bin/static/
+# copy styles so we can copy them manually later
+COPY styles/ /usr/local/geoserver/bin/styles/
+
+
 
 WORKDIR /usr/local/geoserver
 ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]

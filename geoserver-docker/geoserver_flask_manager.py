@@ -1260,7 +1260,7 @@ def build_schema(database_path):
 
         CREATE TABLE global_variables (
             key TEXT NOT NULL PRIMARY KEY,
-            value BLOB)
+            value BLOB);
         """)
 
     _execute_sqlite(
