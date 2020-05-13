@@ -99,7 +99,7 @@ if __name__ == '__main__':
     LOGGER.debug(set(catalog_df))
     required_headers = {
         'gs_uri', 'catalog', 'asset_id', 'description', 'utc_datetime'}
-    if required_headers.union(table_headers) != required_headers:
+    if required_headers.intersection(table_headers) != required_headers:
         raise ValueError(
             f'missing headers in catalog, expected {required_headers} '
             f'got {set(catalog_df)}')
