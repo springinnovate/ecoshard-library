@@ -855,7 +855,8 @@ def search():
                         'id': {catalog}:{id},
                         # bbox is overlap with query bbox
                         'bbox': [xmin, ymin, xmax, ymax],
-                        'description': 'asset description'
+                        'description': 'asset description',
+                        'attribute_dict': dictionary of additional attributes
                     }
                 ]
             }
@@ -945,12 +946,22 @@ def search():
         feature_list = []
         for (asset_id, catalog, utc_datetime, description,
                 xmin, ymin, xmax, ymax) in bounding_box_search:
+            # search for additional attributes
+            attribute_search = _execute_sqlite(
+                '''
+                SELECT key, value
+                FROM attribute_table
+                WHERE asset_id=? AND catalog=?
+                ''', DATABASE_PATH, argument_list=[asset_id, catalog],
+                mode='read_only', execute='execute', fetch='all')
+            attribute_dict = {key: value for key, value in attribute_search}
             feature_list.append(
                 {
                     'id': f'{catalog}:{asset_id}',
                     'bbox': [xmin, ymin, xmax, ymax],
                     'utc_datetime': utc_datetime,
                     'description': description,
+                    'attribute_dict': attribute_dict,
                 })
         return {'features': feature_list}
     except Exception as e:
