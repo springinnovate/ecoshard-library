@@ -338,7 +338,7 @@ RUN mkdir /usr/local/geoserver/bin/static
 COPY static/ /usr/local/geoserver/bin/static/
 # this copies the pre-baked styles
 RUN mkdir /usr/local/geoserver/data_dir/styles
-COPY styles /usr/local/geoserver/data_dir/styles
+COPY styles/ /usr/local/geoserver/data_dir/styles
 
 WORKDIR /usr/local/geoserver
 ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]
