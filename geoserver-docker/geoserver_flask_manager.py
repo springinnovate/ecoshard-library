@@ -143,7 +143,7 @@ def pixel_pick():
 def fetch():
     """Search the catalog using STAC format.
 
-    The body parameters can be queried from
+    Fetch a link from the catalog
 
     Args:
         query parameter:
