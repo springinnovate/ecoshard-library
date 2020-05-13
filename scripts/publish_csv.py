@@ -105,9 +105,9 @@ if __name__ == '__main__':
             f'got {set(catalog_df)}')
 
     extra_headers = table_headers.difference(required_headers)
-    attribute_dict = {}
     for index, row in catalog_df.iterrows():
         LOGGER.debug(f'row {index}: {row}')
+        attribute_dict = {}
         try:
             for header in extra_headers:
                 if row[header] != '':
