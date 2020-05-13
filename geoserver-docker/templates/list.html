@@ -26,7 +26,7 @@
 
     .grid-container-3 {
       display: grid;
-      grid-template-columns: auto auto auto;
+      grid-template-columns: auto auto auto auto;
       padding: 5px;
       grid-gap: 5px;
     }
@@ -120,6 +120,8 @@
             if ("attribute_dict" in search_result) {
               $("#search-results").append(
                 "<div>"+search_result["attribute_dict"]+"</div>");
+            } else {
+              $("#search-results").append("<div></div>");
             }
           });
         });
