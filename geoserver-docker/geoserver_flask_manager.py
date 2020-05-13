@@ -37,6 +37,7 @@ MANAGER_PORT = '8888'
 PASSWORD_FILE_PATH = os.path.join(FULL_DATA_DIR, 'secrets', 'adminpass')
 GEOSERVER_USER = 'admin'
 DEFAULT_STYLE = 'raster'
+STYLE_DIR_PATH = os.path.abspath(os.path.join('..', 'data_dir', 'styles'))
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -1306,6 +1307,10 @@ def initalize_geoserver(database_path):
     else:
         LOGGER.info('geoserver previously initialized')
         return
+
+    # overwrite style directory with pre-baked one
+    shutil.rmtree(STYLE_DIR_PATH, ignore_errors=True)
+    shutil.copytree('./styles', STYLE_DIR_PATH)
 
     # make new random admin password
     try:
