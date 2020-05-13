@@ -117,7 +117,7 @@
               search_result["id"]+"</a></div>"+
               "<div>"+search_result["description"]+"</div>"+
               "<div>"+search_result["utc_datetime"]+"</div>");
-            if ("attribute_dict" in response) {
+            if ("attribute_dict" in search_result) {
               $("#search-results").append(
                 "<div>"+search_result["attribute_dict"]+"</div>");
             }
