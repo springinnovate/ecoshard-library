@@ -90,7 +90,7 @@
         $("#search-results").empty().append(
           "<div>Link to Viewer</div>"+
           "<div>Description</div>"+
-          "<div>UTC datetime</div>"
+          "<div>UTC datetime</div>"+
           "<div>additional attributes</div>");
         $.each(response.features, function(idx, search_result){
           var id_catalog_list = search_result["id"].split(":");
