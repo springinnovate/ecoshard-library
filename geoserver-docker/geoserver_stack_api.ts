@@ -16,6 +16,54 @@ class Api {}
 
 @endpoint({
   method: "POST",
+  path: '/api/v1/publish'
+})
+class Publish {
+  @request
+  request(@queryParams
+      queryParams: {
+        /* API key that has permission to search catalogs */
+        api_key: String;
+      },
+      @body body: PublishRequest) {}
+
+  @response({ status: 200})
+  response(@body body: PublishResponse) {}
+}
+
+interface PublishRequest {
+  /* catalog to publish to */
+  catalog: String;
+  /* asset ID, must be unique to the catalog. */
+  id: String;
+  /* mediatype of the raster. Currently only 'GeoTIFF' is supported. */
+  mediatype:  String;
+  /* uri to the asset that is accessible by this server.
+      Currently supports only `gs://`. */
+  uri: String;
+  /* description of the asset */
+  description: String;
+  /* (optional) if True, will overwrite existing catalog:id asset */
+  force: boolean;
+  /* (optional) if present sets the datetime to this string,
+      if absent sets the datetime of the asset to the UTC time at
+      publishing. String must be formatted as "Y-m-d H:M:S TZ",
+      ex: '2018-06-29 17:08:00 UTC'. */
+  utc_datetime: String;
+  /* if present sets the default style when "fetch"ed by a future REST API
+     call. */
+  default_style: String;
+  /* an arbitrary set of key/value pairs to associate with this asset. */
+  attribute_dict: {};
+}
+
+interface PublishResponse {
+  /* The `callback_url` can be queried for when the asset is published. */
+  callback_url: String;
+}
+
+@endpoint({
+  method: "POST",
   path: "/api/v1/pixel_pick"
 })
 class PixelPick {
