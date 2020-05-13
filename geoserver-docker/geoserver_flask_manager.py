@@ -9,6 +9,7 @@ import pathlib
 import pickle
 import re
 import secrets
+import shutil
 import sqlite3
 import subprocess
 import threading
@@ -1307,6 +1308,10 @@ def initalize_geoserver(database_path):
     else:
         LOGGER.info('geoserver previously initialized')
         return
+
+    # overwrite style directory with pre-baked one
+    shutil.rmtree(STYLE_DIR_PATH, ignore_errors=True)
+    shutil.copytree('./styles', STYLE_DIR_PATH)
 
     # make new random admin password
     try:
