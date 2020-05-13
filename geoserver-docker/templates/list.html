@@ -122,7 +122,7 @@
               $("#search-results").append("<div>");
               $.each(search_result["attribute_dict"], function(key, value) {
                 $("#search-results").append(
-                  "<div>"+key+"</div>: <div>"+value+"</div>");
+                  "<p>"+key+":"+value+"</p>");
               });
               $("#search-results").append("</div>");
             } else {
