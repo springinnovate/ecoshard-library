@@ -317,6 +317,7 @@ RUN echo "export PATH=$PATH:/usr/local/gcloud-sdk/google-cloud-sdk/bin" >> /root
 RUN apt install git -y
 RUN pip3 install git+https://github.com/natcap/pygeoprocessing.git@release/2.0
 RUN pip3 install ecoshard==0.4.0
+RUN pip3 install pandas
 
 WORKDIR /usr/local/workspace
 ENTRYPOINT ["/usr/bin/python"]
