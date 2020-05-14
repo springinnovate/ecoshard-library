@@ -16,21 +16,20 @@ import {
 class Api {}
 
 @endpoint({
-  method: "GET",
-  path: '/api/v1/styles'
+  method: "POST",
+  path: '/api/v1/publish'
 })
-class Styles {
+class Publish {
   @request
-  request() {}
+  request(@queryParams
+      queryParams: {
+        /* API key that has permission to search catalogs */
+        api_key: String;
+      },
+      @body body: PublishRequest) {}
 
   @response({ status: 200})
-  response(@body body: StylesResponse) {}
-}
-
-interface StylesResponse {
-  /* List of style strings that can be applied to the WMS layers retrieved in
-    a call to fetch. */
-  style_list: String[];
+  response(@body body: PublishResponse) {}
 }
 
 @endpoint({
@@ -51,88 +50,6 @@ class GetStatus {
   response(@body body: StatusReponse) {}
 }
 
-interface StatusReponse {
-  /* The job id from the GET */
-  job_id: String;
-  /* Status string, contains "complete" when job is complete, othewise contains
-    a human readable status message */
-  status: String;
-}
-
-@endpoint({
-  method: "POST",
-  path: '/api/v1/publish'
-})
-class Publish {
-  @request
-  request(@queryParams
-      queryParams: {
-        /* API key that has permission to search catalogs */
-        api_key: String;
-      },
-      @body body: PublishRequest) {}
-
-  @response({ status: 200})
-  response(@body body: PublishResponse) {}
-}
-
-interface PublishRequest {
-  /* catalog to publish to */
-  catalog: String;
-  /* asset ID, must be unique to the catalog. */
-  id: String;
-  /* mediatype of the raster. Currently only 'GeoTIFF' is supported. */
-  mediatype:  String;
-  /* uri to the asset that is accessible by this server.
-      Currently supports only `gs://`. */
-  uri: String;
-  /* description of the asset */
-  description: String;
-  /* (optional) if True, will overwrite existing catalog:id asset */
-  force: boolean;
-  /* (optional) if present sets the datetime to this string,
-      if absent sets the datetime of the asset to the UTC time at
-      publishing. String must be formatted as "Y-m-d H:M:S TZ",
-      ex: '2018-06-29 17:08:00 UTC'. */
-  utc_datetime: String;
-  /* if present sets the default style when "fetch"ed by a future REST API
-     call. */
-  default_style: String;
-  /* an arbitrary set of key/value pairs to associate with this asset. */
-  attribute_dict: {};
-}
-
-interface PublishResponse {
-  /* The `callback_url` can be queried for when the asset is published. */
-  callback_url: String;
-}
-
-@endpoint({
-  method: "POST",
-  path: "/api/v1/pixel_pick"
-})
-class PixelPick {
-  /* Get the value of an asset pixel from a lat/lng coordinate */
-  @request
-  request(@body body: PixelPickRequest) {}
-
-  @response({ status: 200})
-  response(@body body: PixelPickResponse) {}
-}
-
-@endpoint({
-  method: "POST",
-  path: "/api/v1/fetch"
-})
-class Fetch {
-  /* Fetch wms, preview, or viewer given catalog and asset id */
-  @request
-  request(@body body: FetchRequest) {}
-
-  @response({ status: 200})
-  response(@body body: FetchResponse) {}
-}
-
 @endpoint({
   method: "POST",
   path: "/api/v1/search"
@@ -150,6 +67,44 @@ class Search {
 
   @response({ status: 200})
   response(@body body: SearchResponse) {}
+}
+
+@endpoint({
+  method: "POST",
+  path: "/api/v1/fetch"
+})
+class Fetch {
+  /* Fetch wms, preview, or viewer given catalog and asset id */
+  @request
+  request(@body body: FetchRequest) {}
+
+  @response({ status: 200})
+  response(@body body: FetchResponse) {}
+}
+
+@endpoint({
+  method: "GET",
+  path: '/api/v1/styles'
+})
+class Styles {
+  @request
+  request() {}
+
+  @response({ status: 200})
+  response(@body body: StylesResponse) {}
+}
+
+@endpoint({
+  method: "POST",
+  path: "/api/v1/pixel_pick"
+})
+class PixelPick {
+  /* Get the value of an asset pixel from a lat/lng coordinate */
+  @request
+  request(@body body: PixelPickRequest) {}
+
+  @response({ status: 200})
+  response(@body body: PixelPickResponse) {}
 }
 
 interface SearchRequest {
@@ -216,4 +171,49 @@ interface PixelPickResponse {
   firstName: string;
   lastName: string;
   role: string;
+}
+
+interface StatusReponse {
+  /* The job id from the GET */
+  job_id: String;
+  /* Status string, contains "complete" when job is complete, othewise contains
+    a human readable status message */
+  status: String;
+}
+
+interface StylesResponse {
+  /* List of style strings that can be applied to the WMS layers retrieved in
+    a call to fetch. */
+  style_list: String[];
+}
+
+interface PublishRequest {
+  /* catalog to publish to */
+  catalog: String;
+  /* asset ID, must be unique to the catalog. */
+  id: String;
+  /* mediatype of the raster. Currently only 'GeoTIFF' is supported. */
+  mediatype:  String;
+  /* uri to the asset that is accessible by this server.
+      Currently supports only `gs://`. */
+  uri: String;
+  /* description of the asset */
+  description: String;
+  /* (optional) if True, will overwrite existing catalog:id asset */
+  force: boolean;
+  /* (optional) if present sets the datetime to this string,
+      if absent sets the datetime of the asset to the UTC time at
+      publishing. String must be formatted as "Y-m-d H:M:S TZ",
+      ex: '2018-06-29 17:08:00 UTC'. */
+  utc_datetime: String;
+  /* if present sets the default style when "fetch"ed by a future REST API
+     call. */
+  default_style: String;
+  /* an arbitrary set of key/value pairs to associate with this asset. */
+  attribute_dict: {};
+}
+
+interface PublishResponse {
+  /* The `callback_url` can be queried for when the asset is published. */
+  callback_url: String;
 }
