@@ -1079,7 +1079,7 @@ def publish():
                 associate with this asset.
 
     Returns:
-        {'callback_uri': ...}, 200 if successful. The `callback_uri` can be
+        {'callback_url': ...}, 200 if successful. The `callback_url` can be
             queried for when the asset is published.
         401 if api key is not authorized for this service
 
