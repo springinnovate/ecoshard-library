@@ -717,7 +717,7 @@ def add_raster_worker(
             mode='modify', execute='execute')
 
         LOGGER.debug('copy %s to %s', uri_path, local_raster_path)
-        if os.path.exists(local_raster_path) or force:
+        if not os.path.exists(local_raster_path) or force:
             subprocess.run([
                 f'gsutil cp "{uri_path}" "{local_raster_path}"'],
                 shell=True, check=True)
