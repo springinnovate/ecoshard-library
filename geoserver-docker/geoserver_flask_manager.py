@@ -673,7 +673,7 @@ def get_lat_lng_bounding_box(raster_path):
 
 def add_raster_worker(
         uri_path, mediatype, catalog, raster_id, asset_description,
-        utc_datetime, default_style, job_id, attribute_dict):
+        utc_datetime, default_style, job_id, attribute_dict, force=False):
     """This is used to copy and update a coverage set asynchronously.
 
     Args:
@@ -687,6 +687,8 @@ def add_raster_worker(
         job_id (str): used to identify entry in job_table
         attribute_dict (dict): a key/value pair mapping of arbitrary attributes
             for this asset, can be None.
+        force (bool): if True will overwrite existing local data, otherwise
+            does not re-copy data.
 
     Returns:
         None.
@@ -715,9 +717,10 @@ def add_raster_worker(
             mode='modify', execute='execute')
 
         LOGGER.debug('copy %s to %s', uri_path, local_raster_path)
-        subprocess.run([
-            f'gsutil cp "{uri_path}" "{local_raster_path}"'],
-            shell=True, check=True)
+        if os.path.exists(local_raster_path) or force:
+            subprocess.run([
+                f'gsutil cp "{uri_path}" "{local_raster_path}"'],
+                shell=True, check=True)
         if not os.path.exists(local_raster_path):
             raise RuntimeError(f"{local_raster_path} didn't copy")
 
@@ -1125,11 +1128,12 @@ def publish():
                 asset_args['catalog'], asset_args['asset_id']],
             mode='read_only', execute='execute', fetch='one')
 
-        if catalog_id_present and catalog_id_present[0] > 0:
-            if 'force' not in asset_args or not asset_args['force']:
-                return (
-                    f'{asset_args["catalog"]}:{asset_args["asset_id"]} '
-                    'already published, use force:True to overwrite.'), 400
+        force = 'force' in asset_args and asset_args['force']
+
+        if catalog_id_present and catalog_id_present[0] > 0 and force:
+            return (
+                f'{asset_args["catalog"]}:{asset_args["asset_id"]} '
+                'already published, use force:True to overwrite.'), 400
 
         # build job
         job_id = build_job_hash(asset_args)
@@ -1174,7 +1178,9 @@ def publish():
             args=(asset_args['uri'], asset_args['mediatype'],
                   asset_args['catalog'], asset_args['asset_id'],
                   asset_args['description'],
-                  utc_datetime, default_style, job_id, attribute_dict))
+                  utc_datetime, default_style, job_id, attribute_dict,
+                  ),
+            kwargs={'force': force})
         raster_worker_thread.start()
         return callback_payload
     except Exception:
