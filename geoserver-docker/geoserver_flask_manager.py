@@ -527,7 +527,7 @@ def publish_to_geoserver(
     gt = raster_info['geotransform']
 
     raster_srs = osr.SpatialReference()
-    raster_srs.ImportFromWkt(raster_info['projection'])
+    raster_srs.ImportFromWkt(raster_info['projection_wkt'])
     lat_lng_bounding_box = get_lat_lng_bounding_box(local_raster_path)
 
     epsg_crs = ':'.join(
@@ -562,14 +562,14 @@ def publish_to_geoserver(
                 "keywords": {
                     "string": [raster_id, "WCS", "GeoTIFF"]
                     },
-                "nativeCRS": raster_info['projection'],
+                "nativeCRS": raster_info['projection_wkt'],
                 "srs": epsg_crs,
                 "nativeBoundingBox": {
                     "minx": raster_info['bounding_box'][0],
                     "maxx": raster_info['bounding_box'][2],
                     "miny": raster_info['bounding_box'][1],
                     "maxy": raster_info['bounding_box'][3],
-                    "crs": raster_info['projection'],
+                    "crs": raster_info['projection_wkt'],
                     },
                 "latLonBoundingBox": {
                     "minx": lat_lng_bounding_box[0],
@@ -613,7 +613,7 @@ def publish_to_geoserver(
                         "translateX": gt[0],
                         "translateY": gt[3]
                         },
-                    "crs": raster_info['projection']
+                    "crs": raster_info['projection_wkt']
                     },
                 "supportedFormats": {
                     "string": [
@@ -667,7 +667,7 @@ def get_lat_lng_bounding_box(raster_path):
     wgs84_srs.ImportFromEPSG(4326)
     lat_lng_bounding_box = pygeoprocessing.transform_bounding_box(
         raster_info['bounding_box'],
-        raster_info['projection'], wgs84_srs.ExportToWkt())
+        raster_info['projection_wkt'], wgs84_srs.ExportToWkt())
     return lat_lng_bounding_box
 
 

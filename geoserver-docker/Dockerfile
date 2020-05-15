@@ -289,7 +289,7 @@ RUN apt-get install -y \
     emacs \
     openjdk-11-jdk
 
-RUN apt update && apt upgrade
+RUN apt update -y && apt upgrade -y
 RUN apt install libspatialindex-dev -y
 
 RUN apt install python3-pip -y
@@ -338,8 +338,6 @@ RUN mkdir /usr/local/geoserver/bin/static
 COPY static/ /usr/local/geoserver/bin/static/
 # copy styles so we can copy them manually later
 COPY styles/ /usr/local/geoserver/bin/styles/
-
-
 
 WORKDIR /usr/local/geoserver
 ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]
