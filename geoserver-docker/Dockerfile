@@ -329,7 +329,6 @@ RUN apt install git -y
 RUN pip3 install git+https://github.com/natcap/pygeoprocessing.git@release/2.0
 RUN pip3 install ecoshard==0.4.0
 
-RUN echo "tyring to get this thing to copy the right files"
 COPY start_geoserver.sh /usr/local/geoserver/bin
 COPY geoserver_flask_manager.py /usr/local/geoserver/bin
 COPY api_key_manager.py /usr/local/geoserver/bin
