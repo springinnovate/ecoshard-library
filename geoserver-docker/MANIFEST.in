@@ -1,0 +1,4 @@
+include stac_api/schema.sql
+graft stac_api/templates
+graft stac_api/static
+global-exclude *.pyc
