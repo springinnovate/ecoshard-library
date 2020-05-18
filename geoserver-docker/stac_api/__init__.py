@@ -74,7 +74,7 @@ def create_app(test_config=None):
     )
     # TODO: this was from the tutorial, should contain a real secret key and
     # a real IP address/hostname
-    app.config.from_pyfile('config.py', silent=True)
+    app.config.from_pyfile('config.py', silent=False)
 
     # ensure the instance folder exists
     try:
