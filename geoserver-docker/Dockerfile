@@ -335,7 +335,8 @@ COPY styles/ /usr/local/geoserver/bin/styles/
 
 RUN pip3 install waitress
 COPY stac_api /usr/local/geoserver/bin/stac_api
-WORKDIR /usr/local/geoserver/bin
+COPY setup.py /usr/local/geoserver/bin/
+WORKDIR /usr/local/geoserver/bin/
 RUN pip3 install -e .
 
 WORKDIR /usr/local/geoserver
