@@ -47,17 +47,11 @@ logging.basicConfig(
 LOGGER = logging.getLogger(__name__)
 
 
-def create_app():
+def create_app(test_config=None):
     """Create the Geoserver STAC Flask app."""
-    parser = argparse.ArgumentParser(
-        description='Start GeoServer REST API server.')
-    parser.add_argument(
-        '--external_ip', type=str, required=True,
-        help='external ip of this host')
-    parser.add_argument(
-        '--debug_api_key', type=str, help='a debug api key with full access')
 
-    args = parser.parse_args()
+    # args = parser.parse_args()
+    external_ip = 'localhost'
     LOGGER.debug('starting up!')
     initalize_geoserver(DATABASE_PATH)
 
@@ -68,27 +62,18 @@ def create_app():
         VALUES (?, ?)
         ''', DATABASE_PATH, argument_list=[
             'external_ip',
-            pickle.dumps(args.external_ip)],
+            pickle.dumps(external_ip)],
         mode='modify', execute='execute')
-
-    # add a default API key if needed
-    if args.debug_api_key:
-        _execute_sqlite(
-            '''
-            INSERT OR REPLACE INTO api_keys (api_key, permissions)
-            VALUES (?, 'READ:* WRITE:*')
-            ''', DATABASE_PATH, argument_list=[args.debug_api_key],
-            mode='modify', execute='execute')
 
     # wait for API calls
 
     app = flask.Flask(__name__, instance_relative_config=True)
     app.config.from_mapping(
         SECRET_KEY='dev',
-        DATABASE=DATABASE_PATH,
-        SERVER_NAME=f'{args.external_ip}:{MANAGER_PORT}'
+        SERVER_NAME=f'localhost:{MANAGER_PORT}'
     )
-    # TODO: this was from the tutorial
+    # TODO: this was from the tutorial, should contain a real secret key and
+    # a real IP address/hostname
     app.config.from_pyfile('config.py', silent=True)
 
     # ensure the instance folder exists
@@ -1252,7 +1237,7 @@ def build_schema(database_path):
 
     with open(SCHEMA_SQL_PATH, 'r') as f:
         _execute_sqlite(
-            f.read().decode('utf-8'), database_path, argument_list=[],
+            f.read(), database_path, argument_list=[],
             mode='modify', execute='script')
 
 
