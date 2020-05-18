@@ -15,7 +15,7 @@ touch app.py
 echo "SERVER_NAME = $1:8080" >> app.py
 echo "SECRET_KEY = $2" >> app.py
 
-waitress-serve --listen=0.0.0.0:8080 --call 'stac_api:create_app'
+nohup waitress-serve --listen=0.0.0.0:8080 --call 'stac_api:create_app' > stac_api_log.txt &
 
 # nohup python3 geoserver_flask_manager.py --external_ip $EXTERNAL_IP --debug_api_key debug_api &
 # sleep 2
