@@ -67,7 +67,7 @@ def create_app(test_config=None):
 
     # wait for API calls
 
-    app = flask.Flask(__name__, instance_relative_config=True)
+    app = flask.Flask(__name__, instance_relative_config=False)
     app.config.from_mapping(
         SECRET_KEY='dev',
         SERVER_NAME=f'localhost:{MANAGER_PORT}'
