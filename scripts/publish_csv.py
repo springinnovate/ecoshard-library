@@ -115,6 +115,7 @@ if __name__ == '__main__':
 
             publish(
                 row['gs_uri'], args.host_port, args.api_key, row['asset_id'],
-                row['catalog'], 'GeoTIFF', row['description'], attribute_dict)
+                row['catalog'], 'GeoTIFF', row['description'], attribute_dict,
+                force=True)
         except Exception:
             LOGGER.exception('publish failed')
