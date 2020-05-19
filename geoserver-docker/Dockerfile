@@ -326,7 +326,7 @@ RUN rm geoserver-2.17.0-bin.zip
 RUN rm -rf geoserver/data_dir/*
 
 RUN apt install git -y
-RUN pip3 install git+https://github.com/natcap/pygeoprocessing.git@release/2.0
+RUN pip3 install pygeoprocessing==2.0.0
 RUN pip3 install ecoshard==0.4.0
 
 COPY start_geoserver.sh /usr/local/geoserver/bin
