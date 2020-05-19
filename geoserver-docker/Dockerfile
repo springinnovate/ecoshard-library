@@ -314,9 +314,9 @@ RUN source /usr/local/gcloud-sdk/google-cloud-sdk/completion.bash.inc
 RUN source /usr/local/gcloud-sdk/google-cloud-sdk/path.bash.inc
 RUN echo "export PATH=$PATH:/usr/local/gcloud-sdk/google-cloud-sdk/bin" >> /root/.bashrc
 
-#COPY salo-api-5de978810708.json /usr/local/salo-api-5de978810708.json
-#RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=/usr/local/salo-api-5de978810708.json
-#RUN rm /usr/local/salo-api-5de978810708.json
+COPY salo-api-5de978810708.json /usr/local/salo-api-5de978810708.json
+RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=/usr/local/salo-api-5de978810708.json
+RUN rm /usr/local/salo-api-5de978810708.json
 
 WORKDIR /usr/local
 COPY geoserver-2.17.0-bin.zip .
