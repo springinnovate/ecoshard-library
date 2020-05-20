@@ -1,12 +1,10 @@
 """Flask APP to manage the GeoServer."""
-import argparse
 import datetime
 import hashlib
 import json
 import logging
 import os
 import pathlib
-import pickle
 import re
 import secrets
 import shutil
@@ -45,6 +43,8 @@ logging.basicConfig(
         '%(asctime)s (%(relativeCreated)d) %(processName)s %(levelname)s '
         '%(name)s [%(funcName)s:%(lineno)d] %(message)s'))
 LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger('waitress')
+logger.setLevel(logging.DEBUG)
 
 
 def create_app(test_config=None):
