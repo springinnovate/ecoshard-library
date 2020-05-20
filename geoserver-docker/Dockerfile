@@ -330,13 +330,13 @@ RUN pip3 install pygeoprocessing==2.0.0
 RUN pip3 install ecoshard==0.4.0
 
 COPY start_geoserver.sh /usr/local/geoserver/bin
-RUN cat /usr/local/start_gesoserver.sh
+RUN cat /usr/local/geoserver/bin/start_gesoserver.sh
 COPY api_key_manager.py /usr/local/geoserver/bin
 COPY styles/ /usr/local/geoserver/bin/styles/
 
 RUN pip3 install waitress
 COPY stac_api /usr/local/geoserver/bin/stac_api
-COPY setup.py /usr/local/geoserver/bin/
+COPY setup.py /usr/local/geoserver/bin
 WORKDIR /usr/local/geoserver/bin/
 RUN pip3 install -e .
 
