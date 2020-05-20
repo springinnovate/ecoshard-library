@@ -330,7 +330,7 @@ RUN pip3 install pygeoprocessing==2.0.0
 RUN pip3 install ecoshard==0.4.0
 
 COPY start_geoserver.sh /usr/local/geoserver/bin
-RUN cat start_gesoserver.sh
+RUN cat /usr/local/start_gesoserver.sh
 COPY api_key_manager.py /usr/local/geoserver/bin
 COPY styles/ /usr/local/geoserver/bin/styles/
 
