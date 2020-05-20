@@ -49,21 +49,9 @@ LOGGER = logging.getLogger(__name__)
 
 def create_app(test_config=None):
     """Create the Geoserver STAC Flask app."""
-
     # args = parser.parse_args()
-    external_ip = 'localhost'
     LOGGER.debug('starting up!')
     initalize_geoserver(DATABASE_PATH)
-
-    # set the external IP so we can return correct contexts
-    _execute_sqlite(
-        '''
-        INSERT OR REPLACE INTO global_variables (key, value)
-        VALUES (?, ?)
-        ''', DATABASE_PATH, argument_list=[
-            'external_ip',
-            pickle.dumps(external_ip)],
-        mode='modify', execute='execute')
 
     # wait for API calls
 
@@ -243,14 +231,6 @@ def create_app(test_config=None):
                 _external=True)
 
         if fetch_data['type'].lower() == 'wms':
-            external_ip = pickle.loads(
-                _execute_sqlite(
-                    '''
-                    SELECT value
-                    FROM global_variables
-                    WHERE key='external_ip'
-                    ''', DATABASE_PATH, mode='read_only', execute='execute',
-                    argument_list=[], fetch='one')[0])
             p2 = raster_min+(raster_max-raster_min)*0.02
             p25 = raster_min+(raster_max-raster_min)*0.25
             p50 = raster_min+(raster_max-raster_min)*0.5
@@ -258,7 +238,7 @@ def create_app(test_config=None):
             p98 = raster_min+(raster_max-raster_min)*0.98
 
             link = (
-                f"http://{external_ip}:8080/geoserver/"
+                f"http://{flask.config['GEOSERVER_HOST']}/geoserver/"
                 f"{fetch_data['catalog']}/wms"
                 f"?layers={fetch_data['catalog']}:{fetch_data['asset_id']}"
                 f'&format="image/png"'
@@ -284,7 +264,7 @@ def create_app(test_config=None):
         session.auth = (GEOSERVER_USER, master_geoserver_password)
         available_styles = do_rest_action(
             session.get,
-            f'http://localhost:{GEOSERVER_PORT}',
+            f'http://{flask.config["GEOSERVER_HOST"]}',
             f'geoserver/rest/styles.json').json()
 
         return {'styles': [
@@ -311,15 +291,6 @@ def create_app(test_config=None):
         """Render a viewer webpage."""
         catalog = flask.request.args['catalog']
         asset_id = flask.request.args['asset_id']
-
-        external_ip = pickle.loads(
-            _execute_sqlite(
-                '''
-                SELECT value
-                FROM global_variables
-                WHERE key='external_ip'
-                ''', DATABASE_PATH, mode='read_only', execute='execute',
-                argument_list=[], fetch='one')[0])
 
         fetch_payload = _execute_sqlite(
             '''
@@ -351,7 +322,7 @@ def create_app(test_config=None):
             'catalog': catalog,
             'asset_id': asset_id,
             'geoserver_url': (
-                f"http://{external_ip}:8080/"
+                f"http://{flask.config['GEOSERVER_HOST']}/"
                 f"geoserver/{catalog}/wms"),
             'original_style': default_style,
             'p0': raster_min,
@@ -801,13 +772,13 @@ def publish_to_geoserver(
     LOGGER.debug('create workspace if it does not exist')
     workspace_exists_result = do_rest_action(
         session.get,
-        f'http://localhost:{GEOSERVER_PORT}',
+        f'http://{flask.config["API_HOST"]}',
         f'geoserver/rest/workspaces/{catalog}')
     if not workspace_exists_result:
         LOGGER.debug(f'{catalog} does not exist, creating it')
         create_workspace_result = do_rest_action(
             session.post,
-            f'http://localhost:{GEOSERVER_PORT}',
+            f'http://{flask.config["API_HOST"]}',
             'geoserver/rest/workspaces',
             json={'workspace': {'name': catalog}})
         if not create_workspace_result:
@@ -818,7 +789,7 @@ def publish_to_geoserver(
     cover_id = f'{raster_id}_cover'
     coverstore_exists_result = do_rest_action(
         session.get,
-        f'http://localhost:{GEOSERVER_PORT}',
+        f'http://{flask.config["API_HOST"]}',
         f'geoserver/rest/workspaces/{catalog}/coveragestores/{cover_id}')
 
     LOGGER.debug(
@@ -829,7 +800,7 @@ def publish_to_geoserver(
         # coverstore exists, delete it
         delete_coverstore_result = do_rest_action(
             session.delete,
-            f'http://localhost:{GEOSERVER_PORT}',
+            f'http://{flask.config["API_HOST"]}',
             f'geoserver/rest/workspaces/{catalog}/'
             f'coveragestores/{cover_id}/?purge=all&recurse=true')
         if not delete_coverstore_result:
@@ -851,7 +822,7 @@ def publish_to_geoserver(
 
     create_coverstore_result = do_rest_action(
         session.post,
-        f'http://localhost:{GEOSERVER_PORT}',
+        f'http://{flask.config["API_HOST"]}',
         f'geoserver/rest/workspaces/{catalog}/coveragestores',
         json=coveragestore_payload)
     if not create_coverstore_result:
@@ -875,15 +846,6 @@ def publish_to_geoserver(
 
     LOGGER.debug('construct the cover_payload')
 
-    external_ip = pickle.loads(
-        _execute_sqlite(
-            '''
-            SELECT value
-            FROM global_variables
-            WHERE key='external_ip'
-            ''', DATABASE_PATH, mode='read_only', execute='execute',
-            argument_list=[], fetch='one')[0])
-
     cover_payload = {
         "coverage":
             {
@@ -893,8 +855,8 @@ def publish_to_geoserver(
                     {
                         "name": catalog,
                         "href": (
-                            f"http://{external_ip}:8080/geoserver/"
-                            f"rest/namespaces/{catalog}.json")
+                            f"http://{flask.config['GEOSERVER_HOST']}/"
+                            f"geoserver/rest/namespaces/{catalog}.json")
                     },
                 "title": raster_id,
                 "description": "description here",
@@ -930,7 +892,7 @@ def publish_to_geoserver(
                     "@class": "coverageStore",
                     "name": f"{catalog}:{raster_id}",
                     "href": (
-                        f"http://{external_ip}:{GEOSERVER_PORT}/"
+                        f"http://{flask.config['GEOSERVER_HOST']}/"
                         "geoserver/rest",
                         f"/workspaces/{catalog}/coveragestores/"
                         f"{urllib.parse.quote(raster_id)}.json")
@@ -991,7 +953,7 @@ def publish_to_geoserver(
     LOGGER.debug('send cover request to GeoServer')
     create_cover_result = do_rest_action(
         session.post,
-        f'http://{external_ip}:{GEOSERVER_PORT}',
+        f'http://{flask.config["API_HOST"]}',
         f'geoserver/rest/workspaces/{catalog}/'
         f'coveragestores/{urllib.parse.quote(cover_id)}/coverages/',
         json=cover_payload)
@@ -1316,7 +1278,7 @@ def get_geoserver_layers():
     session.auth = (GEOSERVER_USER, master_geoserver_password)
     layers_result = do_rest_action(
         session.get,
-        f'http://localhost:{GEOSERVER_PORT}',
+        f'http://{flask.config["API_HOST"]}',
         'geoserver/rest/layers.json').json()
     LOGGER.debug(layers_result)
     layer_name_list = [
@@ -1370,7 +1332,7 @@ def initalize_geoserver(database_path):
     session.auth = (GEOSERVER_USER, 'geoserver')
     password_update_request = do_rest_action(
         session.put,
-        f'http://localhost:{GEOSERVER_PORT}',
+        f'http://{flask.config["API_HOST"]}',
         'geoserver/rest/security/self/password',
         json={
             'newPassword': geoserver_password
@@ -1384,7 +1346,7 @@ def initalize_geoserver(database_path):
     # configuration before the new password is used
     password_update_request = do_rest_action(
         session.post,
-        f'http://localhost:{GEOSERVER_PORT}',
+        f'http://{flask.config["API_HOST"]}',
         'geoserver/rest/reload')
 
 
