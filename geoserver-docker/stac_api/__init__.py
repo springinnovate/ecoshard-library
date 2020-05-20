@@ -28,7 +28,6 @@ INTER_DATA_DIR = 'data'
 FULL_DATA_DIR = os.path.abspath(
     os.path.join('..', 'data_dir', INTER_DATA_DIR))
 DATABASE_PATH = os.path.join(FULL_DATA_DIR, 'flask_manager.db')
-GEOSERVER_PORT = '8080'
 MANAGER_PORT = '8888'
 PASSWORD_FILE_PATH = os.path.join(FULL_DATA_DIR, 'secrets', 'adminpass')
 GEOSERVER_USER = 'admin'
@@ -772,13 +771,13 @@ def publish_to_geoserver(
     LOGGER.debug('create workspace if it does not exist')
     workspace_exists_result = do_rest_action(
         session.get,
-        f'http://{flask.config["API_HOST"]}',
+        f'http://{flask.config["SERVER_NAME"]}',
         f'geoserver/rest/workspaces/{catalog}')
     if not workspace_exists_result:
         LOGGER.debug(f'{catalog} does not exist, creating it')
         create_workspace_result = do_rest_action(
             session.post,
-            f'http://{flask.config["API_HOST"]}',
+            f'http://{flask.config["SERVER_NAME"]}',
             'geoserver/rest/workspaces',
             json={'workspace': {'name': catalog}})
         if not create_workspace_result:
@@ -789,7 +788,7 @@ def publish_to_geoserver(
     cover_id = f'{raster_id}_cover'
     coverstore_exists_result = do_rest_action(
         session.get,
-        f'http://{flask.config["API_HOST"]}',
+        f'http://{flask.config["SERVER_NAME"]}',
         f'geoserver/rest/workspaces/{catalog}/coveragestores/{cover_id}')
 
     LOGGER.debug(
@@ -800,7 +799,7 @@ def publish_to_geoserver(
         # coverstore exists, delete it
         delete_coverstore_result = do_rest_action(
             session.delete,
-            f'http://{flask.config["API_HOST"]}',
+            f'http://{flask.config["SERVER_NAME"]}',
             f'geoserver/rest/workspaces/{catalog}/'
             f'coveragestores/{cover_id}/?purge=all&recurse=true')
         if not delete_coverstore_result:
@@ -822,7 +821,7 @@ def publish_to_geoserver(
 
     create_coverstore_result = do_rest_action(
         session.post,
-        f'http://{flask.config["API_HOST"]}',
+        f'http://{flask.config["SERVER_NAME"]}',
         f'geoserver/rest/workspaces/{catalog}/coveragestores',
         json=coveragestore_payload)
     if not create_coverstore_result:
@@ -953,7 +952,7 @@ def publish_to_geoserver(
     LOGGER.debug('send cover request to GeoServer')
     create_cover_result = do_rest_action(
         session.post,
-        f'http://{flask.config["API_HOST"]}',
+        f'http://{flask.config["SERVER_NAME"]}',
         f'geoserver/rest/workspaces/{catalog}/'
         f'coveragestores/{urllib.parse.quote(cover_id)}/coverages/',
         json=cover_payload)
@@ -1278,7 +1277,7 @@ def get_geoserver_layers():
     session.auth = (GEOSERVER_USER, master_geoserver_password)
     layers_result = do_rest_action(
         session.get,
-        f'http://{flask.config["API_HOST"]}',
+        f'http://{flask.config["SERVER_NAME"]}',
         'geoserver/rest/layers.json').json()
     LOGGER.debug(layers_result)
     layer_name_list = [
@@ -1332,7 +1331,7 @@ def initalize_geoserver(database_path):
     session.auth = (GEOSERVER_USER, 'geoserver')
     password_update_request = do_rest_action(
         session.put,
-        f'http://{flask.config["API_HOST"]}',
+        f'http://{flask.config["SERVER_NAME"]}',
         'geoserver/rest/security/self/password',
         json={
             'newPassword': geoserver_password
@@ -1346,7 +1345,7 @@ def initalize_geoserver(database_path):
     # configuration before the new password is used
     password_update_request = do_rest_action(
         session.post,
-        f'http://{flask.config["API_HOST"]}',
+        f'http://{flask.config["SERVER_NAME"]}',
         'geoserver/rest/reload')
 
 

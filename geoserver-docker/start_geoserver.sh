@@ -19,7 +19,7 @@ tail -n +0 --pid=$$ -f ./geo_log.txt | { sed "/Server:main: Started/ q" && kill 
 cd bin
 
 touch stac_api/config.py
-echo "API_HOST = '$1:$2'" >> stac_api/config.py
+echo "SERVER_NAME = '$1:$2'" >> stac_api/config.py
 echo "GEOSERVER_HOST = '$3:$4'" >> stac_api/config.py
 echo "SECRET_KEY = 'none'" >> stac_api/config.py
 nohup waitress-serve --listen=0.0.0.0:$2 --call stac_api:create_app &
