@@ -48,10 +48,7 @@ logger.setLevel(logging.DEBUG)
 
 def create_app(test_config=None):
     """Create the Geoserver STAC Flask app."""
-    # args = parser.parse_args()
     LOGGER.debug('starting up!')
-    initalize_geoserver(DATABASE_PATH)
-
     # wait for API calls
 
     app = flask.Flask(__name__, instance_relative_config=False)
@@ -59,10 +56,11 @@ def create_app(test_config=None):
         SECRET_KEY='dev',
         SERVER_NAME=f'localhost:{MANAGER_PORT}'
     )
-    # TODO: this was from the tutorial, should contain a real secret key and
+    # config.py should contain a real secret key and
     # a real IP address/hostname
     app.config.from_pyfile('config.py', silent=False)
 
+    initalize_geoserver(DATABASE_PATH, app.config['SERVER_NAME'])
     # ensure the instance folder exists
     try:
         os.makedirs(app.instance_path)
@@ -237,7 +235,7 @@ def create_app(test_config=None):
             p98 = raster_min+(raster_max-raster_min)*0.98
 
             link = (
-                f"http://{flask.config['GEOSERVER_HOST']}/geoserver/"
+                f"http://{app.config['GEOSERVER_HOST']}/geoserver/"
                 f"{fetch_data['catalog']}/wms"
                 f"?layers={fetch_data['catalog']}:{fetch_data['asset_id']}"
                 f'&format="image/png"'
@@ -263,7 +261,7 @@ def create_app(test_config=None):
         session.auth = (GEOSERVER_USER, master_geoserver_password)
         available_styles = do_rest_action(
             session.get,
-            f'http://{flask.config["GEOSERVER_HOST"]}',
+            f'http://{app.config["GEOSERVER_HOST"]}',
             f'geoserver/rest/styles.json').json()
 
         return {'styles': [
@@ -321,7 +319,7 @@ def create_app(test_config=None):
             'catalog': catalog,
             'asset_id': asset_id,
             'geoserver_url': (
-                f"http://{flask.config['GEOSERVER_HOST']}/"
+                f"http://{app.config['GEOSERVER_HOST']}/"
                 f"geoserver/{catalog}/wms"),
             'original_style': default_style,
             'p0': raster_min,
@@ -632,6 +630,7 @@ def create_app(test_config=None):
                       asset_args['catalog'], asset_args['asset_id'],
                       asset_args['description'],
                       utc_datetime, default_style, job_id, attribute_dict,
+                      app.config['SERVER_NAME'], app.config['GEOSERVER_HOST'],
                       ),
                 kwargs={'force': force})
             raster_worker_thread.start()
@@ -747,7 +746,7 @@ def do_rest_action(
 
 def publish_to_geoserver(
         geoserver_raster_path, local_raster_path, catalog, raster_id,
-        mediatype):
+        mediatype, api_server_name, geoserver_name):
     """Publish the layer to the geoserver.
 
     Args:
@@ -757,6 +756,8 @@ def publish_to_geoserver(
         catalog (str): STAC catalog to publish to
         raster_id (str): unique raster id to publish to.
         medatype (str): STAC mediatype for this raster.
+        api_server_name (str): name of api server
+        geoserver_name (str): name of geoserver
 
     Returns:
         None
@@ -771,13 +772,13 @@ def publish_to_geoserver(
     LOGGER.debug('create workspace if it does not exist')
     workspace_exists_result = do_rest_action(
         session.get,
-        f'http://{flask.config["SERVER_NAME"]}',
+        f'http://{api_server_name}',
         f'geoserver/rest/workspaces/{catalog}')
     if not workspace_exists_result:
         LOGGER.debug(f'{catalog} does not exist, creating it')
         create_workspace_result = do_rest_action(
             session.post,
-            f'http://{flask.config["SERVER_NAME"]}',
+            f'http://{api_server_name}',
             'geoserver/rest/workspaces',
             json={'workspace': {'name': catalog}})
         if not create_workspace_result:
@@ -788,7 +789,7 @@ def publish_to_geoserver(
     cover_id = f'{raster_id}_cover'
     coverstore_exists_result = do_rest_action(
         session.get,
-        f'http://{flask.config["SERVER_NAME"]}',
+        f'http://{api_server_name}',
         f'geoserver/rest/workspaces/{catalog}/coveragestores/{cover_id}')
 
     LOGGER.debug(
@@ -799,7 +800,7 @@ def publish_to_geoserver(
         # coverstore exists, delete it
         delete_coverstore_result = do_rest_action(
             session.delete,
-            f'http://{flask.config["SERVER_NAME"]}',
+            f'http://{api_server_name}',
             f'geoserver/rest/workspaces/{catalog}/'
             f'coveragestores/{cover_id}/?purge=all&recurse=true')
         if not delete_coverstore_result:
@@ -821,7 +822,7 @@ def publish_to_geoserver(
 
     create_coverstore_result = do_rest_action(
         session.post,
-        f'http://{flask.config["SERVER_NAME"]}',
+        f'http://{api_server_name}',
         f'geoserver/rest/workspaces/{catalog}/coveragestores',
         json=coveragestore_payload)
     if not create_coverstore_result:
@@ -854,7 +855,7 @@ def publish_to_geoserver(
                     {
                         "name": catalog,
                         "href": (
-                            f"http://{flask.config['GEOSERVER_HOST']}/"
+                            f"http://{geoserver_name}/"
                             f"geoserver/rest/namespaces/{catalog}.json")
                     },
                 "title": raster_id,
@@ -891,7 +892,7 @@ def publish_to_geoserver(
                     "@class": "coverageStore",
                     "name": f"{catalog}:{raster_id}",
                     "href": (
-                        f"http://{flask.config['GEOSERVER_HOST']}/"
+                        f"http://{geoserver_name}/"
                         "geoserver/rest",
                         f"/workspaces/{catalog}/coveragestores/"
                         f"{urllib.parse.quote(raster_id)}.json")
@@ -952,7 +953,7 @@ def publish_to_geoserver(
     LOGGER.debug('send cover request to GeoServer')
     create_cover_result = do_rest_action(
         session.post,
-        f'http://{flask.config["SERVER_NAME"]}',
+        f'http://{api_server_name}',
         f'geoserver/rest/workspaces/{catalog}/'
         f'coveragestores/{urllib.parse.quote(cover_id)}/coverages/',
         json=cover_payload)
@@ -974,7 +975,8 @@ def get_lat_lng_bounding_box(raster_path):
 
 def add_raster_worker(
         uri_path, mediatype, catalog, raster_id, asset_description,
-        utc_datetime, default_style, job_id, attribute_dict, force=False):
+        utc_datetime, default_style, job_id, attribute_dict,
+        api_server_name, geoserver_name, force=False):
     """This is used to copy and update a coverage set asynchronously.
 
     Args:
@@ -988,6 +990,8 @@ def add_raster_worker(
         job_id (str): used to identify entry in job_table
         attribute_dict (dict): a key/value pair mapping of arbitrary attributes
             for this asset, can be None.
+        api_server_name (str): host:port of this API server
+        geoserver_name (str): host:port of remote geoserver
         force (bool): if True will overwrite existing local data, otherwise
             does not re-copy data.
 
@@ -1072,7 +1076,7 @@ def add_raster_worker(
 
         publish_to_geoserver(
             geoserver_raster_path, local_raster_path, catalog, raster_id,
-            mediatype)
+            mediatype, api_server_name, geoserver_name)
 
         LOGGER.debug('update job_table with complete')
         _execute_sqlite(
@@ -1268,23 +1272,6 @@ def build_schema(database_path):
         mode='modify', execute='script')
 
 
-def get_geoserver_layers():
-    """Return list of [workspace]:[layername] registered in the geoserver."""
-    with open(PASSWORD_FILE_PATH, 'r') as password_file:
-        master_geoserver_password = password_file.read()
-
-    session = requests.Session()
-    session.auth = (GEOSERVER_USER, master_geoserver_password)
-    layers_result = do_rest_action(
-        session.get,
-        f'http://{flask.config["SERVER_NAME"]}',
-        'geoserver/rest/layers.json').json()
-    LOGGER.debug(layers_result)
-    layer_name_list = [
-        layer['name'] for layer in layers_result['layers']['layer']]
-    return layer_name_list
-
-
 def get_database_layers():
     """Return a list of [workspace]:[layername] register in database."""
     catalog_sql_result = _execute_sqlite(
@@ -1297,7 +1284,7 @@ def get_database_layers():
         f'{catalog}:{asset_id}' for catalog, asset_id in catalog_sql_result]
 
 
-def initalize_geoserver(database_path):
+def initalize_geoserver(database_path, api_server_name):
     """Ensure database exists, set security, and set server initial stores."""
     try:
         os.makedirs(os.path.dirname(database_path))
@@ -1331,7 +1318,7 @@ def initalize_geoserver(database_path):
     session.auth = (GEOSERVER_USER, 'geoserver')
     password_update_request = do_rest_action(
         session.put,
-        f'http://{flask.config["SERVER_NAME"]}',
+        f'http://{api_server_name}',
         'geoserver/rest/security/self/password',
         json={
             'newPassword': geoserver_password
@@ -1345,7 +1332,7 @@ def initalize_geoserver(database_path):
     # configuration before the new password is used
     password_update_request = do_rest_action(
         session.post,
-        f'http://{flask.config["SERVER_NAME"]}',
+        f'http://{api_server_name}',
         'geoserver/rest/reload')
 
 
