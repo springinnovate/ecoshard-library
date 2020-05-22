@@ -12,4 +12,4 @@ add-apt-repository \
    stable"
 apt-get update
 apt-get install -y docker-ce docker-ce-cli containerd.io
-usermod -a -G docker ${USER}
+usermod -a -G docker rich

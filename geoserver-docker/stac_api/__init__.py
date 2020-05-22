@@ -24,11 +24,12 @@ import pygeoprocessing
 import requests
 import retrying
 
+LOCAL_GEOSERVER = 'localhost:8080'
+LOCAL_API_SERVER = 'localhost:8888'
 INTER_DATA_DIR = 'data'
 FULL_DATA_DIR = os.path.abspath(
     os.path.join('..', 'data_dir', INTER_DATA_DIR))
 DATABASE_PATH = os.path.join(FULL_DATA_DIR, 'flask_manager.db')
-MANAGER_PORT = '8888'
 PASSWORD_FILE_PATH = os.path.join(FULL_DATA_DIR, 'secrets', 'adminpass')
 GEOSERVER_USER = 'admin'
 DEFAULT_STYLE = 'raster'
@@ -54,7 +55,7 @@ def create_app(test_config=None):
     app = flask.Flask(__name__, instance_relative_config=False)
     app.config.from_mapping(
         SECRET_KEY='dev',
-        SERVER_NAME=f'localhost:{MANAGER_PORT}'
+        SERVER_NAME=LOCAL_API_SERVER,
     )
     # config.py should contain a real secret key and
     # a real IP address/hostname
@@ -261,7 +262,7 @@ def create_app(test_config=None):
         session.auth = (GEOSERVER_USER, master_geoserver_password)
         available_styles = do_rest_action(
             session.get,
-            f'http://{app.config["GEOSERVER_HOST"]}',
+            f'http://{LOCAL_GEOSERVER}',
             f'geoserver/rest/styles.json').json()
 
         return {'styles': [
@@ -746,7 +747,7 @@ def do_rest_action(
 
 def publish_to_geoserver(
         geoserver_raster_path, local_raster_path, catalog, raster_id,
-        mediatype, api_server_name, geoserver_name):
+        mediatype):
     """Publish the layer to the geoserver.
 
     Args:
@@ -756,8 +757,6 @@ def publish_to_geoserver(
         catalog (str): STAC catalog to publish to
         raster_id (str): unique raster id to publish to.
         medatype (str): STAC mediatype for this raster.
-        api_server_name (str): name of api server
-        geoserver_name (str): name of geoserver
 
     Returns:
         None
@@ -772,13 +771,13 @@ def publish_to_geoserver(
     LOGGER.debug('create workspace if it does not exist')
     workspace_exists_result = do_rest_action(
         session.get,
-        f'http://{api_server_name}',
+        f'http://{LOCAL_GEOSERVER}',
         f'geoserver/rest/workspaces/{catalog}')
     if not workspace_exists_result:
         LOGGER.debug(f'{catalog} does not exist, creating it')
         create_workspace_result = do_rest_action(
             session.post,
-            f'http://{api_server_name}',
+            f'http://{LOCAL_GEOSERVER}',
             'geoserver/rest/workspaces',
             json={'workspace': {'name': catalog}})
         if not create_workspace_result:
@@ -789,7 +788,7 @@ def publish_to_geoserver(
     cover_id = f'{raster_id}_cover'
     coverstore_exists_result = do_rest_action(
         session.get,
-        f'http://{api_server_name}',
+        f'http://{LOCAL_GEOSERVER}',
         f'geoserver/rest/workspaces/{catalog}/coveragestores/{cover_id}')
 
     LOGGER.debug(
@@ -800,7 +799,7 @@ def publish_to_geoserver(
         # coverstore exists, delete it
         delete_coverstore_result = do_rest_action(
             session.delete,
-            f'http://{api_server_name}',
+            f'http://{LOCAL_GEOSERVER}',
             f'geoserver/rest/workspaces/{catalog}/'
             f'coveragestores/{cover_id}/?purge=all&recurse=true')
         if not delete_coverstore_result:
@@ -822,7 +821,7 @@ def publish_to_geoserver(
 
     create_coverstore_result = do_rest_action(
         session.post,
-        f'http://{api_server_name}',
+        f'http://{LOCAL_GEOSERVER}',
         f'geoserver/rest/workspaces/{catalog}/coveragestores',
         json=coveragestore_payload)
     if not create_coverstore_result:
@@ -855,7 +854,7 @@ def publish_to_geoserver(
                     {
                         "name": catalog,
                         "href": (
-                            f"http://{geoserver_name}/"
+                            f"http://{LOCAL_GEOSERVER}/"
                             f"geoserver/rest/namespaces/{catalog}.json")
                     },
                 "title": raster_id,
@@ -892,7 +891,7 @@ def publish_to_geoserver(
                     "@class": "coverageStore",
                     "name": f"{catalog}:{raster_id}",
                     "href": (
-                        f"http://{geoserver_name}/"
+                        f"http://{LOCAL_GEOSERVER}/"
                         "geoserver/rest",
                         f"/workspaces/{catalog}/coveragestores/"
                         f"{urllib.parse.quote(raster_id)}.json")
@@ -953,7 +952,7 @@ def publish_to_geoserver(
     LOGGER.debug('send cover request to GeoServer')
     create_cover_result = do_rest_action(
         session.post,
-        f'http://{api_server_name}',
+        f'http://{LOCAL_GEOSERVER}',
         f'geoserver/rest/workspaces/{catalog}/'
         f'coveragestores/{urllib.parse.quote(cover_id)}/coverages/',
         json=cover_payload)
@@ -975,8 +974,7 @@ def get_lat_lng_bounding_box(raster_path):
 
 def add_raster_worker(
         uri_path, mediatype, catalog, raster_id, asset_description,
-        utc_datetime, default_style, job_id, attribute_dict,
-        api_server_name, geoserver_name, force=False):
+        utc_datetime, default_style, job_id, attribute_dict, force=False):
     """This is used to copy and update a coverage set asynchronously.
 
     Args:
@@ -990,8 +988,6 @@ def add_raster_worker(
         job_id (str): used to identify entry in job_table
         attribute_dict (dict): a key/value pair mapping of arbitrary attributes
             for this asset, can be None.
-        api_server_name (str): host:port of this API server
-        geoserver_name (str): host:port of remote geoserver
         force (bool): if True will overwrite existing local data, otherwise
             does not re-copy data.
 
@@ -1076,7 +1072,7 @@ def add_raster_worker(
 
         publish_to_geoserver(
             geoserver_raster_path, local_raster_path, catalog, raster_id,
-            mediatype, api_server_name, geoserver_name)
+            mediatype)
 
         LOGGER.debug('update job_table with complete')
         _execute_sqlite(
@@ -1318,7 +1314,7 @@ def initalize_geoserver(database_path, api_server_name):
     session.auth = (GEOSERVER_USER, 'geoserver')
     password_update_request = do_rest_action(
         session.put,
-        f'http://{api_server_name}',
+        f'http://{LOCAL_GEOSERVER}',
         'geoserver/rest/security/self/password',
         json={
             'newPassword': geoserver_password
@@ -1332,7 +1328,7 @@ def initalize_geoserver(database_path, api_server_name):
     # configuration before the new password is used
     password_update_request = do_rest_action(
         session.post,
-        f'http://{api_server_name}',
+        f'http://{LOCAL_GEOSERVER}',
         'geoserver/rest/reload')
 
 
