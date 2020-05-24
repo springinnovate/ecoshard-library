@@ -630,8 +630,7 @@ def create_app(test_config=None):
                 args=(asset_args['uri'], asset_args['mediatype'],
                       asset_args['catalog'], asset_args['asset_id'],
                       asset_args['description'],
-                      utc_datetime, default_style, job_id, attribute_dict,
-                      app.config['SERVER_NAME'], app.config['GEOSERVER_HOST'],
+                      utc_datetime, default_style, job_id, attribute_dict
                       ),
                 kwargs={'force': force})
             raster_worker_thread.start()
