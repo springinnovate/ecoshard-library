@@ -62,7 +62,6 @@ COPY apache-tomcat-9.0.35.tar.gz .
 RUN tar xf apache-tomcat-9.0.35.tar.gz -C /opt/tomcat
 COPY tomcat.service /etc/systemd/system/tomcat.service
 RUN systemctl enable tomcat
-RUN systemctl start tomcat
 
 WORKDIR /usr/local/geoserver
 ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]
