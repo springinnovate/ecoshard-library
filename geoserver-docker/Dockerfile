@@ -64,9 +64,6 @@ RUN chgrp -R tomcat /opt/tomcat
 RUN chmod -R g+r /opt/tomcat/conf
 RUN chmod g+x /opt/tomcat/conf
 RUN chown -R tomcat /opt/tomcat/webapps/ /opt/tomcat/work/ /opt/tomcat/temp/ /opt/tomcat/logs/
-RUN mv geoserver-2.17.0-war /opt/tomcat/webapps/
-
-COPY tomcat.service /etc/systemd/system/tomcat.service
 
 COPY geoserver-2.17.0-war.zip .
 RUN unzip geoserver-2.17.0-war.zip geoserver.war -d /opt/tomcat/webapps/
