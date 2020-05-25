@@ -49,8 +49,8 @@ RUN pip3 install ecoshard==0.4.0
 
 COPY start_geoserver.sh /usr/local/geoserver/bin
 COPY api_key_manager.py /usr/local/geoserver/bin
-RUN mkdir -p /usr/local/geosever/bin/
-COPY styles/ /usr/local/geoserver/bin/styles/
+RUN mkdir -p /usr/local/geosever/bin/styles
+COPY styles/ /usr/local/geoserver/bin/styles
 
 RUN pip3 install waitress
 COPY stac_api /usr/local/geoserver/bin/stac_api
