@@ -6,14 +6,14 @@
 # $5 -- max ram in g (i.e. 55g)
 export GEOSERVER_HOME=/usr/local/geoserver
 export GEOSERVER_DATA_DIR=${GEOSERVER_HOME}/data_dir
-export JAVA_OPTS="-Xms2g -Xmx$5 -XX:SoftRefLRUPolicyMSPerMB=36000"
+export JAVA_OPTS="-Xms2g -Xmx$5 -XX:SoftRefLRUPolicyMSPerMB=36000 -server -XX:+UseParallelGC"
 export JAVA_BIN=/usr/bin/java
 
 cd $GEOSERVER_HOME
 echo $JAVA_OPTS >> java_opts.txt
 
 touch bin/nohup.out
-nohup /opt/tomcat/bin/catalina.sh run -Xms512M -Xmx12G -server -XX:+UseParallelGC > tomcatlog.txt &
+nohup /opt/tomcat/bin/catalina.sh run > tomcatlog.txt &
 # nohup $JAVA_BIN $JAVA_OPTS -DGEOSERVER_DATA_DIR=$GEOSERVER_DATA_DIR -Djava.awt.headless=true -DSTOP.PORT=8079 -DSTOP.KEY=geoserver -jar start.jar > geo_log.txt &
 # touch geo_log.txt
 # tail -n +0 --pid=$$ -f ./geo_log.txt | { sed "/Server:main: Started/ q" && kill $$ ;}
