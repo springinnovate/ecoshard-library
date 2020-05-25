@@ -59,9 +59,13 @@ RUN pip3 install -e .
 
 RUN useradd -r -m -U -d /opt/tomcat -s /bin/false tomcat
 COPY apache-tomcat-9.0.35.tar.gz .
-RUN tar xf apache-tomcat-9.0.35.tar.gz -C /opt/tomcat
+RUN tar xzvf apache-tomcat-9.0.35.tar.gz -C /opt/tomcat --strip-components=1
+RUN chgrp -R tomcat /opt/tomcat
+RUN chmod -R g+r /opt/tomcat/conf
+RUN chmod g+x /opt/tomcat/conf
+RUN chown -R tomcat /opt/tomcat/webapps/ /opt/tomcat/work/ /opt/tomcat/temp/ /opt/tomcat/logs/
+
 COPY tomcat.service /etc/systemd/system/tomcat.service
-RUN systemctl enable tomcat
 
 WORKDIR /usr/local/geoserver
 ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]
