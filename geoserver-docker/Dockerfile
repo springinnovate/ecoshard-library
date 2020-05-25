@@ -37,9 +37,11 @@ RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud auth activate-service-acco
 RUN rm /usr/local/salo-api-5de978810708.json
 
 WORKDIR /usr/local
-COPY geoserver-2.17.0-bin.zip .
-RUN unzip geoserver-2.17.0-bin.zip -d geoserver
-RUN rm geoserver-2.17.0-bin.zip
+# COPY geoserver-2.17.0-bin.zip .
+# RUN unzip geoserver-2.17.0-bin.zip -d geoserver
+# RUN rm geoserver-2.17.0-bin.zip
+COPY geoserver-2.17.0-war.zip .
+RUN unzip geoserver-2.17.0-war.zip
 # We'll mount our own data dir so don't use the default
 RUN rm -rf geoserver/data_dir/*
 
@@ -47,7 +49,7 @@ RUN apt install git -y
 RUN pip3 install pygeoprocessing==2.0.0
 RUN pip3 install ecoshard==0.4.0
 
-COPY start_geoserver.sh /usr/local/geoserver/bin
+# COPY start_geoserver.sh /usr/local/geoserver/bin
 COPY api_key_manager.py /usr/local/geoserver/bin
 COPY styles/ /usr/local/geoserver/bin/styles/
 
@@ -64,6 +66,7 @@ RUN chgrp -R tomcat /opt/tomcat
 RUN chmod -R g+r /opt/tomcat/conf
 RUN chmod g+x /opt/tomcat/conf
 RUN chown -R tomcat /opt/tomcat/webapps/ /opt/tomcat/work/ /opt/tomcat/temp/ /opt/tomcat/logs/
+RUN mv geoserver-2.17.0-war /opt/tomcat/webapps/
 
 COPY tomcat.service /etc/systemd/system/tomcat.service
 
