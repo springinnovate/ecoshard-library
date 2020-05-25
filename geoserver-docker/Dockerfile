@@ -61,7 +61,6 @@ RUN useradd -r -m -U -d /opt/tomcat -s /bin/false tomcat
 COPY apache-tomcat-9.0.35.tar.gz .
 RUN tar xf apache-tomcat-9.0.35.tar.gz -C /opt/tomcat
 COPY tomcat.service /etc/systemd/system/tomcat.service
-RUN systemctl daemon-reload
 RUN systemctl enable tomcat
 RUN systemctl start tomcat
 
