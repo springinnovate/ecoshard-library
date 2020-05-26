@@ -220,7 +220,8 @@ if __name__ == '__main__':
     MOUNT_POINT = args.mount_point
     DISK_ITERATION = 0
     STATUS_STRING = "startup"
-    PASSWORD_FILE_PATH = os.path.join(args.mount_point, 'secrets', 'adminpass')
+    PASSWORD_FILE_PATH = os.path.join(
+        args.mount_point, 'data', 'secrets', 'adminpass')
     swap_thread = threading.Thread(
         target=swap_new_disk,
         args=(args.initalize,))
