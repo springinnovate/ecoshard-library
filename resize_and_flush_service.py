@@ -143,7 +143,8 @@ def swap_new_disk(initalize):
             new_dev_names = set([
                 lsblk_result.split(' ')[0]
                 for lsblk_result in lsblk_result.split('\n')])
-            mount_device = list(new_dev_names.subtract(existing_dev_names))[0]
+            mount_device = list(new_dev_names.difference(
+                existing_dev_names))[0]
             STATUS_STRING = f'mounting {mount_device} at {MOUNT_POINT}'
             LOGGER.info(STATUS_STRING)
             subprocess.run(["mount", "-o", "ro", mount_device, MOUNT_POINT])
