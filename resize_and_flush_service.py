@@ -148,7 +148,7 @@ def swap_new_disk(initalize):
             device_location = f'/dev/{mount_device}'
             STATUS_STRING = f'mounting {device_location} at {MOUNT_POINT}'
             LOGGER.info(STATUS_STRING)
-            subprocess.run(["mount", "-o", "ro", device_location, MOUNT_POINT])
+            subprocess.run(["mount", device_location, MOUNT_POINT])
 
             # Detach and delete the old disk
             global LAST_DISK_NAME
