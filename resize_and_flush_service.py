@@ -62,9 +62,16 @@ def swap_new_disk():
 
         LAST_SNAPSHOT_NAME = snapshot_name
 
-        # TODO: delete the old disk
+
+
+        # TODO: detach the old disk
+        # gcloud compute instances detach-disk `hostname` --disk=stac-geoserver-manager-data-3 --zone=us-west1-b
+
         global LAST_DISK_NAME
         if LAST_DISK_NAME:
+            STATUS_STRING = f'detaching {LAST_DISK_NAME}'
+
+
             STATUS_STRING = f'deleting {LAST_DISK_NAME}'
             subprocess.run([
                 "gcloud", "compute", "disks", "delete", LAST_DISK_NAME,
