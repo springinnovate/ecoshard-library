@@ -6,7 +6,7 @@
 # $5 -- max ram in g (i.e. 55g)
 export GEOSERVER_HOME=/usr/local/geoserver
 export GEOSERVER_DATA_DIR=${GEOSERVER_HOME}/data_dir
-export JAVA_OPTS="-Xms2g -Xmx$5 -XX:SoftRefLRUPolicyMSPerMB=36000 -server -XX:+UseParallelGC"
+export JAVA_OPTS="-Xms2g -Xmx$5 -XX:SoftRefLRUPolicyMSPerMB=36000 -server -XX:+UseParallelGC -DGEOSERVER_DATA_DIR=$GEOSERVER_DATA_DIR"
 export JAVA_BIN=/usr/bin/java
 
 cd $GEOSERVER_HOME
