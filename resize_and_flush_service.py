@@ -74,7 +74,7 @@ def swap_new_disk(initalize):
             # get existing devices
             lsblk_result = subprocess.run(["lsblk"], stdout=subprocess.PIPE)
             existing_dev_names = set([
-                lsblk_result.split(' ')[0]
+                lsblk_result.stdout.rstrip().decode('utf-8').split(' ')[0]
                 for lsblk_result in lsblk_result.split('\n')])
 
             global STATUS_STRING
