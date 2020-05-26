@@ -67,7 +67,7 @@ COPY api_key_manager.py /usr/local/geoserver/bin
 COPY styles /usr/local/geoserver/bin/styles/
 COPY stac_api /usr/local/geoserver/bin/stac_api
 COPY setup.py /usr/local/geoserver/bin
-RUN pip3 install .
+RUN pip3 install -e .
 
 WORKDIR /usr/local/geoserver
 ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]
