@@ -1,6 +1,7 @@
 """Service to monitor for new snapshots and create disk & flush if so."""
 import argparse
 import datetime
+import logging
 import os
 import socket
 import subprocess
@@ -22,6 +23,15 @@ LAST_DISK_NAME = None
 POSSIBLE_MOUNT_DEVS = ['/dev/sdb', 'dev/sdc']
 LAST_MOUNT_DEV_INDEX = 0
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format=(
+        '%(asctime)s (%(relativeCreated)d) %(processName)s %(levelname)s '
+        '%(name)s [%(funcName)s:%(lineno)d] %(message)s'))
+LOGGER = logging.getLogger(__name__)
+logger = logging.getLogger('waitress')
+logger.setLevel(logging.DEBUG)
+
 
 def swap_new_disk():
     """Try to swap in a new disk if one is available."""
@@ -29,6 +39,7 @@ def swap_new_disk():
         try:
             global STATUS_STRING
             STATUS_STRING = 'search for new snapshot'
+            LOGGER.info(STATUS_STRING)
             snapshot_query = subprocess.run([
                 "gcloud", "compute", "snapshots", "list", "--limit=1",
                 "--sort-by=~name", f"--filter=name:({DISK_PATTERN})",
@@ -40,12 +51,14 @@ def swap_new_disk():
             if (snapshot_name == LAST_SNAPSHOT_NAME and
                     LAST_SNAPSHOT_NAME is not None):
                 # not a new snapshot
+                LOGGER.info(STATUS_STRING)
                 STATUS_STRING = f'last checked: {str(datetime.datetime.now())}'
-                return
+                continue
 
             # create new disk
             hostname = socket.gethostname()
             disk_name = (f'{hostname}-data-{uuid.uuid4().hex}')[:59]
+            LOGGER.info(STATUS_STRING)
             STATUS_STRING = f'creating disk {disk_name}'
             DISK_ITERATION += 1
             subprocess.run([
@@ -53,6 +66,7 @@ def swap_new_disk():
                 f"--source-snapshot={snapshot_name}", "--zone=us-west1-b"])
 
             # attach the new disk to the current host
+            LOGGER.info(STATUS_STRING)
             STATUS_STRING = f'attaching disk {disk_name}'
             subprocess.run([
                 "gcloud", "compute", "instances", "attach-disk", hostname,
@@ -61,6 +75,7 @@ def swap_new_disk():
             # unmount the current disk if any is mounted
             global MOUNT_POINT
             if LAST_SNAPSHOT_NAME:
+                LOGGER.info(STATUS_STRING)
                 STATUS_STRING = f'unmounting {MOUNT_POINT}'
                 subprocess.run(["umount", MOUNT_POINT])
 
@@ -71,24 +86,29 @@ def swap_new_disk():
             mount_device = POSSIBLE_MOUNT_DEVS[LAST_MOUNT_DEV_INDEX]
             LAST_MOUNT_DEV_INDEX = (
                 LAST_MOUNT_DEV_INDEX+1) % len(POSSIBLE_MOUNT_DEVS)
+            LOGGER.info(STATUS_STRING)
             STATUS_STRING = f'mounting {mount_device} at {MOUNT_POINT}'
             subprocess.run(["mount", mount_device, MOUNT_POINT])
 
             # Detach and delete the old disk
             global LAST_DISK_NAME
             if LAST_DISK_NAME:
+                LOGGER.info(STATUS_STRING)
                 STATUS_STRING = f'detatch old {LAST_DISK_NAME}'
                 subprocess.run([
-                    "gcloud", "compute", "instances", "detach-disk", "`hostname`",
-                    f"--disk={LAST_DISK_NAME}", "--zone=us-west1-b"])
+                    "gcloud", "compute", "instances", "detach-disk",
+                    hostname, f"--disk={LAST_DISK_NAME}", "--zone=us-west1-b"])
 
+                LOGGER.info(STATUS_STRING)
                 STATUS_STRING = f'deleting old {LAST_DISK_NAME}'
                 subprocess.run([
-                    "gcloud", "compute", "disks", "delete", LAST_DISK_NAME,
+                    f"yes|gcloud compute disks delete {LAST_DISK_NAME} "
                     "--zone=us-west1-b"])
+
             LAST_DISK_NAME = disk_name
 
             # refresh the GeoServer
+            LOGGER.info(STATUS_STRING)
             STATUS_STRING = f'refreshing geoserver'
             with open(PASSWORD_FILE_PATH, 'r') as password_file:
                 master_geoserver_password = password_file.read()
@@ -100,11 +120,13 @@ def swap_new_disk():
                 f'http://localhost:8080',
                 'geoserver/rest/reload')
             if refresh_geoserver:
+                LOGGER.info(STATUS_STRING)
                 STATUS_STRING = f'on iteration {DISK_ITERATION}'
             else:
                 raise RuntimeError(
                     f'update failed: {str(refresh_geoserver)}')
         except Exception as e:
+            LOGGER.info(STATUS_STRING)
             STATUS_STRING = f'error: {str(e)}'
         time.sleep(60*5)
 
