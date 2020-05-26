@@ -200,7 +200,9 @@ def processing_status():
     """Return the state of processing."""
     if STATUS_STRING.startswith('error'):
         return STATUS_STRING, 500
-    return STATUS_STRING, 200
+    return (
+        f'last snapshot: {LAST_SNAPSHOT_NAME}\n'
+        f'last disk: {LAST_DISK_NAME}\nstatus: {STATUS_STRING}', 200)
 
 
 if __name__ == '__main__':
