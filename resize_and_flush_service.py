@@ -6,10 +6,12 @@ import os
 import socket
 import subprocess
 import time
+import urllib
 import uuid
 
 import flask
 import requests
+import retrying
 import stac_spec
 
 APP = flask.Flask(__name__)
@@ -31,6 +33,30 @@ logging.basicConfig(
 LOGGER = logging.getLogger(__name__)
 logger = logging.getLogger('waitress')
 logger.setLevel(logging.DEBUG)
+
+
+@retrying.retry(
+    wait_exponential_multiplier=1000, wait_exponential_max=5000,
+    stop_max_attempt_number=5)
+def do_rest_action(
+        session_fn, host, suburl, data=None, json=None, headers=None):
+    """A wrapper around HTML functions to make for easy retry.
+
+    Args:
+        sesson_fn (function): takes a url, optional data parameter, and
+            optional json parameter.
+
+    Returns:
+        result of `session_fn` on arguments.
+
+    """
+    try:
+        return session_fn(
+            urllib.parse.urljoin(host, suburl), data=data, json=json,
+            headers=headers)
+    except Exception:
+        LOGGER.exception('error in function')
+        raise
 
 
 def swap_new_disk():
@@ -115,7 +141,7 @@ def swap_new_disk():
             session = requests.Session()
             session.auth = ('admin', master_geoserver_password)
 
-            refresh_geoserver = stac_spec.do_rest_action(
+            refresh_geoserver = do_rest_action(
                 session.post,
                 f'http://localhost:8080',
                 'geoserver/rest/reload')

@@ -4,7 +4,9 @@ apt-get install -y \
     ca-certificates \
     curl \
     gnupg-agent \
-    software-properties-common
+    software-properties-common \
+    python3-flask \
+    python3-requests
 curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
 add-apt-repository \
    "deb [arch=amd64] https://download.docker.com/linux/debian \
