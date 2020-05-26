@@ -137,7 +137,9 @@ def swap_new_disk(initalize):
             LAST_SNAPSHOT_NAME = snapshot_name
 
             # mount the new disk at the mount point
-            lsblk_result = subprocess.run(["lsblk"], stdout=subprocess.PIPE)
+            lsblk_result = subprocess.run(
+                ["lsblk"], stdout=subprocess.PIPE).stdout.rstrip().decode(
+                    'utf-8')
             new_dev_names = set([
                 lsblk_result.split(' ')[0]
                 for lsblk_result in lsblk_result.split('\n')])
