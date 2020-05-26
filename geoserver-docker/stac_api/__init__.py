@@ -593,12 +593,12 @@ def create_app(test_config=None):
                 'get_status', job_id=job_id, api_key=api_key, _external=True)
             callback_payload = json.dumps({'callback_url': callback_url})
 
-            # see if job already running
+            # see if job already running and hasn't previously errored
             job_payload = _execute_sqlite(
                 '''
                 SELECT active
                 FROM job_table
-                WHERE job_id=?
+                WHERE job_id=? AND job_status NOT LIKE 'ERROR%'
                 ''', DATABASE_PATH, argument_list=[job_id],
                 mode='read_only', execute='execute', fetch='one')
 
@@ -644,6 +644,87 @@ def create_app(test_config=None):
                 VALUES (?, 'crashed on schedule', 0, ?);
                 ''', DATABASE_PATH, argument_list=[job_id, utc_now()],
                 mode='modify', execute='execute')
+            raise
+
+    @app.route('/api/v1/delete', methods=['POST'])
+    def delete():
+        """Adds a raster to the GeoServer from a local storage.
+
+        Request parameters:
+            query parameters:
+                api_key (str): api key that has WRITE:catalog access.
+
+            body parameters in json format:
+                catalog (str): catalog to delete from
+                id (str): raster ID, must be unique to the catalog.
+
+        Returns:
+            200 if successful
+            401 if api key is not authorized for this service
+
+        """
+        try:
+            api_key = flask.request.args['api_key']
+            asset_args = json.loads(flask.request.json)
+            LOGGER.debug(f"asset args: {str(asset_args)}")
+            valid_check = validate_api(
+                api_key, f"WRITE:{asset_args['catalog']}")
+            if valid_check != 'valid':
+                return valid_check
+            LOGGER.debug(
+                f"{api_key} has access to WRITE:{asset_args['catalog']}")
+
+            if not asset_args['catalog'] or not asset_args['asset_id']:
+                return (
+                    f'invalid catalog:asset_id: '
+                    f'{asset_args["catalog"]}:{asset_args["asset_id"]}'), 401
+
+            # see if catalog/id are already in db if not, return 403
+            local_path_result = _execute_sqlite(
+                '''
+                SELECT local_path
+                FROM catalog_table
+                WHERE catalog=? AND asset_id=?
+                ''', DATABASE_PATH, argument_list=[
+                    asset_args['catalog'], asset_args['asset_id']],
+                mode='read_only', execute='execute', fetch='one')
+
+            if not local_path_result:
+                return (
+                    f'{asset_args["catalog"]}:{asset_args["asset_id"]} '
+                    'is not in the catalog, nothing to delete.'), 400
+
+            # Don't wait for the remove to happen before returning, it could
+            # take a bit of time.
+            remove_thread = threading.Thread(
+                target=os.remove,
+                args=(local_path_result[0],))
+            remove_thread.start()
+
+            with open(PASSWORD_FILE_PATH, 'r') as password_file:
+                master_geoserver_password = password_file.read()
+            session = requests.Session()
+            session.auth = (GEOSERVER_USER, master_geoserver_password)
+
+            cover_id = f'{asset_args["asset_id"]}_cover'
+            delete_coverstore_result = do_rest_action(
+                session.delete,
+                f'http://{LOCAL_GEOSERVER}',
+                f'geoserver/rest/workspaces/{asset_args["catalog"]}/'
+                f'coveragestores/{cover_id}/?purge=all&recurse=true')
+            if not delete_coverstore_result:
+                raise RuntimeError(f"Unable to delete {cover_id}")
+            _execute_sqlite(
+                '''
+                DELETE FROM catalog_table
+                WHERE catalog=? AND asset_id=?
+                ''', DATABASE_PATH, argument_list=[
+                    asset_args['catalog'], asset_args['asset_id']],
+                mode='modify', execute='execute')
+
+            return 200
+        except Exception:
+            LOGGER.exception('something bad happened on delete')
             raise
 
     return app
@@ -995,6 +1076,7 @@ def add_raster_worker(
 
     """
     try:
+        local_raster_path = None
         # geoserver raster path is for it's local data dir
         geoserver_raster_path = os.path.join(
             INTER_DATA_DIR, catalog, f'{raster_id}.tif')
@@ -1132,6 +1214,12 @@ def add_raster_worker(
             ''', DATABASE_PATH, argument_list=[
                 f'ERROR: {str(e)}', time.time(), 0, job_id],
             mode='modify', execute='execute')
+        if local_raster_path:
+            # try to delete the local file in case it errored
+            try:
+                os.remove(local_raster_path)
+            except OSError:
+                LOGGER.exception(f'unable to remove {local_raster_path}')
 
 
 def validate_api(api_key, permission):
