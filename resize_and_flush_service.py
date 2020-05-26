@@ -112,9 +112,9 @@ def swap_new_disk(initalize):
 
             STATUS_STRING = f'setting disk {disk_name} to autodelete'
             LOGGER.info(STATUS_STRING)
-            subprocess.run([(
+            subprocess.run([
                 "gcloud", "compute", "instances", "set-disk-auto-delete",
-                hostname, f"--disk={disk_name}", "--zone=us-west1-b")])
+                hostname, f"--disk={disk_name}", "--zone=us-west1-b"])
 
             # unmount the current disk if any is mounted
             global MOUNT_POINT
@@ -159,23 +159,24 @@ def swap_new_disk(initalize):
             LAST_DISK_NAME = disk_name
 
             # refresh the GeoServer
-            STATUS_STRING = f'refreshing geoserver'
-            LOGGER.info(STATUS_STRING)
-            with open(PASSWORD_FILE_PATH, 'r') as password_file:
-                master_geoserver_password = password_file.read()
-            session = requests.Session()
-            session.auth = ('admin', master_geoserver_password)
-
-            refresh_geoserver = do_rest_action(
-                session.post,
-                f'http://localhost:8080',
-                'geoserver/rest/reload')
-            if refresh_geoserver:
-                STATUS_STRING = f'on iteration {DISK_ITERATION}'
+            if not initalize:
+                STATUS_STRING = f'refreshing geoserver'
                 LOGGER.info(STATUS_STRING)
-            else:
-                raise RuntimeError(
-                    f'update failed: {str(refresh_geoserver)}')
+                with open(PASSWORD_FILE_PATH, 'r') as password_file:
+                    master_geoserver_password = password_file.read()
+                session = requests.Session()
+                session.auth = ('admin', master_geoserver_password)
+
+                refresh_geoserver = do_rest_action(
+                    session.post,
+                    f'http://localhost:8080',
+                    'geoserver/rest/reload')
+                if refresh_geoserver:
+                    STATUS_STRING = f'on iteration {DISK_ITERATION}'
+                    LOGGER.info(STATUS_STRING)
+                else:
+                    raise RuntimeError(
+                        f'update failed: {str(refresh_geoserver)}')
             STATUS_STRING = f'last checked: {str(datetime.datetime.now())}'
         except Exception as e:
             STATUS_STRING = f'error: {str(e)}'
