@@ -62,6 +62,12 @@ def create_app(test_config=None):
     app.config.from_pyfile('config.py', silent=False)
 
     initalize_geoserver(DATABASE_PATH, app.config['SERVER_NAME'])
+
+    # remove any old jobs
+    _execute_sqlite(
+        '''DELETE FROM job_table''', DATABASE_PATH, mode='modify',
+        execute='execute')
+
     # ensure the instance folder exists
     try:
         os.makedirs(app.instance_path)
