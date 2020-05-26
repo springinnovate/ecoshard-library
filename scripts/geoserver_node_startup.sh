@@ -2,10 +2,6 @@
 
 # Startup script for GeoServer Node
 
-# create new disk from snapshot, name it geoserver-data-disk-*instance name*
-gcloud compute disks create `hostname`-geoserver-data --source-snapshot=geoserver-data-snapshot --zone=us-west1-b
-# attach new disk to *instance name*
-gcloud compute instances attach-disk `hostname` --disk=`hostname`-geoserver-data --zone=us-west1-b
 # set to auto delete
 gcloud compute instances set-disk-auto-delete `hostname` --disk=`hostname`-geoserver-data --zone=us-west1-b
 # create dir at /mnt/geoserver_data

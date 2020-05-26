@@ -98,6 +98,12 @@ def swap_new_disk():
                 "gcloud", "compute", "instances", "attach-disk", hostname,
                 f"--disk={disk_name}", "--zone=us-west1-b"])
 
+            STATUS_STRING = f'setting disk {disk_name} to autodelete'
+            LOGGER.info(STATUS_STRING)
+            subprocess.run([(
+                "gcloud", "compute", "instances", "set-disk-auto-delete",
+                hostname, f"--disk={disk_name}", "--zone=us-west1-b")])
+
             # unmount the current disk if any is mounted
             global MOUNT_POINT
             try:
@@ -121,7 +127,7 @@ def swap_new_disk():
                 LAST_MOUNT_DEV_INDEX+1) % len(POSSIBLE_MOUNT_DEVS)
             STATUS_STRING = f'mounting {mount_device} at {MOUNT_POINT}'
             LOGGER.info(STATUS_STRING)
-            subprocess.run(["mount", mount_device, MOUNT_POINT])
+            subprocess.run(["mount", "-o", "ro", mount_device, MOUNT_POINT])
 
             # Detach and delete the old disk
             global LAST_DISK_NAME

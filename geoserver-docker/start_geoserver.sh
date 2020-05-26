@@ -14,9 +14,6 @@ echo $JAVA_OPTS >> java_opts.txt
 
 touch bin/nohup.out
 nohup /opt/tomcat/bin/catalina.sh run > tomcatlog.txt &
-# nohup $JAVA_BIN $JAVA_OPTS -DGEOSERVER_DATA_DIR=$GEOSERVER_DATA_DIR -Djava.awt.headless=true -DSTOP.PORT=8079 -DSTOP.KEY=geoserver -jar start.jar > geo_log.txt &
-# touch geo_log.txt
-# tail -n +0 --pid=$$ -f ./geo_log.txt | { sed "/Server:main: Started/ q" && kill $$ ;}
 cd bin
 
 touch stac_api/config.py
