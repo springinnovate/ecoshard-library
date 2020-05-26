@@ -23,9 +23,6 @@ HEALTHY = True
 LAST_DISK_NAME = None
 SLEEP_TIME = 5*60
 
-POSSIBLE_MOUNT_DEVS = ['/dev/sdb', 'dev/sdc']
-LAST_MOUNT_DEV_INDEX = 0
-
 logging.basicConfig(
     level=logging.DEBUG,
     format=(
@@ -74,6 +71,12 @@ def swap_new_disk(initalize):
         if not initalize:
             time.sleep(SLEEP_TIME)
         try:
+            # get existing devices
+            lsblk_result = subprocess.run(["lsblk"], stdout=subprocess.PIPE)
+            existing_dev_names = set([
+                lsblk_result.split(' ')[0]
+                for lsblk_result in lsblk_result.split('\n')])
+
             global STATUS_STRING
             STATUS_STRING = 'search for new snapshot'
             LOGGER.info(STATUS_STRING)
@@ -133,10 +136,11 @@ def swap_new_disk(initalize):
             LAST_SNAPSHOT_NAME = snapshot_name
 
             # mount the new disk at the mount point
-            global LAST_MOUNT_DEV_INDEX
-            mount_device = POSSIBLE_MOUNT_DEVS[LAST_MOUNT_DEV_INDEX]
-            LAST_MOUNT_DEV_INDEX = (
-                LAST_MOUNT_DEV_INDEX+1) % len(POSSIBLE_MOUNT_DEVS)
+            lsblk_result = subprocess.run(["lsblk"], stdout=subprocess.PIPE)
+            new_dev_names = set([
+                lsblk_result.split(' ')[0]
+                for lsblk_result in lsblk_result.split('\n')])
+            mount_device = list(new_dev_names.subtract(existing_dev_names))[0]
             STATUS_STRING = f'mounting {mount_device} at {MOUNT_POINT}'
             LOGGER.info(STATUS_STRING)
             subprocess.run(["mount", "-o", "ro", mount_device, MOUNT_POINT])
