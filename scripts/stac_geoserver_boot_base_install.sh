@@ -6,7 +6,8 @@ apt-get install -y \
     gnupg-agent \
     software-properties-common \
     python3-flask \
-    python3-requests
+    python3-requests \
+    python3-retrying
 curl -fsSL https://download.docker.com/linux/debian/gpg | apt-key add -
 add-apt-repository \
    "deb [arch=amd64] https://download.docker.com/linux/debian \

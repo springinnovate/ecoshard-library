@@ -12,7 +12,6 @@ import uuid
 import flask
 import requests
 import retrying
-import stac_spec
 
 APP = flask.Flask(__name__)
 
