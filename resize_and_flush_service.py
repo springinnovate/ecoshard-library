@@ -72,10 +72,11 @@ def swap_new_disk(initalize):
             time.sleep(SLEEP_TIME)
         try:
             # get existing devices
-            lsblk_result = subprocess.run(["lsblk"], stdout=subprocess.PIPE)
+            lsblk_result = subprocess.run(
+                ["lsblk"], stdout=subprocess.PIPE).stdout.rstrip().decode(
+                    'utf-8')
             existing_dev_names = set([
-                lsblk_result.stdout.rstrip().decode('utf-8').split(' ')[0]
-                for lsblk_result in lsblk_result.split('\n')])
+                line.split(' ')[0] for line in lsblk_result.split('\n')])
 
             global STATUS_STRING
             STATUS_STRING = 'search for new snapshot'
