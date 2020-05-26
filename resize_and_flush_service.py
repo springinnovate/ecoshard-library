@@ -6,6 +6,7 @@ import os
 import socket
 import subprocess
 import time
+import threading
 import urllib
 import uuid
 
@@ -20,6 +21,7 @@ DISK_PATTERN = None
 LAST_SNAPSHOT_NAME = None
 HEALTHY = True
 LAST_DISK_NAME = None
+SLEEP_TIME = 5*60
 
 POSSIBLE_MOUNT_DEVS = ['/dev/sdb', 'dev/sdc']
 LAST_MOUNT_DEV_INDEX = 0
@@ -58,9 +60,19 @@ def do_rest_action(
         raise
 
 
-def swap_new_disk():
-    """Try to swap in a new disk if one is available."""
+def swap_new_disk(initalize):
+    """Try to swap in a new disk if one is available.
+
+    Args:
+        initalize (bool): If true, run through once, otherwise loop infinately.
+
+    Returns:
+        None
+
+    """
     while True:
+        if not initalize:
+            time.sleep(SLEEP_TIME)
         try:
             global STATUS_STRING
             STATUS_STRING = 'search for new snapshot'
@@ -168,8 +180,8 @@ def swap_new_disk():
         except Exception as e:
             STATUS_STRING = f'error: {str(e)}'
             LOGGER.info(STATUS_STRING)
-        break
-        time.sleep(60*5)
+        if initalize:
+            break
 
 
 @APP.route('/', methods=['GET'])
@@ -192,14 +204,19 @@ if __name__ == '__main__':
     parser.add_argument(
         '--mount_point', type=str, required=True, help=(
             'mount point location ex /mnt/geoserver_data'))
+    parser.add_argument('--initalize', action="store_true")
     args = parser.parse_args()
     DISK_PATTERN = args.disk_pattern
     MOUNT_POINT = args.mount_point
     DISK_ITERATION = 0
     STATUS_STRING = "startup"
     PASSWORD_FILE_PATH = os.path.join(args.mount_point, 'secrets', 'adminpass')
-    swap_new_disk()
+    swap_thread = threading.Thread(
+        target=swap_new_disk,
+        args=(args.initalize,))
+    swap_thread.start()
 
-    # APP.run(
-    #     host='0.0.0.0',
-    #     port=args.app_port)
+    if not args.initalize:
+        APP.run(
+            host='0.0.0.0',
+            port=args.app_port)
