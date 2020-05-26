@@ -46,18 +46,10 @@ WORKDIR /usr/local
 RUN apt install git -y
 RUN pip3 install pygeoprocessing==2.0.0
 RUN pip3 install ecoshard==0.4.0
+RUN pip3 install waitress
 
 RUN mkdir -p /usr/local/geoserver/bin
-COPY start_geoserver.sh /usr/local/geoserver/bin
-COPY api_key_manager.py /usr/local/geoserver/bin
-
-COPY styles /usr/local/geoserver/bin
-
-RUN pip3 install waitress
-COPY stac_api /usr/local/geoserver/bin/stac_api
-COPY setup.py /usr/local/geoserver/bin
 WORKDIR /usr/local/geoserver/bin/
-RUN pip3 install -e .
 
 RUN useradd -r -m -U -d /opt/tomcat -s /bin/false tomcat
 COPY apache-tomcat-9.0.35.tar.gz .
@@ -69,6 +61,13 @@ RUN chown -R tomcat /opt/tomcat/webapps/ /opt/tomcat/work/ /opt/tomcat/temp/ /op
 
 COPY geoserver-2.17.0-war.zip .
 RUN unzip geoserver-2.17.0-war.zip geoserver.war -d /opt/tomcat/webapps/
+
+COPY start_geoserver.sh /usr/local/geoserver/bin
+COPY api_key_manager.py /usr/local/geoserver/bin
+COPY styles /usr/local/geoserver/bin/styles/
+COPY stac_api /usr/local/geoserver/bin/stac_api
+COPY setup.py /usr/local/geoserver/bin
+RUN pip3 install .
 
 WORKDIR /usr/local/geoserver
 ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]
