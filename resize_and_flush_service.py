@@ -5,6 +5,7 @@ import logging
 import os
 import socket
 import subprocess
+import sys
 import time
 import threading
 import urllib
@@ -19,7 +20,6 @@ APP = flask.Flask(__name__)
 DISK_ITERATION = 0
 DISK_PATTERN = None
 LAST_SNAPSHOT_NAME = None
-HEALTHY = True
 LAST_DISK_NAME = None
 SLEEP_TIME = 5*60
 
@@ -27,7 +27,8 @@ logging.basicConfig(
     level=logging.DEBUG,
     format=(
         '%(asctime)s (%(relativeCreated)d) %(processName)s %(levelname)s '
-        '%(name)s [%(funcName)s:%(lineno)d] %(message)s'))
+        '%(name)s [%(funcName)s:%(lineno)d] %(message)s'),
+    stream=sys.stdout)
 LOGGER = logging.getLogger(__name__)
 logger = logging.getLogger('waitress')
 logger.setLevel(logging.DEBUG)
