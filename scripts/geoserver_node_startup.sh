@@ -1,7 +1,5 @@
 #!/bin/bash
-
 # Startup script for GeoServer Node
-
 
 # create dir at /mnt/geoserver_data
 mkdir -p /mnt/geoserver_data
