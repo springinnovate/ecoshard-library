@@ -125,9 +125,11 @@ def swap_new_disk():
             else:
                 raise RuntimeError(
                     f'update failed: {str(refresh_geoserver)}')
+            STATUS_STRING = f'last checked: {str(datetime.datetime.now())}'
         except Exception as e:
             LOGGER.info(STATUS_STRING)
             STATUS_STRING = f'error: {str(e)}'
+        break
         time.sleep(60*5)
 
 
@@ -159,6 +161,6 @@ if __name__ == '__main__':
     PASSWORD_FILE_PATH = os.path.join(args.mount_point, 'secrets', 'adminpass')
     swap_new_disk()
 
-    APP.run(
-        host='0.0.0.0',
-        port=args.app_port)
+    # APP.run(
+    #     host='0.0.0.0',
+    #     port=args.app_port)
