@@ -66,7 +66,7 @@ def create_app(test_config=None):
     # remove any old jobs
     _execute_sqlite(
         '''DELETE FROM job_table''', DATABASE_PATH, mode='modify',
-        execute='execute')
+        execute='execute', argument_list=[])
 
     # ensure the instance folder exists
     try:
