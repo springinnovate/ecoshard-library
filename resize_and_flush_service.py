@@ -145,9 +145,10 @@ def swap_new_disk(initalize):
                 for lsblk_result in lsblk_result.split('\n')])
             mount_device = list(new_dev_names.difference(
                 existing_dev_names))[0]
-            STATUS_STRING = f'mounting {mount_device} at {MOUNT_POINT}'
+            device_location = f'/dev/{mount_device}'
+            STATUS_STRING = f'mounting {device_location} at {MOUNT_POINT}'
             LOGGER.info(STATUS_STRING)
-            subprocess.run(["mount", "-o", "ro", mount_device, MOUNT_POINT])
+            subprocess.run(["mount", "-o", "ro", device_location, MOUNT_POINT])
 
             # Detach and delete the old disk
             global LAST_DISK_NAME
