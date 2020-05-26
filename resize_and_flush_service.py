@@ -71,6 +71,7 @@ def swap_new_disk():
                 "--format=value(name)"], stdout=subprocess.PIPE)
             snapshot_name = snapshot_query.stdout.rstrip().decode('utf-8')
             STATUS_STRING = f'creating new disk from snapshot {snapshot_name}'
+            LOGGER.info(STATUS_STRING)
             global DISK_ITERATION
             global LAST_SNAPSHOT_NAME
             if (snapshot_name == LAST_SNAPSHOT_NAME and
