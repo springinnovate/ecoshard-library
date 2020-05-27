@@ -588,7 +588,7 @@ def create_app(test_config=None):
 
             force = 'force' in asset_args and asset_args['force']
 
-            if catalog_id_present and catalog_id_present[0] > 0 and force:
+            if catalog_id_present and catalog_id_present[0] > 0 and not force:
                 return (
                     f'{asset_args["catalog"]}:{asset_args["asset_id"]} '
                     'already published, use force:True to overwrite.'), 400
