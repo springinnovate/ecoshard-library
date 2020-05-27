@@ -33,6 +33,23 @@ class Publish {
 }
 
 @endpoint({
+  method: "POST",
+  path: '/api/v1/delete'
+})
+class Delete {
+  @request
+  request(@queryParams
+      queryParams: {
+        /* API key that has permission to search catalogs */
+        api_key: String;
+      },
+      @body body: DeleteRequest) {}
+
+  @response({ status: 200})
+  response(@body body: DeleteResponse) {}
+}
+
+@endpoint({
   method: "GET",
   path: '/api/v1/get_status/:job_id'
 })
@@ -216,4 +233,16 @@ interface PublishRequest {
 interface PublishResponse {
   /* The `callback_url` can be queried for when the asset is published. */
   callback_url: String;
+}
+
+interface DeleteRequest {
+  /* catalog to delete from to */
+  catalog: String;
+  /* asset ID to delete */
+  id: String;
+}
+
+interface DeleteResponse {
+  /* Returns a simple status string. 200 means successful delete.  */
+  status: String;
 }
