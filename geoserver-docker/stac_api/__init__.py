@@ -700,13 +700,6 @@ def create_app(test_config=None):
                     f'{asset_args["catalog"]}:{asset_args["asset_id"]} '
                     'is not in the catalog, nothing to delete.'), 400
 
-            # Don't wait for the remove to happen before returning, it could
-            # take a bit of time.
-            remove_thread = threading.Thread(
-                target=os.remove,
-                args=(local_path_result[0],))
-            remove_thread.start()
-
             with open(PASSWORD_FILE_PATH, 'r') as password_file:
                 master_geoserver_password = password_file.read()
             session = requests.Session()
@@ -727,6 +720,13 @@ def create_app(test_config=None):
                 ''', DATABASE_PATH, argument_list=[
                     asset_args['catalog'], asset_args['asset_id']],
                 mode='modify', execute='execute')
+
+            # Don't wait for the remove to happen before returning, it could
+            # take a bit of time.
+            remove_thread = threading.Thread(
+                target=os.remove,
+                args=(local_path_result[0],))
+            remove_thread.start()
 
             return 200
         except Exception:
