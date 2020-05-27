@@ -1,18 +1,8 @@
 #!/bin/bash
 # Startup script for GeoServer Node
 
-# pull latest container
 docker pull us.gcr.io/salo-api/stac-geoserver-container:latest
-
-# create dir at /mnt/geoserver_data
 mkdir -p /mnt/geoserver_data
-
-pushd /home/rich/stac-geoserver-api/
+cd /home/rich/stac-geoserver-api/
 git pull
-python3 resize_and_flush_service.py --initalize --app_port 8081 --disk_pattern geoserver-data-disk* --mount_point /mnt/geoserver_data > /home/rich/resize_and_flush_service_log.txt
-
-# geoserver instance, map port 8080 and assume 15gb total ram -- give 12gb to JVM
-docker run --rm -d -it -v /mnt/geoserver_data/:/usr/local/geoserver/data_dir -p 8080:8080 us.gcr.io/salo-api/stac-geoserver-container:latest api.salo.ai 8888 maps.salo.ai 8080 12g
-
-nohup python3 resize_and_flush_service.py --app_port 8081 --disk_pattern geoserver-data-disk* --mount_point /mnt/geoserver_data > resize_and_flush_service_log.txt &
-popd
+nohup python3 resize_and_flush_service.py --mem_size 12G --snapshot-pattern geoserver-data-disk* --image_name us.gcr.io/salo-api/stac-geoserver-container:latest --check_time 300 --container_name geoserver_node --app_port 8081 --disk_pattern geoserver-data-disk* --mount_point /mnt/geoserver_data > /home/rich/resize_and_flush_service_log.txt &
