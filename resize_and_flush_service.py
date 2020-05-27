@@ -136,8 +136,8 @@ def swap_new_disk(initalize):
 
             STATUS_STRING = f'ensuring {MOUNT_POINT} exists'
             LOGGER.info(STATUS_STRING)
-            subprocess.run(["umount", MOUNT_POINT], check=True)
-            subprocess.run(["mkdir", "-p", MOUNT_POINT], check=True)
+            subprocess.run(["umount", MOUNT_POINT])
+            subprocess.run(["mkdir", "-p", MOUNT_POINT])
 
             LAST_SNAPSHOT_NAME = snapshot_name
 
