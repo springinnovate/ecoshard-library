@@ -136,7 +136,6 @@ def swap_new_disk(initalize):
 
             STATUS_STRING = f'ensuring {MOUNT_POINT} exists'
             LOGGER.info(STATUS_STRING)
-            subprocess.run(["umount", MOUNT_POINT])
             subprocess.run(["mkdir", "-p", MOUNT_POINT])
 
             LAST_SNAPSHOT_NAME = snapshot_name
@@ -169,7 +168,7 @@ def swap_new_disk(initalize):
                 LOGGER.info(STATUS_STRING)
                 subprocess.run([
                     f"yes|gcloud compute disks delete {LAST_DISK_NAME} "
-                    "--zone=us-west1-b"], check=True)
+                    "--zone=us-west1-b"], check=True, shell=True)
 
             LAST_DISK_NAME = disk_name
 
