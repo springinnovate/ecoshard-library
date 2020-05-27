@@ -12,16 +12,9 @@ import urllib
 import uuid
 
 import flask
-import requests
 import retrying
 
 APP = flask.Flask(__name__)
-
-DISK_ITERATION = 0
-DISK_PATTERN = None
-LAST_SNAPSHOT_NAME = None
-LAST_DISK_NAME = None
-CHECK_TIME = None
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -32,6 +25,10 @@ logging.basicConfig(
 LOGGER = logging.getLogger(__name__)
 logger = logging.getLogger('waitress')
 logger.setLevel(logging.DEBUG)
+
+LAST_SNAPSHOT_NAME = None
+CONTAINER_RUNNING = False
+LAST_DISK_NAME = None
 
 
 @retrying.retry(
@@ -58,19 +55,26 @@ def do_rest_action(
         raise
 
 
-def swap_new_disk(initalize):
-    """Try to swap in a new disk if one is available.
+def new_disk_monitor_docker_manager(
+        snapshot_pattern, mount_point, check_time, image_name, container_name,
+        mem_size):
+    """Monitor for new snapshots matching pattern. Create copy if one appears.
 
     Args:
-        initalize (bool): If true, run through once, otherwise loop infinately.
+        snapshot_pattern (str): the string to match for a new snapshot
+        mount_point (str): system location to mount the drive
+        check_time (float): how many seconds to wait between snapshot checks
+        image_name (str): name of image to run for Docker container
+        container_name (str): what to name the running docker container
+        mem_size (str): Java formatted max memory string i.e. "12G"
 
     Returns:
         None
 
     """
+    disk_iteration = 0
+
     while True:
-        if not initalize:
-            time.sleep(CHECK_TIME)
         try:
             # get existing devices
             lsblk_result = subprocess.run(
@@ -84,11 +88,10 @@ def swap_new_disk(initalize):
             LOGGER.info(STATUS_STRING)
             snapshot_query = subprocess.run([
                 "gcloud", "compute", "snapshots", "list", "--limit=1",
-                "--sort-by=~name", f"--filter=name:({DISK_PATTERN})",
+                "--sort-by=~name", f"--filter=name:({snapshot_pattern})",
                 "--format=value(name)"], stdout=subprocess.PIPE,
                 check=True)
             snapshot_name = snapshot_query.stdout.rstrip().decode('utf-8')
-            global DISK_ITERATION
             global LAST_SNAPSHOT_NAME
             if (snapshot_name == LAST_SNAPSHOT_NAME and
                     LAST_SNAPSHOT_NAME is not None):
@@ -104,7 +107,7 @@ def swap_new_disk(initalize):
             disk_name = (f'{hostname}-data-{uuid.uuid4().hex}')[:59]
             STATUS_STRING = f'creating disk {disk_name}'
             LOGGER.info(STATUS_STRING)
-            DISK_ITERATION += 1
+            disk_iteration += 1
             subprocess.run([
                 "gcloud", "compute", "disks", "create", disk_name,
                 f"--source-snapshot={snapshot_name}", "--zone=us-west1-b"],
@@ -126,17 +129,16 @@ def swap_new_disk(initalize):
                 check=True)
 
             # unmount the current disk if any is mounted
-            global MOUNT_POINT
             try:
-                STATUS_STRING = f'unmounting {MOUNT_POINT}'
+                STATUS_STRING = f'unmounting {mount_point}'
                 LOGGER.info(STATUS_STRING)
-                subprocess.run(["umount", MOUNT_POINT], check=True)
+                subprocess.run(["umount", mount_point], check=True)
             except Exception:
-                LOGGER.exception(f'exception when unmounting {MOUNT_POINT}')
+                LOGGER.exception(f'exception when unmounting {mount_point}')
 
-            STATUS_STRING = f'ensuring {MOUNT_POINT} exists'
+            STATUS_STRING = f'ensuring {mount_point} exists'
             LOGGER.info(STATUS_STRING)
-            subprocess.run(["mkdir", "-p", MOUNT_POINT])
+            subprocess.run(["mkdir", "-p", mount_point])
 
             LAST_SNAPSHOT_NAME = snapshot_name
 
@@ -171,42 +173,38 @@ def swap_new_disk(initalize):
                     "--zone=us-west1-b"], check=True, shell=True)
 
             LAST_DISK_NAME = disk_name
-
-            # refresh the GeoServer
-            if not initalize:
-                STATUS_STRING = f'refreshing geoserver'
+            global CONTAINER_RUNNING
+            if CONTAINER_RUNNING:
+                STATUS_STRING = f'stopping docker container'
                 LOGGER.info(STATUS_STRING)
-                with open(PASSWORD_FILE_PATH, 'r') as password_file:
-                    master_geoserver_password = password_file.read()
-                session = requests.Session()
-                session.auth = ('admin', master_geoserver_password)
+                CONTAINER_RUNNING = False
+                subprocess.run(["docker", "stop", container_name], check=True)
 
-                refresh_geoserver = do_rest_action(
-                    session.post,
-                    f'http://localhost:8080',
-                    'geoserver/rest/reload')
-                if refresh_geoserver:
-                    STATUS_STRING = f'geoserver refreshed'
-                    LOGGER.info(STATUS_STRING)
-                else:
-                    raise RuntimeError(
-                        f'update failed: {str(refresh_geoserver)}')
+            STATUS_STRING = f'starting docker container'
+            LOGGER.info(STATUS_STRING)
+            subprocess.run([
+                "docker", "run", "--rm", "-d", "-it", "-v",
+                "/mnt/geoserver_data/:/usr/local/geoserver/data_dir",
+                "-p", "8080:8080", "--name", container_name,
+                image_name, "api.salo.ai", "8888", "maps.salo.ai", "8080",
+                mem_size], check=True)
+            CONTAINER_RUNNING = True
             STATUS_STRING = f'last checked: {str(datetime.datetime.now())}'
         except Exception as e:
             STATUS_STRING = f'error: {str(e)}'
             LOGGER.exception(STATUS_STRING)
-        if initalize:
-            break
+            CONTAINER_RUNNING = False
+        time.sleep(CHECK_TIME)
 
 
 @APP.route('/', methods=['GET'])
 def processing_status():
     """Return the state of processing."""
-    if STATUS_STRING.startswith('error'):
-        return STATUS_STRING, 500
-    return (
-        f'last snapshot: {LAST_SNAPSHOT_NAME}\n'
-        f'last disk: {LAST_DISK_NAME}\nstatus: {STATUS_STRING}', 200)
+    if CONTAINER_RUNNING:
+        return (
+            f'last snapshot: {LAST_SNAPSHOT_NAME}\n'
+            f'last disk: {LAST_DISK_NAME}\nstatus: {STATUS_STRING}', 200)
+    return STATUS_STRING, 500
 
 
 if __name__ == '__main__':
@@ -215,7 +213,7 @@ if __name__ == '__main__':
         '--app_port', type=int, required=True,
         help='port to respond to status queries')
     parser.add_argument(
-        '--disk_pattern', type=str, required=True, help=(
+        '--snapshot_pattern', type=str, required=True, help=(
             'pattern of disk snapshot to query for, ex '
             '"geoserver-data-disk*"'))
     parser.add_argument(
@@ -224,9 +222,19 @@ if __name__ == '__main__':
     parser.add_argument(
         '--check_time', type=float, default=5*60, help=(
             'how many seconds to wait between checking for a new disk'))
+    parser.add_argument(
+        '--container_name', type=str, required=True, help=(
+            'desired name of docker container running the geoserver node'))
+    parser.add_argument(
+        '--image_name', type=str, required=True, help=(
+            'docker image name to run'))
+    parser.add_argument(
+        '--mem_size', type=str, required=True, help=(
+            'java formatted max mem size string eg "12G"'))
+
     parser.add_argument('--initalize', action="store_true")
     args = parser.parse_args()
-    DISK_PATTERN = args.disk_pattern
+    snapshot_PATTERN = args.snapshot_pattern
     MOUNT_POINT = args.mount_point
     DISK_ITERATION = 0
     STATUS_STRING = "startup"
@@ -234,11 +242,11 @@ if __name__ == '__main__':
     PASSWORD_FILE_PATH = os.path.join(
         args.mount_point, 'data', 'secrets', 'adminpass')
     swap_thread = threading.Thread(
-        target=swap_new_disk,
-        args=(args.initalize,))
+        target=new_disk_monitor_docker_manager,
+        args=(args.snapshot_pattern, args.mount_point, args.check_time,
+              args.image_name, args.container_name, args.mem_size))
     swap_thread.start()
 
-    if not args.initalize:
-        APP.run(
-            host='0.0.0.0',
-            port=args.app_port)
+    APP.run(
+        host='0.0.0.0',
+        port=args.app_port)
