@@ -21,7 +21,7 @@ DISK_ITERATION = 0
 DISK_PATTERN = None
 LAST_SNAPSHOT_NAME = None
 LAST_DISK_NAME = None
-SLEEP_TIME = 5*60
+CHECK_TIME = None
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -70,12 +70,12 @@ def swap_new_disk(initalize):
     """
     while True:
         if not initalize:
-            time.sleep(SLEEP_TIME)
+            time.sleep(CHECK_TIME)
         try:
             # get existing devices
             lsblk_result = subprocess.run(
-                ["lsblk"], stdout=subprocess.PIPE).stdout.rstrip().decode(
-                    'utf-8')
+                ["lsblk"], stdout=subprocess.PIPE,
+                check=True).stdout.rstrip().decode('utf-8')
             existing_dev_names = set([
                 line.split(' ')[0] for line in lsblk_result.split('\n')])
 
@@ -85,18 +85,19 @@ def swap_new_disk(initalize):
             snapshot_query = subprocess.run([
                 "gcloud", "compute", "snapshots", "list", "--limit=1",
                 "--sort-by=~name", f"--filter=name:({DISK_PATTERN})",
-                "--format=value(name)"], stdout=subprocess.PIPE)
+                "--format=value(name)"], stdout=subprocess.PIPE,
+                check=True)
             snapshot_name = snapshot_query.stdout.rstrip().decode('utf-8')
-            STATUS_STRING = f'creating new disk from snapshot {snapshot_name}'
-            LOGGER.info(STATUS_STRING)
             global DISK_ITERATION
             global LAST_SNAPSHOT_NAME
             if (snapshot_name == LAST_SNAPSHOT_NAME and
                     LAST_SNAPSHOT_NAME is not None):
                 # not a new snapshot
-                LOGGER.info(STATUS_STRING)
                 STATUS_STRING = f'last checked: {str(datetime.datetime.now())}'
+                LOGGER.info(STATUS_STRING)
                 continue
+            STATUS_STRING = f'creating new disk from snapshot {snapshot_name}'
+            LOGGER.info(STATUS_STRING)
 
             # create new disk
             hostname = socket.gethostname()
@@ -106,41 +107,44 @@ def swap_new_disk(initalize):
             DISK_ITERATION += 1
             subprocess.run([
                 "gcloud", "compute", "disks", "create", disk_name,
-                f"--source-snapshot={snapshot_name}", "--zone=us-west1-b"])
+                f"--source-snapshot={snapshot_name}", "--zone=us-west1-b"],
+                check=True)
 
             # attach the new disk to the current host
             STATUS_STRING = f'attaching disk {disk_name}'
             LOGGER.info(STATUS_STRING)
             subprocess.run([
                 "gcloud", "compute", "instances", "attach-disk", hostname,
-                f"--disk={disk_name}", "--zone=us-west1-b"])
+                f"--disk={disk_name}", "--zone=us-west1-b"],
+                check=True)
 
             STATUS_STRING = f'setting disk {disk_name} to autodelete'
             LOGGER.info(STATUS_STRING)
             subprocess.run([
                 "gcloud", "compute", "instances", "set-disk-auto-delete",
-                hostname, f"--disk={disk_name}", "--zone=us-west1-b"])
+                hostname, f"--disk={disk_name}", "--zone=us-west1-b"],
+                check=True)
 
             # unmount the current disk if any is mounted
             global MOUNT_POINT
             try:
                 STATUS_STRING = f'unmounting {MOUNT_POINT}'
                 LOGGER.info(STATUS_STRING)
-                subprocess.run(["umount", MOUNT_POINT])
+                subprocess.run(["umount", MOUNT_POINT], check=True)
             except Exception:
                 LOGGER.exception(f'exception when unmounting {MOUNT_POINT}')
 
             STATUS_STRING = f'ensuring {MOUNT_POINT} exists'
             LOGGER.info(STATUS_STRING)
-            subprocess.run(["umount", MOUNT_POINT])
-            subprocess.run(["mkdir", "-p", MOUNT_POINT])
+            subprocess.run(["umount", MOUNT_POINT], check=True)
+            subprocess.run(["mkdir", "-p", MOUNT_POINT], check=True)
 
             LAST_SNAPSHOT_NAME = snapshot_name
 
             # mount the new disk at the mount point
             lsblk_result = subprocess.run(
-                ["lsblk"], stdout=subprocess.PIPE).stdout.rstrip().decode(
-                    'utf-8')
+                ["lsblk"], stdout=subprocess.PIPE,
+                check=True).stdout.rstrip().decode('utf-8')
             new_dev_names = set([
                 lsblk_result.split(' ')[0]
                 for lsblk_result in lsblk_result.split('\n')])
@@ -149,7 +153,7 @@ def swap_new_disk(initalize):
             device_location = f'/dev/{mount_device}'
             STATUS_STRING = f'mounting {device_location} at {MOUNT_POINT}'
             LOGGER.info(STATUS_STRING)
-            subprocess.run(["mount", device_location, MOUNT_POINT])
+            subprocess.run(["mount", device_location, MOUNT_POINT], check=True)
 
             # Detach and delete the old disk
             global LAST_DISK_NAME
@@ -158,13 +162,14 @@ def swap_new_disk(initalize):
                 LOGGER.info(STATUS_STRING)
                 subprocess.run([
                     "gcloud", "compute", "instances", "detach-disk",
-                    hostname, f"--disk={LAST_DISK_NAME}", "--zone=us-west1-b"])
+                    hostname, f"--disk={LAST_DISK_NAME}", "--zone=us-west1-b"],
+                    check=True)
 
                 STATUS_STRING = f'deleting old {LAST_DISK_NAME}'
                 LOGGER.info(STATUS_STRING)
                 subprocess.run([
                     f"yes|gcloud compute disks delete {LAST_DISK_NAME} "
-                    "--zone=us-west1-b"])
+                    "--zone=us-west1-b"], check=True)
 
             LAST_DISK_NAME = disk_name
 
@@ -182,7 +187,7 @@ def swap_new_disk(initalize):
                     f'http://localhost:8080',
                     'geoserver/rest/reload')
                 if refresh_geoserver:
-                    STATUS_STRING = f'on iteration {DISK_ITERATION}'
+                    STATUS_STRING = f'geoserver refreshed'
                     LOGGER.info(STATUS_STRING)
                 else:
                     raise RuntimeError(
@@ -190,7 +195,7 @@ def swap_new_disk(initalize):
             STATUS_STRING = f'last checked: {str(datetime.datetime.now())}'
         except Exception as e:
             STATUS_STRING = f'error: {str(e)}'
-            LOGGER.info(STATUS_STRING)
+            LOGGER.exception(STATUS_STRING)
         if initalize:
             break
 
@@ -217,12 +222,16 @@ if __name__ == '__main__':
     parser.add_argument(
         '--mount_point', type=str, required=True, help=(
             'mount point location ex /mnt/geoserver_data'))
+    parser.add_argument(
+        '--check_time', type=float, default=5*60, help=(
+            'how many seconds to wait between checking for a new disk'))
     parser.add_argument('--initalize', action="store_true")
     args = parser.parse_args()
     DISK_PATTERN = args.disk_pattern
     MOUNT_POINT = args.mount_point
     DISK_ITERATION = 0
     STATUS_STRING = "startup"
+    CHECK_TIME = args.check_time
     PASSWORD_FILE_PATH = os.path.join(
         args.mount_point, 'data', 'secrets', 'adminpass')
     swap_thread = threading.Thread(
