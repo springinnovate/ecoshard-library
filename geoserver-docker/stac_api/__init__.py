@@ -728,7 +728,9 @@ def create_app(test_config=None):
                 args=(local_path_result[0],))
             remove_thread.start()
 
-            return 200
+            return (
+                f'{asset_args["catalog"]}:{asset_args["asset_id"]} deleted',
+                200)
         except Exception:
             LOGGER.exception('something bad happened on delete')
             raise
