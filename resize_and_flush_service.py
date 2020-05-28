@@ -92,6 +92,7 @@ def new_disk_monitor_docker_manager(
                 "--format=value(name)"], stdout=subprocess.PIPE,
                 check=True)
             snapshot_name = snapshot_query.stdout.rstrip().decode('utf-8')
+            LOGGER.debug(f"this is the latest snapshot: {snapshot_name}")
             global LAST_SNAPSHOT_NAME
             if (snapshot_name == LAST_SNAPSHOT_NAME and
                     LAST_SNAPSHOT_NAME is not None):
@@ -194,7 +195,8 @@ def new_disk_monitor_docker_manager(
             STATUS_STRING = f'error: {str(e)}'
             LOGGER.exception(STATUS_STRING)
             CONTAINER_RUNNING = False
-        time.sleep(CHECK_TIME)
+        LOGGER.debug(f'sleeping {check_time} seconds')
+        time.sleep(check_time)
 
 
 @APP.route('/', methods=['GET'])
@@ -238,7 +240,6 @@ if __name__ == '__main__':
     MOUNT_POINT = args.mount_point
     DISK_ITERATION = 0
     STATUS_STRING = "startup"
-    CHECK_TIME = args.check_time
     PASSWORD_FILE_PATH = os.path.join(
         args.mount_point, 'data', 'secrets', 'adminpass')
     swap_thread = threading.Thread(
