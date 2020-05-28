@@ -1107,10 +1107,34 @@ def add_raster_worker(
             mode='modify', execute='execute')
 
         LOGGER.debug('copy %s to %s', uri_path, local_raster_path)
-        if not os.path.exists(local_raster_path) or force:
-            subprocess.run([
-                f'gsutil cp "{uri_path}" "{local_raster_path}"'],
-                shell=True, check=True)
+        if os.path.exists(local_raster_path):
+            # remove the file first
+            os.remove(local_raster_path)
+
+        # get the object size
+        gsutil_ls_result = subprocess.run(
+           ['gsutil', 'ls', '-l', uri_path], stdout=subprocess.PIPE,
+           check=True, shell=True)
+        last_ls_line = gsutil_ls_result.stdout.decode(
+            'utf-8').rstrip().split('\n')[-1].split()
+        object_size = last_ls_line[last_ls_line.index('bytes')-1]
+
+        # get the file system size
+        df_result = subprocess.run(
+            ['df', os.path.dirname(local_raster_path)],
+            stdout=subprocess.PIPE, check=True, shell=True)
+        fs, blocks, used, available, use_p, mount = (
+            df_result.stdout.decode('utf-8').rstrip().split('\n')[-1].split())
+
+        if (object_size > available):
+            raise RuntimeError(
+                f'not enough space left on drive, need {object_size} but have '
+                f'{available}.')
+
+        subprocess.run([
+            f'gsutil cp "{uri_path}" "{local_raster_path}"'],
+            shell=True, check=True)
+
         if not os.path.exists(local_raster_path):
             raise RuntimeError(f"{local_raster_path} didn't copy")
 
