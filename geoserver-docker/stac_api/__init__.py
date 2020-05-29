@@ -1120,7 +1120,7 @@ def add_raster_worker(
 
         # get the object size
         gsutil_ls_result = subprocess.run(
-           [f'gsutil ls -l {uri_path}'], stdout=subprocess.PIPE,
+           [f'gsutil ls -l "{uri_path}"'], stdout=subprocess.PIPE,
            check=True, shell=True)
         LOGGER.debug(f"raw output: {gsutil_ls_result.stdout}")
         last_gsutil_ls_line = gsutil_ls_result.stdout.decode(
