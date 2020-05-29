@@ -1122,8 +1122,10 @@ def add_raster_worker(
         gsutil_ls_result = subprocess.run(
            ['gsutil', 'ls', '-l', uri_path], stdout=subprocess.PIPE,
            check=True, shell=True)
+        LOGGER.debug(f"raw output: {gsutil_ls_result.stdout}")
         last_gsutil_ls_line = gsutil_ls_result.stdout.decode(
             'utf-8').rstrip().split('\n')[-1].split()
+        LOGGER.debug(f"last line: {last_gsutil_ls_line}")
         # say we need four times that because we might need to duplicate the
         # file and also build overviews for it. That shoud be ~3 times,
         # so might as well be safe and make it 4.
