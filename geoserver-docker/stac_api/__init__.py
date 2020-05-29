@@ -1111,7 +1111,7 @@ def add_raster_worker(
             # check the size of any existing file first
             existing_ls_line_result = subprocess.run(
                ['ls', '-l', local_raster_path], stdout=subprocess.PIPE,
-               check=True, shell=True)
+               check=True)
             existing_ls_line = existing_ls_line_result.stdout.decode(
                 'utf-8').rstrip().split('\n')[-1].split()
             existing_object_size = existing_ls_line[4]
@@ -1120,7 +1120,7 @@ def add_raster_worker(
 
         # get the object size
         gsutil_ls_result = subprocess.run(
-           ['gsutil', 'ls', '-l', uri_path], stdout=subprocess.PIPE,
+           [f'gsutil ls -l {uri_path}'], stdout=subprocess.PIPE,
            check=True, shell=True)
         LOGGER.debug(f"raw output: {gsutil_ls_result.stdout}")
         last_gsutil_ls_line = gsutil_ls_result.stdout.decode(
@@ -1135,7 +1135,7 @@ def add_raster_worker(
         # get the file system size
         df_result = subprocess.run(
             ['df', os.path.dirname(local_raster_path)],
-            stdout=subprocess.PIPE, check=True, shell=True)
+            stdout=subprocess.PIPE, check=True)
         fs, blocks, used, available, use_p, mount = (
             df_result.stdout.decode('utf-8').rstrip().split('\n')[-1].split())
 
