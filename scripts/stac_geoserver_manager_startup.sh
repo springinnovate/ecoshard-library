@@ -10,7 +10,7 @@ mkdir -p /mnt/geoserver_data
 mount /dev/sdb /mnt/geoserver_data
 
 cd /home/rich/stac-geoserver-api/
-nohup python3 expand_drive_service.py --app_port 8080 --disk_name geoserver-data-disk --device_name /dev/sdb --zone us-west1-b --max_size 256 > expand_drive_service_log.txt &
+nohup python3 expand_drive_service.py --app_port 8080 --disk_name geoserver-data-disk --device_name /dev/sdb --zone us-west1-b --max_size 256 --project salo-api > expand_drive_service_log.txt &
 
 # pull latest container and start it
 docker pull us.gcr.io/salo-api/stac-geoserver-container:latest

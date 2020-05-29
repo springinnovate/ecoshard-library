@@ -3,6 +3,7 @@ import datetime
 import hashlib
 import json
 import logging
+import math
 import os
 import pathlib
 import re
@@ -26,6 +27,7 @@ import retrying
 
 LOCAL_GEOSERVER = 'localhost:8080'
 LOCAL_API_SERVER = 'localhost:8888'
+LOCAL_DISK_RESIZE_SERVICE = 'localhost:8082'
 INTER_DATA_DIR = 'data'
 FULL_DATA_DIR = os.path.abspath(
     os.path.join('..', 'data_dir', INTER_DATA_DIR))
@@ -1136,14 +1138,30 @@ def add_raster_worker(
         df_result = subprocess.run(
             ['df', os.path.dirname(local_raster_path)],
             stdout=subprocess.PIPE, check=True)
-        fs, blocks, used, available, use_p, mount = (
+        fs, blocks, used, available_k, use_p, mount = (
             df_result.stdout.decode('utf-8').rstrip().split('\n')[-1].split())
 
-        if (gs_object_size-existing_object_size > int(available)):
-            raise RuntimeError(
-                f'not enough space left on drive, need '
-                f'{gs_object_size-existing_object_size} '
-                f'but have {available}.')
+        # turn kb to b
+        available_b = available_k * 2**10
+
+        additional_b_needed = (
+            available_b - (gs_object_size-existing_object_size))
+        if additional_b_needed > 0:
+            # calcualte additional GB needed
+            additional_gb = int(math.ceil(available_b/2**30))
+            LOGGER.warn(f'need an additional {additional_gb}G')
+            session = requests.Session()
+            resize_disk_request = do_rest_action(
+                session.post,
+                f'http://{LOCAL_DISK_RESIZE_SERVICE}',
+                f'resize',
+                json={'gb_to_add': additional_gb})
+
+            if not resize_disk_request:
+                raise RuntimeError(
+                    f'not enough space left on drive and unable to resize '
+                    f'need {gs_object_size-existing_object_size} '
+                    f'but have {available_b}.')
 
         if os.path.exists(local_raster_path):
             # remove the file first
