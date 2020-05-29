@@ -1108,16 +1108,27 @@ def add_raster_worker(
 
         LOGGER.debug('copy %s to %s', uri_path, local_raster_path)
         if os.path.exists(local_raster_path):
-            # remove the file first
-            os.remove(local_raster_path)
+            # check the size of any existing file first
+            existing_ls_line_result = subprocess.run(
+               ['ls', '-l', local_raster_path], stdout=subprocess.PIPE,
+               check=True, shell=True)
+            existing_ls_line = existing_ls_line_result.stdout.decode(
+                'utf-8').rstrip().split('\n')[-1].split()
+            existing_object_size = existing_ls_line[4]
+        else:
+            existing_object_size = 0
 
         # get the object size
         gsutil_ls_result = subprocess.run(
            ['gsutil', 'ls', '-l', uri_path], stdout=subprocess.PIPE,
            check=True, shell=True)
-        last_ls_line = gsutil_ls_result.stdout.decode(
+        last_gsutil_ls_line = gsutil_ls_result.stdout.decode(
             'utf-8').rstrip().split('\n')[-1].split()
-        object_size = last_ls_line[last_ls_line.index('bytes')-1]
+        # say we need four times that because we might need to duplicate the
+        # file and also build overviews for it. That shoud be ~3 times,
+        # so might as well be safe and make it 4.
+        gs_object_size = 4*last_gsutil_ls_line[
+            last_gsutil_ls_line.index('bytes')-1]
 
         # get the file system size
         df_result = subprocess.run(
@@ -1126,10 +1137,15 @@ def add_raster_worker(
         fs, blocks, used, available, use_p, mount = (
             df_result.stdout.decode('utf-8').rstrip().split('\n')[-1].split())
 
-        if (object_size > available):
+        if (gs_object_size-existing_object_size > available):
             raise RuntimeError(
-                f'not enough space left on drive, need {object_size} but have '
-                f'{available}.')
+                f'not enough space left on drive, need '
+                f'{gs_object_size-existing_object_size} '
+                f'but have {available}.')
+
+        if os.path.exists(local_raster_path):
+            # remove the file first
+            os.remove(local_raster_path)
 
         subprocess.run([
             f'gsutil cp "{uri_path}" "{local_raster_path}"'],

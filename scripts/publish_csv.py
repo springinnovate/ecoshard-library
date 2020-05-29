@@ -119,3 +119,4 @@ if __name__ == '__main__':
                 force=True)
         except Exception:
             LOGGER.exception('publish failed')
+            break
