@@ -22,25 +22,28 @@ LOGGER = logging.getLogger(__name__)
 def resize():
     """Resize the disk."""
     gb_to_add = json.loads(flask.request.get_data())['gb_to_add']
-
+    LOGGER.debug(f'increase by {gb_to_add}G')
     gsutil_ls_result = subprocess.run([
         'gcloud', 'compute', 'disks', 'describe', DISK_NAME, f'--zone={ZONE}',
         '--flatten', 'sizeGb', '--project=salo-api'], stdout=subprocess.PIPE,
        check=True)
     disk_size_gb = int(gsutil_ls_result.stdout.decode(
         'utf-8').rstrip().split('\n')[-1].split("'")[1])
+    LOGGER.debug(f'current disk size: {disk_size_gb}G')
 
     if disk_size_gb+gb_to_add > MAX_SIZE_GB:
-        raise ValueError(
+        return (
             f'adding {gb_to_add}G to an already {disk_size_gb}G big disk '
-            f'would exceed the max size of {MAX_SIZE_GB}G')
+            f'would exceed the max size of {MAX_SIZE_GB}G', 500)
 
     # resize the google disk
+    LOGGER.debug(f'resizing google disk to {disk_size_gb+gb_to_add}G')
     subprocess.run([
         f'yes|gcloud compute disks resize {DISK_NAME} --size '
         f'{disk_size_gb+gb_to_add} --zone={ZONE}'], check=True, shell=True)
 
     # resize the file system
+    LOGGER.debug('resize the filesystem')
     subprocess.run(['resize2fs', DEVICE_NAME], check=True)
 
     return 'success', 200
