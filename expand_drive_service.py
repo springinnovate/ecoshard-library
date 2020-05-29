@@ -38,7 +38,7 @@ def resize():
     # resize the google disk
     subprocess.run([
         'gcloud', 'compute', 'disks', 'resize', DISK_NAME, '--size',
-        f'{disk_size_gb+gb_to_add}', f'--zone={ZONE}'], check=True)
+        f'{disk_size_gb+gb_to_add}', f'--zone={ZONE}'], check=True, shell=True)
 
     # resize the file system
     subprocess.run(['resize2fs', DEVICE_NAME], check=True)
