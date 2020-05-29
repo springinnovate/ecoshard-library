@@ -27,8 +27,8 @@ def resize():
         'gcloud', 'compute', 'disks', 'describe', DISK_NAME, f'--zone={ZONE}',
         '--flatten', 'sizeGb', '--project=salo-api'], stdout=subprocess.PIPE,
        check=True)
-    disk_size_gb = gsutil_ls_result.stdout.decode(
-        'utf-8').rstrip().split('\n')[-1].split("'")[1]
+    disk_size_gb = int(gsutil_ls_result.stdout.decode(
+        'utf-8').rstrip().split('\n')[-1].split("'")[1])
 
     if disk_size_gb+gb_to_add > MAX_SIZE_GB:
         raise ValueError(
