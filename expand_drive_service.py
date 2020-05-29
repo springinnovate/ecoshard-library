@@ -26,7 +26,7 @@ def resize():
     gsutil_ls_result = subprocess.run([
         'gcloud', 'compute', 'disks', 'describe', DISK_NAME, f'--zone={ZONE}',
         '--flatten', 'sizeGb', '--project=salo-api'], stdout=subprocess.PIPE,
-       check=True, shell=True)
+       check=True)
     disk_size_gb = gsutil_ls_result.stdout.decode(
         'utf-8').rstrip().split('\n')[-1].split("'")[1]
 
@@ -38,10 +38,10 @@ def resize():
     # resize the google disk
     subprocess.run([
         'gcloud', 'compute', 'disks', 'resize', DISK_NAME, '--size',
-        disk_size_gb+gb_to_add], shell=True, check=True)
+        disk_size_gb+gb_to_add], check=True)
 
     # resize the file system
-    subprocess.run(['resize2fs', DEVICE_NAME], shell=True, check=True)
+    subprocess.run(['resize2fs', DEVICE_NAME], check=True)
 
     return 'success', 200
 
