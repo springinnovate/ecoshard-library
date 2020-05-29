@@ -1114,7 +1114,7 @@ def add_raster_worker(
                check=True)
             existing_ls_line = existing_ls_line_result.stdout.decode(
                 'utf-8').rstrip().split('\n')[-1].split()
-            existing_object_size = existing_ls_line[4]
+            existing_object_size = int(existing_ls_line[4])
         else:
             existing_object_size = 0
 
@@ -1129,8 +1129,8 @@ def add_raster_worker(
         # say we need four times that because we might need to duplicate the
         # file and also build overviews for it. That shoud be ~3 times,
         # so might as well be safe and make it 4.
-        gs_object_size = 4*last_gsutil_ls_line[
-            last_gsutil_ls_line.index('bytes')-1]
+        gs_object_size = 4*int(last_gsutil_ls_line[
+            last_gsutil_ls_line.index('bytes')-1])
 
         # get the file system size
         df_result = subprocess.run(
@@ -1139,7 +1139,7 @@ def add_raster_worker(
         fs, blocks, used, available, use_p, mount = (
             df_result.stdout.decode('utf-8').rstrip().split('\n')[-1].split())
 
-        if (gs_object_size-existing_object_size > available):
+        if (gs_object_size-existing_object_size > int(available)):
             raise RuntimeError(
                 f'not enough space left on drive, need '
                 f'{gs_object_size-existing_object_size} '
