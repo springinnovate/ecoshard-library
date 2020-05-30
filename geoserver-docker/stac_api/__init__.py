@@ -1145,7 +1145,7 @@ def add_raster_worker(
         available_b = int(available_k) * 2**10
 
         additional_b_needed = (
-            available_b - (gs_object_size-existing_object_size))
+            (gs_object_size-existing_object_size) - available_b)
         LOGGER.debug(
             f'gs_object_size: {gs_object_size}, '
             f'existing_object_size: {existing_object_size} '
