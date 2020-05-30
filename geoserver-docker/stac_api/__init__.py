@@ -1146,9 +1146,14 @@ def add_raster_worker(
 
         additional_b_needed = (
             available_b - (gs_object_size-existing_object_size))
+        LOGGER.debug(
+            f'gs_object_size: {gs_object_size}, '
+            f'existing_object_size: {existing_object_size} '
+            f'available_b: {available_b}f'
+            f'additional_b needed: {additional_b_needed}')
         if additional_b_needed > 0:
             # calcualte additional GB needed
-            additional_gb = int(math.ceil(available_b/2**30))
+            additional_gb = int(math.ceil(additional_b_needed/2**30))
             LOGGER.warn(f'need an additional {additional_gb}G')
             session = requests.Session()
             resize_disk_request = do_rest_action(
