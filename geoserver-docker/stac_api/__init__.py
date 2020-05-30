@@ -1142,7 +1142,7 @@ def add_raster_worker(
             df_result.stdout.decode('utf-8').rstrip().split('\n')[-1].split())
 
         # turn kb to b
-        available_b = available_k * 2**10
+        available_b = int(available_k) * 2**10
 
         additional_b_needed = (
             available_b - (gs_object_size-existing_object_size))
