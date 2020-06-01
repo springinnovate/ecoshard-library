@@ -301,7 +301,8 @@ def create_app(test_config=None):
         fetch_payload = _execute_sqlite(
             '''
             SELECT
-                xmin, ymin, xmax, ymax, raster_min, raster_max, default_style
+                xmin, ymin, xmax, ymax, raster_min, raster_max, default_style,
+                local_path
             FROM catalog_table
             WHERE asset_id=? AND catalog=?
             ''', DATABASE_PATH, argument_list=[asset_id, catalog],
@@ -320,6 +321,10 @@ def create_app(test_config=None):
         raster_max = fetch_payload[5]
 
         default_style = fetch_payload[6]
+
+        local_raster_path = fetch_payload[7]
+        nodata = pygeoprocessing.get_raster_info(
+            local_raster_path)['nodata'][0]
 
         x_center = (xmax+xmin)/2
         y_center = (ymax+ymin)/2
@@ -341,6 +346,7 @@ def create_app(test_config=None):
             'max_lat': ymax,
             'max_lng': xmax,
             'geoserver_style_url': flask.url_for('styles', _external=True),
+            'nodata': nodata,
         }, _external=True)
 
     @app.route('/api/v1/search', methods=["POST"])
