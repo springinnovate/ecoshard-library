@@ -113,8 +113,8 @@ def new_disk_monitor_docker_manager(
             disk_iteration += 1
             subprocess.run([
                 "gcloud", "compute", "disks", "create", disk_name,
-                f"--source-snapshot={snapshot_name}", "--zone=us-west1-b"],
-                check=True)
+                f"--source-snapshot={snapshot_name}", "--type=pd-ssd",
+                "--zone=us-west1-b"], check=True)
 
             # attach the new disk to the current host, sometimes it takes a bit
             # for the disk to become available to attach after it's been
@@ -177,6 +177,23 @@ def new_disk_monitor_docker_manager(
             LOGGER.info(STATUS_STRING)
             subprocess.run(["mount", device_location, MOUNT_POINT], check=True)
 
+            if container_running:
+                STATUS_STRING = f'stopping docker container'
+                LOGGER.info(STATUS_STRING)
+                subprocess.run(["docker", "stop", container_name], check=True)
+                container_running = False
+
+            STATUS_STRING = f'starting docker container'
+            LOGGER.info(STATUS_STRING)
+            subprocess.run([
+                "docker", "run", "--rm", "-d", "-it", "-v",
+                "/mnt/geoserver_data/:/usr/local/geoserver/data_dir",
+                "-p", "8080:8080", "--name", container_name,
+                image_name, "api.salo.ai", "8888", "maps.salo.ai", "8080",
+                mem_size], check=True)
+            container_running = True
+            HEALTHY = True
+
             # Detach and delete the old disk
             if LAST_DISK_NAME:
                 STATUS_STRING = f'detatch old {LAST_DISK_NAME}'
@@ -193,28 +210,12 @@ def new_disk_monitor_docker_manager(
                     "--zone=us-west1-b"], check=True, shell=True)
 
             LAST_DISK_NAME = disk_name
-            if container_running:
-                STATUS_STRING = f'stopping docker container'
-                LOGGER.info(STATUS_STRING)
-                subprocess.run(["docker", "stop", container_name], check=True)
-                container_running = False
-
-            STATUS_STRING = f'starting docker container'
-            LOGGER.info(STATUS_STRING)
-            subprocess.run([
-                "docker", "run", "--rm", "-d", "-it", "-v",
-                "/mnt/geoserver_data/:/usr/local/geoserver/data_dir",
-                "-p", "8080:8080", "--name", container_name,
-                image_name, "api.salo.ai", "8888", "maps.salo.ai", "8080",
-                mem_size], check=True)
-            container_running = True
             STATUS_STRING = f'last checked: {str(datetime.datetime.now())}'
-            HEALTHY = True
+
         except Exception as e:
             STATUS_STRING = f'error: {str(e)}'
             LOGGER.exception(STATUS_STRING)
             HEALTHY = False
-            container_running = False
         LOGGER.debug(f'sleeping {check_time} seconds')
         time.sleep(check_time)
 
