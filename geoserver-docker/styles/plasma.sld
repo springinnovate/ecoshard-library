@@ -13,6 +13,7 @@
         <Rule>
           <RasterSymbolizer>
             <ColorMap>
+              <ColorMapEntry quantity="${env('nodata', -9999.0)}" label="${env('nodata', -9999.0)}" opacity="0.0", color="#0d0887"/>
               <ColorMapEntry quantity="${env('p0', 0.0)}" label="${env('p0', 0.0)}" color="#0d0887"/>
               <ColorMapEntry quantity="${env('p2', 0.02)}" label="${env('p2', 0.02)}" color="#5901a5"/>
               <ColorMapEntry quantity="${env('p50', 0.5)}" label="${env('p50', 0.5)}" color="#c43e7f"/>
