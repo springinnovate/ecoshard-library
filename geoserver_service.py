@@ -27,9 +27,8 @@ logger = logging.getLogger('waitress')
 logger.setLevel(logging.DEBUG)
 
 LAST_SNAPSHOT_NAME = None
-CONTAINER_RUNNING = False
 LAST_DISK_NAME = None
-
+HEALTHY = False
 
 @retrying.retry(
     wait_exponential_multiplier=1000, wait_exponential_max=5000,
@@ -73,7 +72,7 @@ def new_disk_monitor_docker_manager(
 
     """
     disk_iteration = 0
-
+    container_running = False
     while True:
         try:
             # get existing devices
@@ -114,13 +113,30 @@ def new_disk_monitor_docker_manager(
                 f"--source-snapshot={snapshot_name}", "--zone=us-west1-b"],
                 check=True)
 
-            # attach the new disk to the current host
-            STATUS_STRING = f'attaching disk {disk_name}'
-            LOGGER.info(STATUS_STRING)
-            subprocess.run([
-                "gcloud", "compute", "instances", "attach-disk", hostname,
-                f"--disk={disk_name}", "--zone=us-west1-b"],
-                check=True)
+            # attach the new disk to the current host, sometimes it takes a bit
+            # for the disk to become available to attach after it's been
+            # created, be tolerant of that
+            attach_attempts = 0
+            STATUS_STRING = f'attaching disk {disk_name}, inital attempt'
+            while True:
+                # give it 10 seconds to come online
+                time.sleep(10)
+                try:
+                    attach_attempts += 1
+                    subprocess.run([
+                        "gcloud", "compute", "instances", "attach-disk",
+                        hostname, f"--disk={disk_name}", "--zone=us-west1-b"],
+                        check=True)
+                    STATUS_STRING = \
+                        f'attached {disk_name}, {attach_attempts} attempts'
+                    LOGGER.info(STATUS_STRING)
+                    break
+                except subprocess.CalledProcessError:
+                    STATUS_STRING = f'attach attempt {attach_attempts} failed'
+                    LOGGER.exception(STATUS_STRING)
+                    if attach_attempts > 10:
+                        raise RuntimeError(
+                            f'{attach_attempts} for disk {disk_name} failed')
 
             STATUS_STRING = f'setting disk {disk_name} to autodelete'
             LOGGER.info(STATUS_STRING)
@@ -174,12 +190,12 @@ def new_disk_monitor_docker_manager(
                     "--zone=us-west1-b"], check=True, shell=True)
 
             LAST_DISK_NAME = disk_name
-            global CONTAINER_RUNNING
-            if CONTAINER_RUNNING:
+            global container_running
+            if container_running:
                 STATUS_STRING = f'stopping docker container'
                 LOGGER.info(STATUS_STRING)
-                CONTAINER_RUNNING = False
                 subprocess.run(["docker", "stop", container_name], check=True)
+                container_running = False
 
             STATUS_STRING = f'starting docker container'
             LOGGER.info(STATUS_STRING)
@@ -189,12 +205,15 @@ def new_disk_monitor_docker_manager(
                 "-p", "8080:8080", "--name", container_name,
                 image_name, "api.salo.ai", "8888", "maps.salo.ai", "8080",
                 mem_size], check=True)
-            CONTAINER_RUNNING = True
+            container_running = True
             STATUS_STRING = f'last checked: {str(datetime.datetime.now())}'
+            HEALTHY = True
         except Exception as e:
             STATUS_STRING = f'error: {str(e)}'
             LOGGER.exception(STATUS_STRING)
-            CONTAINER_RUNNING = False
+            global HEALTHY
+            HEALTHY = False
+            container_running = False
         LOGGER.debug(f'sleeping {check_time} seconds')
         time.sleep(check_time)
 
@@ -202,7 +221,7 @@ def new_disk_monitor_docker_manager(
 @APP.route('/', methods=['GET'])
 def processing_status():
     """Return the state of processing."""
-    if CONTAINER_RUNNING:
+    if HEALTHY:
         return (
             f'last snapshot: {LAST_SNAPSHOT_NAME}\n'
             f'last disk: {LAST_DISK_NAME}\nstatus: {STATUS_STRING}', 200)
