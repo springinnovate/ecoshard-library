@@ -30,6 +30,7 @@ LAST_SNAPSHOT_NAME = None
 LAST_DISK_NAME = None
 HEALTHY = False
 
+
 @retrying.retry(
     wait_exponential_multiplier=1000, wait_exponential_max=5000,
     stop_max_attempt_number=5)
@@ -71,6 +72,10 @@ def new_disk_monitor_docker_manager(
         None
 
     """
+    global HEALTHY
+    global STATUS_STRING
+    global LAST_SNAPSHOT_NAME
+    global LAST_DISK_NAME
     disk_iteration = 0
     container_running = False
     while True:
@@ -82,7 +87,6 @@ def new_disk_monitor_docker_manager(
             existing_dev_names = set([
                 line.split(' ')[0] for line in lsblk_result.split('\n')])
 
-            global STATUS_STRING
             STATUS_STRING = 'search for new snapshot'
             LOGGER.info(STATUS_STRING)
             snapshot_query = subprocess.run([
@@ -92,7 +96,6 @@ def new_disk_monitor_docker_manager(
                 check=True)
             snapshot_name = snapshot_query.stdout.rstrip().decode('utf-8')
             LOGGER.debug(f"this is the latest snapshot: {snapshot_name}")
-            global LAST_SNAPSHOT_NAME
             if (snapshot_name == LAST_SNAPSHOT_NAME and
                     LAST_SNAPSHOT_NAME is not None):
                 # not a new snapshot
@@ -174,7 +177,6 @@ def new_disk_monitor_docker_manager(
             subprocess.run(["mount", device_location, MOUNT_POINT], check=True)
 
             # Detach and delete the old disk
-            global LAST_DISK_NAME
             if LAST_DISK_NAME:
                 STATUS_STRING = f'detatch old {LAST_DISK_NAME}'
                 LOGGER.info(STATUS_STRING)
@@ -190,7 +192,6 @@ def new_disk_monitor_docker_manager(
                     "--zone=us-west1-b"], check=True, shell=True)
 
             LAST_DISK_NAME = disk_name
-            global container_running
             if container_running:
                 STATUS_STRING = f'stopping docker container'
                 LOGGER.info(STATUS_STRING)
@@ -211,7 +212,6 @@ def new_disk_monitor_docker_manager(
         except Exception as e:
             STATUS_STRING = f'error: {str(e)}'
             LOGGER.exception(STATUS_STRING)
-            global HEALTHY
             HEALTHY = False
             container_running = False
         LOGGER.debug(f'sleeping {check_time} seconds')
