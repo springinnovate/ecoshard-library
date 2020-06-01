@@ -121,9 +121,10 @@ def new_disk_monitor_docker_manager(
             # created, be tolerant of that
             attach_attempts = 0
             STATUS_STRING = f'attaching disk {disk_name}, inital attempt'
+            LOGGER.info(STATUS_STRING)
             while True:
-                # give it 10 seconds to come online
-                time.sleep(10)
+                # give it 5 seconds to come online
+                time.sleep(5)
                 try:
                     attach_attempts += 1
                     subprocess.run([
