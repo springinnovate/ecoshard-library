@@ -139,6 +139,7 @@ def new_disk_monitor_docker_manager(
                     STATUS_STRING = f'attach attempt {attach_attempts} failed'
                     LOGGER.exception(STATUS_STRING)
                     if attach_attempts > 10:
+                        HEALTHY = False
                         raise RuntimeError(
                             f'{attach_attempts} for disk {disk_name} failed')
 
@@ -175,24 +176,35 @@ def new_disk_monitor_docker_manager(
             device_location = f'/dev/{mount_device}'
             STATUS_STRING = f'mounting {device_location} at {MOUNT_POINT}'
             LOGGER.info(STATUS_STRING)
-            subprocess.run(["mount", device_location, MOUNT_POINT], check=True)
+            try:
+                subprocess.run(
+                    ["mount", device_location, MOUNT_POINT], check=True)
+            except Exception:
+                LOGGER.exception("mount failed")
+                HEALTHY = False
+                raise
 
-            if container_running:
-                STATUS_STRING = f'stopping docker container'
+            try:
+                if container_running:
+                    STATUS_STRING = f'stopping docker container'
+                    LOGGER.info(STATUS_STRING)
+                    subprocess.run(
+                        ["docker", "stop", container_name], check=True)
+                    container_running = False
+
+                STATUS_STRING = f'starting docker container'
                 LOGGER.info(STATUS_STRING)
-                subprocess.run(["docker", "stop", container_name], check=True)
-                container_running = False
-
-            STATUS_STRING = f'starting docker container'
-            LOGGER.info(STATUS_STRING)
-            subprocess.run([
-                "docker", "run", "--rm", "-d", "-it", "-v",
-                "/mnt/geoserver_data/:/usr/local/geoserver/data_dir",
-                "-p", "8080:8080", "--name", container_name,
-                image_name, "api.salo.ai", "8888", "maps.salo.ai", "8080",
-                mem_size], check=True)
-            container_running = True
-            HEALTHY = True
+                subprocess.run([
+                    "docker", "run", "--rm", "-d", "-it", "-v",
+                    "/mnt/geoserver_data/:/usr/local/geoserver/data_dir",
+                    "-p", "8080:8080", "--name", container_name,
+                    image_name, "api.salo.ai", "8888", "maps.salo.ai", "8080",
+                    mem_size], check=True)
+                container_running = True
+                HEALTHY = True
+            except Exception:
+                LOGGER.exception('stopping or starting failed')
+                HEALTHY = False
 
             # Detach and delete the old disk
             if LAST_DISK_NAME:
@@ -215,7 +227,6 @@ def new_disk_monitor_docker_manager(
         except Exception as e:
             STATUS_STRING = f'error: {str(e)}'
             LOGGER.exception(STATUS_STRING)
-            HEALTHY = False
         LOGGER.debug(f'sleeping {check_time} seconds')
         time.sleep(check_time)
 
