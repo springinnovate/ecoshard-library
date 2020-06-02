@@ -6,9 +6,9 @@
     xmlns:xlink="http://www.w3.org/1999/xlink"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <NamedLayer>
-    <Name>greens</Name>
+    <Name>wildfire</Name>
     <UserStyle>
-      <Title>greens</Title>
+      <Title>wildfire</Title>
       <FeatureTypeStyle>
         <Rule>
           <RasterSymbolizer>

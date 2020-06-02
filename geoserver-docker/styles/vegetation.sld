@@ -6,16 +6,16 @@
     xmlns:xlink="http://www.w3.org/1999/xlink"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <NamedLayer>
-    <Name>salo: style</Name>
+    <Name>vegetation</Name>
     <UserStyle>
-      <Title>salo: style</Title>
+      <Title>vegetation</Title>
       <FeatureTypeStyle>
         <Rule>
           <RasterSymbolizer>
             <ColorMap>
               <ColorMapEntry quantity="${env('p0', 0)}" label="${env('p0', 0)}" color="#f9fae5"/>
-              <ColorMapEntry quantity="${env('p30', 6)}" label="${env('p30', 18)}" color="#ccd682"/>
-              <ColorMapEntry quantity="${env('p60', 12)}" label="${env('p60', 18)}" color="#a6bd34"/>
+              <ColorMapEntry quantity="${env('p30', 6)}" label="${env('p30', 6)}" color="#ccd682"/>
+              <ColorMapEntry quantity="${env('p60', 12)}" label="${env('p60', 12)}" color="#a6bd34"/>
               <ColorMapEntry quantity="${env('p90', 18)}" label="${env('p90', 18)}" color="#72b416"/>
               <ColorMapEntry quantity="${env('p100', 20)}" label="${env('p100', 20)}" color="#325900"/>
             </ColorMap>

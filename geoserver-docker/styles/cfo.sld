@@ -6,9 +6,9 @@
     xmlns:xlink="http://www.w3.org/1999/xlink"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <NamedLayer>
-    <Name>salo: height-style</Name>
+    <Name>cfo</Name>
     <UserStyle>
-      <Title>salo: height-style</Title>
+      <Title>cfo</Title>
       <FeatureTypeStyle>
         <Rule>
           <RasterSymbolizer>

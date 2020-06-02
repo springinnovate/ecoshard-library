@@ -90,13 +90,16 @@
       p100 = parsed_max;
       p2 = p0 + (p100-p0)*0.02;
       p25 = p0 + (p100-p0)*0.25;
+      p30 = p0 + (p100-p0)*0.30;
       p50 = p0 + (p100-p0)*0.5;
+      p60 = p0 + (p100-p0)*0.60;
       p75 = p0 + (p100-p0)*0.75;
+      p90 = p0 + (p100-p0)*0.90;
       p98 = p0 + (p100-p0)*0.98;
 
       let raster_style = $("#style").val();
       wms_layer.setParams({
-        ENV: "p0:"+p0+";p2:"+p2+";p25:"+p25+";p50:"+p50+";p75:"+p75+";p98:"+p98+";p100:"+p100,
+        ENV: "p0:"+p0+";p2:"+p2+";p25:"+p25+";p30:"+p30+";p50:"+p50+";p60:"+p60+";p75:"+p75+";p90:"+p90+";p98:"+p98+";p100:"+p100,
         styles: raster_style
       });
       $("#style-control").removeClass("ui-state-disabled");
@@ -106,9 +109,11 @@
     let p100 = {{ p100 }};
     let p2 = p0 + (p100-p0)*0.02;
     let p25 = p0 + (p100-p0)*0.25;
+    let p30 = p0 + (p100-p0)*0.30;
     let p50 = p0 + (p100-p0)*0.5;
+    let p60 = p0 + (p100-p0)*0.60;
     let p75 = p0 + (p100-p0)*0.75;
-    let p90 = p0 + (p100-p0)*0.9;
+    let p90 = p0 + (p100-p0)*0.90;
     let p98 = p0 + (p100-p0)*0.98;
 
     var map = L.map("mapid", {
@@ -119,7 +124,7 @@
     map.fitBounds([
       [{{ min_lat }}, {{ min_lng }}],
       [{{ max_lat }}, {{ max_lng }}]]);
-    
+
     // use the salo topo map
     var topomap = L.tileLayer('https://api.mapbox.com/styles/v1/salo-cba/ck9wzygix02os1io34hlll17l/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1Ijoic2Fsby1jYmEiLCJhIjoiY2pwMjcwcHZrMDQ2MTN1bnY4b2RrbjllMSJ9.nv4JZUvZNTvnAEw3KdmXzA', {
       attribution: '&copy; Salo Sciences'
@@ -135,7 +140,7 @@
       ENV: "p0:"+p0+";p2:"+p2+";p25:"+p25+";p50:"+p50+";p75:"+p75+";p98:"+p98+";p100:"+p100+";nodata:{{ nodata }}",
     });
     wms_layer.addTo(map);
-    
+
     // and add the salo roads and labels map on top
     var labels = L.tileLayer('https://api.mapbox.com/styles/v1/salo-cba/ck7l3r84h07xd1intnedvwd0i/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1Ijoic2Fsby1jYmEiLCJhIjoiY2pwMjcwcHZrMDQ2MTN1bnY4b2RrbjllMSJ9.nv4JZUvZNTvnAEw3KdmXzA', {
       transparent: true
