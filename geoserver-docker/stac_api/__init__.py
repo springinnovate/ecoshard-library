@@ -34,7 +34,7 @@ FULL_DATA_DIR = os.path.abspath(
 DATABASE_PATH = os.path.join(FULL_DATA_DIR, 'flask_manager.db')
 PASSWORD_FILE_PATH = os.path.join(FULL_DATA_DIR, 'secrets', 'adminpass')
 GEOSERVER_USER = 'admin'
-DEFAULT_STYLE = 'raster'
+DEFAULT_STYLE = 'vegetation'
 STYLE_DIR_PATH = os.path.abspath(os.path.join('..', 'data_dir', 'styles'))
 SCHEMA_SQL_PATH = 'schema.sql'
 
