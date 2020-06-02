@@ -90,6 +90,9 @@ if __name__ == '__main__':
     parser.add_argument(
         '--catalog_csv', type=str, required=True,
         help='path to the csv catalog to publish')
+    parser.add_argument(
+        '--force', action='store_true',
+        help='use this to overwrite existing entries on publish')
 
     args = parser.parse_args()
 
@@ -116,6 +119,7 @@ if __name__ == '__main__':
             publish(
                 row['gs_uri'], args.host_port, args.api_key, row['asset_id'],
                 row['catalog'], 'GeoTIFF', row['description'], attribute_dict,
-                force=True)
+                force=args.force)
         except Exception:
             LOGGER.exception('publish failed')
+            break

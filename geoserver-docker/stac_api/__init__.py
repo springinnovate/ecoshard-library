@@ -3,6 +3,7 @@ import datetime
 import hashlib
 import json
 import logging
+import math
 import os
 import pathlib
 import re
@@ -26,6 +27,7 @@ import retrying
 
 LOCAL_GEOSERVER = 'localhost:8080'
 LOCAL_API_SERVER = 'localhost:8888'
+LOCAL_DISK_RESIZE_SERVICE = 'localhost:8082'
 INTER_DATA_DIR = 'data'
 FULL_DATA_DIR = os.path.abspath(
     os.path.join('..', 'data_dir', INTER_DATA_DIR))
@@ -299,7 +301,8 @@ def create_app(test_config=None):
         fetch_payload = _execute_sqlite(
             '''
             SELECT
-                xmin, ymin, xmax, ymax, raster_min, raster_max, default_style
+                xmin, ymin, xmax, ymax, raster_min, raster_max, default_style,
+                local_path
             FROM catalog_table
             WHERE asset_id=? AND catalog=?
             ''', DATABASE_PATH, argument_list=[asset_id, catalog],
@@ -318,6 +321,10 @@ def create_app(test_config=None):
         raster_max = fetch_payload[5]
 
         default_style = fetch_payload[6]
+
+        local_raster_path = fetch_payload[7]
+        nodata = pygeoprocessing.get_raster_info(
+            local_raster_path)['nodata'][0]
 
         x_center = (xmax+xmin)/2
         y_center = (ymax+ymin)/2
@@ -339,6 +346,7 @@ def create_app(test_config=None):
             'max_lat': ymax,
             'max_lng': xmax,
             'geoserver_style_url': flask.url_for('styles', _external=True),
+            'nodata': nodata,
         }, _external=True)
 
     @app.route('/api/v1/search', methods=["POST"])
@@ -1108,28 +1116,67 @@ def add_raster_worker(
 
         LOGGER.debug('copy %s to %s', uri_path, local_raster_path)
         if os.path.exists(local_raster_path):
-            # remove the file first
-            os.remove(local_raster_path)
+            # check the size of any existing file first
+            existing_ls_line_result = subprocess.run(
+               ['ls', '-l', local_raster_path], stdout=subprocess.PIPE,
+               check=True)
+            existing_ls_line = existing_ls_line_result.stdout.decode(
+                'utf-8').rstrip().split('\n')[-1].split()
+            existing_object_size = int(existing_ls_line[4])
+        else:
+            existing_object_size = 0
 
         # get the object size
         gsutil_ls_result = subprocess.run(
-           ['gsutil', 'ls', '-l', uri_path], stdout=subprocess.PIPE,
+           [f'gsutil ls -l "{uri_path}"'], stdout=subprocess.PIPE,
            check=True, shell=True)
-        last_ls_line = gsutil_ls_result.stdout.decode(
+        LOGGER.debug(f"raw output: {gsutil_ls_result.stdout}")
+        last_gsutil_ls_line = gsutil_ls_result.stdout.decode(
             'utf-8').rstrip().split('\n')[-1].split()
-        object_size = last_ls_line[last_ls_line.index('bytes')-1]
+        LOGGER.debug(f"last line: {last_gsutil_ls_line}")
+        # say we need four times that because we might need to duplicate the
+        # file and also build overviews for it. That shoud be ~3 times,
+        # so might as well be safe and make it 4.
+        gs_object_size = 4*int(last_gsutil_ls_line[
+            last_gsutil_ls_line.index('bytes')-1])
 
         # get the file system size
         df_result = subprocess.run(
             ['df', os.path.dirname(local_raster_path)],
-            stdout=subprocess.PIPE, check=True, shell=True)
-        fs, blocks, used, available, use_p, mount = (
+            stdout=subprocess.PIPE, check=True)
+        fs, blocks, used, available_k, use_p, mount = (
             df_result.stdout.decode('utf-8').rstrip().split('\n')[-1].split())
 
-        if (object_size > available):
-            raise RuntimeError(
-                f'not enough space left on drive, need {object_size} but have '
-                f'{available}.')
+        # turn kb to b
+        available_b = int(available_k) * 2**10
+
+        additional_b_needed = (
+            (gs_object_size-existing_object_size) - available_b)
+        LOGGER.debug(
+            f'gs_object_size: {gs_object_size}, '
+            f'existing_object_size: {existing_object_size} '
+            f'available_b: {available_b}f'
+            f'additional_b needed: {additional_b_needed}')
+        if additional_b_needed > 0:
+            # calcualte additional GB needed
+            additional_gb = int(math.ceil(additional_b_needed/2**30))
+            LOGGER.warn(f'need an additional {additional_gb}G')
+            session = requests.Session()
+            resize_disk_request = do_rest_action(
+                session.post,
+                f'http://{LOCAL_DISK_RESIZE_SERVICE}',
+                f'resize',
+                json={'gb_to_add': additional_gb})
+
+            if not resize_disk_request:
+                raise RuntimeError(
+                    f'not enough space left on drive and unable to resize '
+                    f'need {gs_object_size-existing_object_size} '
+                    f'but have {available_b}.')
+
+        if os.path.exists(local_raster_path):
+            # remove the file first
+            os.remove(local_raster_path)
 
         subprocess.run([
             f'gsutil cp "{uri_path}" "{local_raster_path}"'],
