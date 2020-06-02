@@ -14,7 +14,7 @@
           <RasterSymbolizer>
             <ColorMap>
               <ColorMapEntry quantity="${env('p0', 0)}" label="${env('p0', 0)}" color="#ffffff"/>
-              <ColorMapEntry quantity="${env('p90', 18)}" label="${env('p75', 18)}" color="#292663"/>
+              <ColorMapEntry quantity="${env('p90', 18)}" label="${env('p90', 18)}" color="#292663"/>
               <ColorMapEntry quantity="${env('p100', 20)}" label="${env('p100', 20)}" color="#fdb515"/>
             </ColorMap>
           </RasterSymbolizer>
