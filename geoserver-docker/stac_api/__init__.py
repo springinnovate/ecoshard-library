@@ -1565,21 +1565,26 @@ def expiration_monitor(database_path):
         None (never)
 
     """
-    while True:
-        current_time = utc_now()
-        expired_assets = _execute_sqlite(
-            '''
-            SELECT asset_id, catalog, local_path, expiration_utc_datetime
-            FROM catalog_table
-            WHERE expiration_utc_datetime <= ?;''',
-            database_path, mode='read_only', execute='execute', fetch='all',
-            argument_list=[current_time])
+    try:
+        while True:
+            current_time = utc_now()
+            LOGGER.debug(f'checking for expired data at {current_time}')
+            expired_assets = _execute_sqlite(
+                '''
+                SELECT asset_id, catalog, local_path, expiration_utc_datetime
+                FROM catalog_table
+                WHERE expiration_utc_datetime <= ?;''',
+                database_path, mode='read_only', execute='execute',
+                fetch='all', argument_list=[current_time])
 
-        for asset_id, catalog, local_path, expiration_utc_datetime in \
-                expired_assets:
-            LOGGER.info(
-                f'{asset_id}:{catalog} expired on {expiration_utc_datetime} '
-                f'current time is {current_time}. Deleting...')
-            delete_raster(local_path, asset_id, catalog)
+            for asset_id, catalog, local_path, expiration_utc_datetime in \
+                    expired_assets:
+                LOGGER.info(
+                    f'{asset_id}:{catalog} expired on '
+                    f'{expiration_utc_datetime} '
+                    f'current time is {current_time}. Deleting...')
+                delete_raster(local_path, asset_id, catalog)
 
-        time.sleep(EXPIRATION_MONITOR_DELAY)
+            time.sleep(EXPIRATION_MONITOR_DELAY)
+    except Exception:
+        LOGGER.exception('something bad happened in expiration_monitor')
