@@ -398,8 +398,10 @@ def create_app(test_config=None):
                                 this asset will expire.
                             'attribute_dict':
                                 dictionary of additional attributes
+                            'utc_now': utc datetime at the time of the search
                         }
-                    ]
+                    ],
+                    'utc_now': "string of the UTC time of search"
                 }
 
             400 if invalid api key
@@ -511,7 +513,9 @@ def create_app(test_config=None):
                         'description': description,
                         'attribute_dict': attribute_dict,
                     })
-            return {'features': feature_list}
+            return {
+                'features': feature_list,
+                'utc_now': utc_now()}
         except Exception as e:
             LOGGER.exception('something went wrong')
             return str(e), 500

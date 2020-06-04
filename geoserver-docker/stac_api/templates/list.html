@@ -50,6 +50,7 @@
       <div><input id="description" oninput="search_changed()"></div>
       <div><label for="description">partial description</label></div>
   </div>
+  <div id="utc_time"></div>
   <div id="search-results" class="grid-container-3 ui-widget ui-state-default ui-widget-content ui-corner-all ui-priority-primary"></div>
   <script>
     /* do list based on API key */
@@ -87,6 +88,8 @@
           $("#search-results").addClass('ui-state-error').append(
             "...failed" + e.responseText);
       }).done(function (response) {
+        $("#utc_time").empty().append(
+          "UTC time on server: " + response.utc_now);
         $("#search-results").empty().append(
           "<div>Link to Viewer</div>"+
           "<div>Description</div>"+
