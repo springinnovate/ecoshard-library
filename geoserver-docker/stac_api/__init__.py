@@ -179,6 +179,7 @@ def create_app(test_config=None):
                     "uri": gives a URI that is the direct link to the dataset,
                         this may be a gs:// or https:// or other url. The
                         caller will infer this from context.
+                    "url": returns a url to download the requested file.
                     "wms": just the WMS link.
 
         Responses:
@@ -227,16 +228,21 @@ def create_app(test_config=None):
         raster_min, raster_max, raster_mean, raster_stdev, default_style = \
             fetch_payload[1:6]
 
-        if fetch_data["type"].lower() == 'uri':
+        fetch_type = fetch_data['type'].lower()
+        if fetch_type == 'uri':
             link = fetch_payload[0]
-
-        if fetch_data['type'].lower() == 'wms_preview':
+        elif fetch_data['type'] == 'url':
+            gs_link = fetch_payload[0]
+            # google storage links of the form gs://[VALUE] have https
+            # equivalents of https://storage.cloud.google.com/[VALUE]
+            link = os.path.join(
+                'https://storage.cloud.google.com', gs_link.split('gs://')[1])
+        elif fetch_type == 'wms_preview':
             link = flask.url_for(
                 'viewer', catalog=fetch_data['catalog'],
                 asset_id=fetch_data['asset_id'], api_key=api_key,
                 _external=True)
-
-        if fetch_data['type'].lower() == 'wms':
+        elif fetch_type == 'wms':
             p2 = raster_min+(raster_max-raster_min)*0.02
             p25 = raster_min+(raster_max-raster_min)*0.25
             p50 = raster_min+(raster_max-raster_min)*0.5
