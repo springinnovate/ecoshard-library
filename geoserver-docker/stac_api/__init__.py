@@ -574,13 +574,12 @@ def create_app(test_config=None):
                 utc_datetime = str(datetime.datetime.strptime(
                     asset_args['utc_datetime'], '%Y-%m-%d %H:%M:%S %Z'))
             else:
-                utc_datetime = str(
-                    datetime.datetime.now(datetime.timezone.utc))
+                utc_datetime = utc_now()
 
-            if 'default_style' in asset_args:
-                default_style = asset_args['default_style']
-            else:
-                default_style = DEFAULT_STYLE
+            expiration_utc_datetime = asset_args.get(
+                'expiration_utc_datetime', None)
+
+            default_style = asset_args.get('default_style', DEFAULT_STYLE)
 
             LOGGER.debug(f"asset args: {str(asset_args)}")
             valid_check = validate_api(
@@ -659,7 +658,8 @@ def create_app(test_config=None):
                 args=(asset_args['uri'], asset_args['mediatype'],
                       asset_args['catalog'], asset_args['asset_id'],
                       asset_args['description'],
-                      utc_datetime, default_style, job_id, attribute_dict
+                      utc_datetime, default_style, job_id, attribute_dict,
+                      expiration_utc_datetime
                       ),
                 kwargs={'force': force})
             raster_worker_thread.start()
@@ -1105,7 +1105,8 @@ def get_lat_lng_bounding_box(raster_path):
 
 def add_raster_worker(
         uri_path, mediatype, catalog, raster_id, asset_description,
-        utc_datetime, default_style, job_id, attribute_dict, force=False):
+        utc_datetime, default_style, job_id, attribute_dict,
+        expiration_utc_datetime, force=False):
     """This is used to copy and update a coverage set asynchronously.
 
     Args:
@@ -1119,6 +1120,9 @@ def add_raster_worker(
         job_id (str): used to identify entry in job_table
         attribute_dict (dict): a key/value pair mapping of arbitrary attributes
             for this asset, can be None.
+        expiration_utc_datetime (str): either None or UTC formatted string
+            indicating when this raster should be automatically removed from
+            database and local storage.
         force (bool): if True will overwrite existing local data, otherwise
             does not re-copy data.
 
@@ -1291,8 +1295,8 @@ def add_raster_worker(
                 asset_id, catalog, xmin, ymin, xmax, ymax,
                 utc_datetime, mediatype, description, uri, local_path,
                 raster_min, raster_max, raster_mean, raster_stdev,
-                default_style)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+                default_style, expiration_utc_datetime)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
             ''', DATABASE_PATH, argument_list=[
                 raster_id, catalog,
                 lat_lng_bounding_box[0],
@@ -1302,7 +1306,7 @@ def add_raster_worker(
                 utc_datetime, mediatype, asset_description, uri_path,
                 local_raster_path,
                 raster_min, raster_max, raster_mean, raster_stdev,
-                default_style],
+                default_style, expiration_utc_datetime],
             mode='modify', execute='execute')
 
         if attribute_dict:
