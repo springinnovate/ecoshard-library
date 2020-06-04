@@ -245,8 +245,11 @@ def create_app(test_config=None):
         elif fetch_type == 'wms':
             p2 = raster_min+(raster_max-raster_min)*0.02
             p25 = raster_min+(raster_max-raster_min)*0.25
-            p50 = raster_min+(raster_max-raster_min)*0.5
+            p30 = raster_min+(raster_max-raster_min)*0.30
+            p50 = raster_min+(raster_max-raster_min)*0.50
+            p60 = raster_min+(raster_max-raster_min)*0.60
             p75 = raster_min+(raster_max-raster_min)*0.75
+            p90 = raster_min+(raster_max-raster_min)*0.90
             p98 = raster_min+(raster_max-raster_min)*0.98
 
             link = (
@@ -255,8 +258,8 @@ def create_app(test_config=None):
                 f"?layers={fetch_data['catalog']}:{fetch_data['asset_id']}"
                 f'&format="image/png"'
                 f'&styles={default_style}'
-                f'&p0={raster_min}&p2={p2}&p25={p25}&p50={p50}'
-                f'&p75={p75}&p98={p98}&p100={raster_max}')
+                f'&p0={raster_min}&p2={p2}&p25={p25}&p30={p30}&p50={p50}'
+                f'&p60={p60}&p75={p75}&p90={p90}&p98={p98}&p100={raster_max}')
 
         return {
             'type': fetch_data['type'],
