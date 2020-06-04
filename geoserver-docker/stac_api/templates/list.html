@@ -91,6 +91,7 @@
           "<div>Link to Viewer</div>"+
           "<div>Description</div>"+
           "<div>UTC datetime</div>"+
+          "<div>UTC expiration</div>"+
           "<div>additional attributes</div>");
         $.each(response.features, function(idx, search_result){
           var id_catalog_list = search_result["id"].split(":");
@@ -117,7 +118,8 @@
               "<div>"+"<a class=\"ui-button ui-widget ui-corner-all\" href=\""+response["link"]+ "\">"+
               search_result["id"]+"</a></div>"+
               "<div>"+search_result["description"]+"</div>"+
-              "<div>"+search_result["utc_datetime"]+"</div>");
+              "<div>"+search_result["utc_datetime"]+"</div>"+
+              "<div>"+search_result["expiration_utc_datetime"]+"</div>");
             if ("attribute_dict" in search_result) {
               let attribute_string = "";
               $.each(search_result["attribute_dict"], function(key, value) {

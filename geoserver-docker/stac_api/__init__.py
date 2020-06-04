@@ -391,6 +391,11 @@ def create_app(test_config=None):
                             # bbox is overlap with query bbox
                             'bbox': [xmin, ymin, xmax, ymax],
                             'description': 'asset description',
+                            'utc_datetime': UTC datetime associated with asset,
+                                either defined at publish or is the publis
+                                time.
+                            'expiration_utc_datetime': UTC datetime in which
+                                this asset will expire.
                             'attribute_dict':
                                 dictionary of additional attributes
                         }
@@ -471,21 +476,22 @@ def create_app(test_config=None):
                 argument_list.append(f"%{search_data['description']}%")
 
             base_query_string = (
-                'SELECT asset_id, catalog, utc_datetime, description, '
+                'SELECT asset_id, catalog, utc_datetime, '
+                'expiration_utc_datetime, description, '
                 'xmin, ymin, xmax, ymax '
                 'FROM catalog_table')
 
             if where_query_list:
                 base_query_string += f" WHERE {' AND '.join(where_query_list)}"
 
-            bounding_box_search = _execute_sqlite(
+            search_result = _execute_sqlite(
                 base_query_string,
                 DATABASE_PATH, argument_list=argument_list,
                 mode='read_only', execute='execute', fetch='all')
 
             feature_list = []
-            for (asset_id, catalog, utc_datetime, description,
-                    xmin, ymin, xmax, ymax) in bounding_box_search:
+            for (asset_id, catalog, utc_datetime, expiration_utc_datetime,
+                    description, xmin, ymin, xmax, ymax) in search_result:
                 # search for additional attributes
                 attribute_search = _execute_sqlite(
                     '''
@@ -501,6 +507,7 @@ def create_app(test_config=None):
                         'id': f'{catalog}:{asset_id}',
                         'bbox': [xmin, ymin, xmax, ymax],
                         'utc_datetime': utc_datetime,
+                        'expiration_utc_datetime': expiration_utc_datetime,
                         'description': description,
                         'attribute_dict': attribute_dict,
                     })
