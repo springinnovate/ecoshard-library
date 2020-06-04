@@ -37,7 +37,7 @@ GEOSERVER_USER = 'admin'
 DEFAULT_STYLE = 'vegetation'
 STYLE_DIR_PATH = os.path.abspath(os.path.join('..', 'data_dir', 'styles'))
 SCHEMA_SQL_PATH = 'schema.sql'
-
+EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -69,6 +69,12 @@ def create_app(test_config=None):
     _execute_sqlite(
         '''DELETE FROM job_table;''', DATABASE_PATH, mode='modify',
         execute='execute', argument_list=[])
+
+    # start up an expiration monitor
+    expiration_monitor_thread = threading.Thread(
+        target=expiration_monitor,
+        args=(DATABASE_PATH,))
+    expiration_monitor_thread.start()
 
     # ensure the instance folder exists
     try:
@@ -717,33 +723,9 @@ def create_app(test_config=None):
                     f'{asset_args["catalog"]}:{asset_args["asset_id"]} '
                     'is not in the catalog, nothing to delete.'), 400
 
-            with open(PASSWORD_FILE_PATH, 'r') as password_file:
-                master_geoserver_password = password_file.read()
-            session = requests.Session()
-            session.auth = (GEOSERVER_USER, master_geoserver_password)
-
-            cover_id = f'{asset_args["asset_id"]}_cover'
-            delete_coverstore_result = do_rest_action(
-                session.delete,
-                f'http://{LOCAL_GEOSERVER}',
-                f'geoserver/rest/workspaces/{asset_args["catalog"]}/'
-                f'coveragestores/{cover_id}/?purge=all&recurse=true')
-            if not delete_coverstore_result:
-                raise RuntimeError(f"Unable to delete {cover_id}")
-            _execute_sqlite(
-                '''
-                DELETE FROM catalog_table
-                WHERE catalog=? AND asset_id=?
-                ''', DATABASE_PATH, argument_list=[
-                    asset_args['catalog'], asset_args['asset_id']],
-                mode='modify', execute='execute')
-
-            # Don't wait for the remove to happen before returning, it could
-            # take a bit of time.
-            remove_thread = threading.Thread(
-                target=os.remove,
-                args=(local_path_result[0],))
-            remove_thread.start()
+            delete_raster(
+                local_path_result[0], asset_args['asset_id'],
+                asset_args['catalog'])
 
             return (
                 f'{asset_args["catalog"]}:{asset_args["asset_id"]} deleted',
@@ -753,6 +735,46 @@ def create_app(test_config=None):
             raise
 
     return app
+
+
+def delete_raster(local_path, asset_id, catalog):
+    """Delete a given asset from the geoserver and local stoarge.
+
+    Args:
+        local_path (str): path to raster in local storage.
+        asset_id (str): asset id in database
+        catalog (str): catalog in database.
+
+    Returns:
+        None.
+    """
+    with open(PASSWORD_FILE_PATH, 'r') as password_file:
+        master_geoserver_password = password_file.read()
+    session = requests.Session()
+    session.auth = (GEOSERVER_USER, master_geoserver_password)
+
+    cover_id = f'{asset_id}_cover'
+    delete_coverstore_result = do_rest_action(
+        session.delete,
+        f'http://{LOCAL_GEOSERVER}',
+        f'geoserver/rest/workspaces/{catalog}/'
+        f'coveragestores/{cover_id}/?purge=all&recurse=true')
+    if not delete_coverstore_result:
+        raise RuntimeError(f"Unable to delete {cover_id}")
+    _execute_sqlite(
+        '''
+        DELETE FROM catalog_table
+        WHERE catalog=? AND asset_id=?
+        ''', DATABASE_PATH, argument_list=[
+            catalog, asset_id],
+        mode='modify', execute='execute')
+
+    # Don't wait for the remove to happen before returning, it could
+    # take a bit of time.
+    remove_thread = threading.Thread(
+        target=os.remove,
+        args=(local_path,))
+    remove_thread.start()
 
 
 @retrying.retry(
@@ -794,7 +816,11 @@ def _execute_sqlite(
             raise ValueError('Unknown mode: %s' % mode)
 
         if execute == 'execute':
-            cursor = connection.execute(sqlite_command, argument_list)
+            if argument_list:
+                cursor = connection.execute(sqlite_command, argument_list)
+            else:
+                cursor = connection.execute(sqlite_command)
+
         elif execute == 'many':
             cursor = connection.executemany(sqlite_command, argument_list)
         elif execute == 'script':
@@ -1394,6 +1420,7 @@ def build_schema(database_path):
             ymin REAL NOT NULL,
             ymax REAL NOT NULL,
             utc_datetime TEXT NOT NULL COLLATE NOCASE,
+            expiration_utc_datetime TEXT COLLATE NOCASE,
             mediatype TEXT NOT NULL COLLATE NOCASE,
             description TEXT NOT NULL COLLATE NOCASE,
             uri TEXT NOT NULL,
@@ -1510,3 +1537,34 @@ def initalize_geoserver(database_path, api_server_name):
 def utc_now():
     """Return string of current time in UTC."""
     return str(datetime.datetime.now(datetime.timezone.utc))
+
+
+def expiration_monitor(database_path):
+    """Monitor database for any entries that have expired and delete them.
+
+    Args:
+        database_path (str): path to database that contains at least a
+            'expiration_utc_datetime' column.
+
+    Returns:
+        None (never)
+
+    """
+    while True:
+        current_time = utc_now()
+        expired_assets = _execute_sqlite(
+            '''
+            SELECT asset_id, catalog, local_path, expiration_utc_datetime
+            FROM catalog_table
+            WHERE expiration_utc_datetime <= ?;''',
+            database_path, mode='read_only', execute='execute', fetch='all',
+            argument_list=[current_time])
+
+        for asset_id, catalog, local_path, expiration_utc_datetime in \
+                expired_assets:
+            LOGGER.info(
+                f'{asset_id}:{catalog} expired on {expiration_utc_datetime} '
+                f'current time is {current_time}. Deleting...')
+            delete_raster(local_path, asset_id, catalog)
+
+        time.sleep(EXPIRATION_MONITOR_DELAY)
