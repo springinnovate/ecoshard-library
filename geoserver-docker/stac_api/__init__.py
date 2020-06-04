@@ -1573,7 +1573,9 @@ def expiration_monitor(database_path):
                 '''
                 SELECT asset_id, catalog, local_path, expiration_utc_datetime
                 FROM catalog_table
-                WHERE expiration_utc_datetime <= ?;''',
+                WHERE
+                    ifnull(expiration_utc_datetime, '') != '' AND
+                    expiration_utc_datetime <= ?;''',
                 database_path, mode='read_only', execute='execute',
                 fetch='all', argument_list=[current_time])
 
