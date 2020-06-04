@@ -17,7 +17,7 @@ LOGGER = logging.getLogger(__name__)
 
 def publish(
         gs_uri, host_port, api_key, asset_id, catalog, mediatype,
-        description, attribute_dict, force=False):
+        description, attribute_dict, expiration_utc_datetime, force=False):
     """Publish a gs raster to an ecoserver.
 
     Args:
@@ -34,6 +34,9 @@ def publish(
         force (bool): if already exists on the server, request an overwrite.
         attribute_dict (dict): these key/value pairs are added as additional
             elements in the attribute database for this asset.
+        expiration_utc_datetime (str): either empty string or UTC formatted
+            time to indicate when the raster should be expired from the
+            database.
 
     Returns:
         None
@@ -52,7 +55,8 @@ def publish(
             'mediatype': mediatype,
             'description': description,
             'force': force,
-            'attribute_dict': attribute_dict
+            'attribute_dict': attribute_dict,
+            'expiration_utc_datetime': expiration_utc_datetime,
         }))
     if not publish_response:
         LOGGER.error(f'response from server: {publish_response.text}')
@@ -101,7 +105,8 @@ if __name__ == '__main__':
     table_headers = set(catalog_df)
     LOGGER.debug(set(catalog_df))
     required_headers = {
-        'gs_uri', 'catalog', 'asset_id', 'description', 'utc_datetime'}
+        'gs_uri', 'catalog', 'asset_id', 'description', 'utc_datetime',
+        'expiration_utc_datetime'}
     if required_headers.intersection(table_headers) != required_headers:
         raise ValueError(
             f'missing headers in catalog, expected {required_headers} '
@@ -119,7 +124,7 @@ if __name__ == '__main__':
             publish(
                 row['gs_uri'], args.host_port, args.api_key, row['asset_id'],
                 row['catalog'], 'GeoTIFF', row['description'], attribute_dict,
-                force=args.force)
+                row['expiration_utc_datetime'], force=args.force)
         except Exception:
             LOGGER.exception('publish failed')
             break
