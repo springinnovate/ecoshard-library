@@ -4,11 +4,11 @@ Geoserver
 Development
 ===========
 
-One can run the geoserver-docker image configured for local development of the
-flask application by passing `FLASK_ENV` environmental variable, and mounting
-the geoserver-docker directory into the image:
+One can run the flask app for the geoserver-docker image, configured for
+development by passing `FLASK_ENV` environmental variable, and mounting the
+geoserver-docker directory into the image:
 
-    docker run --rm -it -v $PWD/geoserver_data/:/usr/local/geoserver/data_dir -v $PWD/geoserver-docker:/usr/local/geoserver/bin:delegated -p 8888:8888 -e FLASK_APP=stac_api -e FLASK_ENV=development --entrypoint /usr/bin/bash us.gcr.io/salo-api/stac-geoserver-container:latest
+    docker run --rm -it -v $PWD/geoserver_data/:/usr/local/geoserver/data_dir -v $PWD/geoserver-docker:/usr/local/geoserver/bin:delegated -p 8888:8888 -e FLASK_APP=stac_api:create_app -e FLASK_ENV=development --entrypoint /usr/bin/bash us.gcr.io/salo-api/stac-geoserver-container:latest
 
     # a bash prompt is presented:
     cd bin

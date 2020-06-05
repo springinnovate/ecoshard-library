@@ -36,6 +36,7 @@ INTER_DATA_DIR = 'data'
 FULL_DATA_DIR = os.path.abspath(
     os.path.join('..', 'data_dir', INTER_DATA_DIR))
 DATABASE_PATH = os.path.join(FULL_DATA_DIR, 'flask_manager.db')
+AUTH_DATABASE_PATH = os.path.join(FULL_DATA_DIR, 'users.db')
 PASSWORD_FILE_PATH = os.path.join(FULL_DATA_DIR, 'secrets', 'adminpass')
 GEOSERVER_USER = 'admin'
 DEFAULT_STYLE = 'vegetation'
@@ -53,7 +54,7 @@ logger = logging.getLogger('waitress')
 logger.setLevel(logging.DEBUG)
 
 
-def create_app(test_config=None):
+def create_app(config=None):
     """Create the Geoserver STAC Flask app."""
     LOGGER.debug('starting up!')
     # wait for API calls
@@ -63,10 +64,15 @@ def create_app(test_config=None):
         SECRET_KEY='dev',
         SERVER_NAME=LOCAL_API_SERVER,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        SQLALCHEMY_DATABASE_URI=f"sqlite:///{AUTH_DATABASE_PATH}",
     )
+
     # config.py should contain a real secret key and
     # a real IP address/hostname
     app.config.from_pyfile('config.py', silent=False)
+
+    if config is not None:
+        app.config.from_mapping(config)
 
     initalize_geoserver(DATABASE_PATH, app.config['SERVER_NAME'])
 
@@ -89,7 +95,10 @@ def create_app(test_config=None):
         pass
 
     db.init_app(app)
-    Migrate(app, db)
+    migrate = Migrate(app, db)
+    if not os.path.exists(AUTH_DATABASE_PATH):
+        with app.app_context():
+            db.create_all()
 
     app.register_blueprint(auth_bp, url_prefix="/users")
 
@@ -745,7 +754,7 @@ def create_app(test_config=None):
             LOGGER.exception('something bad happened on delete')
             raise
 
-    return (app, db)
+    return app
 
 
 def delete_raster(local_path, asset_id, catalog):

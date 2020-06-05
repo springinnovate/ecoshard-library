@@ -2,7 +2,7 @@ import pytest
 
 from flanker.addresslib import address
 from stac_api import create_app
-from stac_api.auth.models import User
+from stac_api.auth.models import User, db
 from stac_api.auth.utils import make_hash
 
 USER_PASSWORD = "atestpass"
@@ -11,7 +11,7 @@ USER_PASSWORD = "atestpass"
 @pytest.fixture
 def app():
     # create a temporary file to isolate the database for each test
-    (app, db) = create_app(
+    app = create_app(
         {
             "SQLALCHEMY_DATABASE_URI": "sqlite://",
             "TESTING": True,
@@ -19,6 +19,7 @@ def app():
             "SECRET_KEY": "PYTEST",
         }
     )
+    db.init_app(app)
 
     with app.app_context():
         db.create_all()
