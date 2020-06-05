@@ -74,6 +74,7 @@ def create_app(test_config=None):
     expiration_monitor_thread = threading.Thread(
         target=expiration_monitor,
         args=(DATABASE_PATH,))
+    expiration_monitor_thread.daemon = True
     expiration_monitor_thread.start()
 
     # ensure the instance folder exists
