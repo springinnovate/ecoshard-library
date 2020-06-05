@@ -1,9 +1,15 @@
 # requirements.txt
 # --------------------
-datetime
-ecoshard
-flask
-gdal
-pygeoprocessing
-requests
-retrying
+ecoshard==0.4.0
+Flask==1.1.2
+GDAL==3.0.4
+pygeoprocessing==2.0.0
+requests==2.23.0
+retrying==1.3.3
+waitress==1.4.4
+Cython==0.29.19
+matplotlib==3.2.1
+retrying==1.3.3
+Rtree==0.9.4
+scipy==1.4.1
+Shapely==1.7.0
