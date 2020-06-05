@@ -8,6 +8,7 @@ RUN apt-get update -qq && \
     openjdk-11-jdk \
     libspatialindex-dev \
     python3-pip \
+    postgresql-client \
     openssl \
     curl \
     git \

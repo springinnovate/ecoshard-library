@@ -20,10 +20,14 @@ from osgeo import ogr
 from osgeo import osr
 import ecoshard
 import flask
+from flask_migrate import Migrate
 import numpy
 import pygeoprocessing
 import requests
 import retrying
+
+from .auth import auth_bp, db
+
 
 LOCAL_GEOSERVER = 'localhost:8080'
 LOCAL_API_SERVER = 'localhost:8888'
@@ -58,6 +62,7 @@ def create_app(test_config=None):
     app.config.from_mapping(
         SECRET_KEY='dev',
         SERVER_NAME=LOCAL_API_SERVER,
+        SQLALCHEMY_TRACK_MODIFICATIONS=False,
     )
     # config.py should contain a real secret key and
     # a real IP address/hostname
@@ -82,6 +87,11 @@ def create_app(test_config=None):
         os.makedirs(app.instance_path)
     except OSError:
         pass
+
+    db.init_app(app)
+    Migrate(app, db)
+
+    app.register_blueprint(auth_bp, url_prefix="/users")
 
     @app.route('/api/v1/pixel_pick', methods=["POST"])
     def pixel_pick():
@@ -735,7 +745,7 @@ def create_app(test_config=None):
             LOGGER.exception('something bad happened on delete')
             raise
 
-    return app
+    return (app, db)
 
 
 def delete_raster(local_path, asset_id, catalog):
