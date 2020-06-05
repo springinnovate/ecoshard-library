@@ -126,5 +126,4 @@ if __name__ == '__main__':
                 row['catalog'], 'GeoTIFF', row['description'], attribute_dict,
                 row['expiration_utc_datetime'], force=args.force)
         except Exception:
-            LOGGER.exception('publish failed')
-            break
+            LOGGER.exception('publish failed, trying next object')

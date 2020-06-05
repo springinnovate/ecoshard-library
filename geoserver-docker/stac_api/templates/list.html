@@ -26,7 +26,7 @@
 
     .grid-container-3 {
       display: grid;
-      grid-template-columns: auto auto auto auto;
+      grid-template-columns: auto auto auto auto auto;
       padding: 5px;
       grid-gap: 5px;
     }
@@ -50,6 +50,7 @@
       <div><input id="description" oninput="search_changed()"></div>
       <div><label for="description">partial description</label></div>
   </div>
+  <div id="utc_time"></div>
   <div id="search-results" class="grid-container-3 ui-widget ui-state-default ui-widget-content ui-corner-all ui-priority-primary"></div>
   <script>
     /* do list based on API key */
@@ -87,10 +88,13 @@
           $("#search-results").addClass('ui-state-error').append(
             "...failed" + e.responseText);
       }).done(function (response) {
+        $("#utc_time").empty().append(
+          "UTC time on server: " + response.utc_now);
         $("#search-results").empty().append(
           "<div>Link to Viewer</div>"+
           "<div>Description</div>"+
           "<div>UTC datetime</div>"+
+          "<div>UTC expiration</div>"+
           "<div>additional attributes</div>");
         $.each(response.features, function(idx, search_result){
           var id_catalog_list = search_result["id"].split(":");
@@ -117,7 +121,8 @@
               "<div>"+"<a class=\"ui-button ui-widget ui-corner-all\" href=\""+response["link"]+ "\">"+
               search_result["id"]+"</a></div>"+
               "<div>"+search_result["description"]+"</div>"+
-              "<div>"+search_result["utc_datetime"]+"</div>");
+              "<div>"+search_result["utc_datetime"]+"</div>"+
+              "<div>"+search_result["expiration_utc_datetime"]+"</div>");
             if ("attribute_dict" in search_result) {
               let attribute_string = "";
               $.each(search_result["attribute_dict"], function(key, value) {

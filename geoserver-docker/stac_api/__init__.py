@@ -411,10 +411,17 @@ def create_app(config=None):
                             # bbox is overlap with query bbox
                             'bbox': [xmin, ymin, xmax, ymax],
                             'description': 'asset description',
+                            'utc_datetime': UTC datetime associated with asset,
+                                either defined at publish or is the publis
+                                time.
+                            'expiration_utc_datetime': UTC datetime in which
+                                this asset will expire.
                             'attribute_dict':
                                 dictionary of additional attributes
+                            'utc_now': utc datetime at the time of the search
                         }
-                    ]
+                    ],
+                    'utc_now': "string of the UTC time of search"
                 }
 
             400 if invalid api key
@@ -491,21 +498,22 @@ def create_app(config=None):
                 argument_list.append(f"%{search_data['description']}%")
 
             base_query_string = (
-                'SELECT asset_id, catalog, utc_datetime, description, '
+                'SELECT asset_id, catalog, utc_datetime, '
+                'expiration_utc_datetime, description, '
                 'xmin, ymin, xmax, ymax '
                 'FROM catalog_table')
 
             if where_query_list:
                 base_query_string += f" WHERE {' AND '.join(where_query_list)}"
 
-            bounding_box_search = _execute_sqlite(
+            search_result = _execute_sqlite(
                 base_query_string,
                 DATABASE_PATH, argument_list=argument_list,
                 mode='read_only', execute='execute', fetch='all')
 
             feature_list = []
-            for (asset_id, catalog, utc_datetime, description,
-                    xmin, ymin, xmax, ymax) in bounding_box_search:
+            for (asset_id, catalog, utc_datetime, expiration_utc_datetime,
+                    description, xmin, ymin, xmax, ymax) in search_result:
                 # search for additional attributes
                 attribute_search = _execute_sqlite(
                     '''
@@ -521,10 +529,13 @@ def create_app(config=None):
                         'id': f'{catalog}:{asset_id}',
                         'bbox': [xmin, ymin, xmax, ymax],
                         'utc_datetime': utc_datetime,
+                        'expiration_utc_datetime': expiration_utc_datetime,
                         'description': description,
                         'attribute_dict': attribute_dict,
                     })
-            return {'features': feature_list}
+            return {
+                'features': feature_list,
+                'utc_now': utc_now()}
         except Exception as e:
             LOGGER.exception('something went wrong')
             return str(e), 500
@@ -1574,21 +1585,28 @@ def expiration_monitor(database_path):
         None (never)
 
     """
-    while True:
-        current_time = utc_now()
-        expired_assets = _execute_sqlite(
-            '''
-            SELECT asset_id, catalog, local_path, expiration_utc_datetime
-            FROM catalog_table
-            WHERE expiration_utc_datetime <= ?;''',
-            database_path, mode='read_only', execute='execute', fetch='all',
-            argument_list=[current_time])
+    try:
+        while True:
+            current_time = utc_now()
+            LOGGER.debug(f'checking for expired data at {current_time}')
+            expired_assets = _execute_sqlite(
+                '''
+                SELECT asset_id, catalog, local_path, expiration_utc_datetime
+                FROM catalog_table
+                WHERE
+                    ifnull(expiration_utc_datetime, '') != '' AND
+                    expiration_utc_datetime <= ?;''',
+                database_path, mode='read_only', execute='execute',
+                fetch='all', argument_list=[current_time])
 
-        for asset_id, catalog, local_path, expiration_utc_datetime in \
-                expired_assets:
-            LOGGER.info(
-                f'{asset_id}:{catalog} expired on {expiration_utc_datetime} '
-                f'current time is {current_time}. Deleting...')
-            delete_raster(local_path, asset_id, catalog)
+            for asset_id, catalog, local_path, expiration_utc_datetime in \
+                    expired_assets:
+                LOGGER.info(
+                    f'{asset_id}:{catalog} expired on '
+                    f'{expiration_utc_datetime} '
+                    f'current time is {current_time}. Deleting...')
+                delete_raster(local_path, asset_id, catalog)
 
-        time.sleep(EXPIRATION_MONITOR_DELAY)
+            time.sleep(EXPIRATION_MONITOR_DELAY)
+    except Exception:
+        LOGGER.exception('something bad happened in expiration_monitor')
