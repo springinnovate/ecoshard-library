@@ -36,7 +36,6 @@ INTER_DATA_DIR = 'data'
 FULL_DATA_DIR = os.path.abspath(
     os.path.join('..', 'data_dir', INTER_DATA_DIR))
 DATABASE_PATH = os.path.join(FULL_DATA_DIR, 'flask_manager.db')
-AUTH_DATABASE_PATH = os.path.join(FULL_DATA_DIR, 'users.db')
 PASSWORD_FILE_PATH = os.path.join(FULL_DATA_DIR, 'secrets', 'adminpass')
 GEOSERVER_USER = 'admin'
 DEFAULT_STYLE = 'vegetation'
@@ -64,7 +63,6 @@ def create_app(config=None):
         SECRET_KEY='dev',
         SERVER_NAME=LOCAL_API_SERVER,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
-        SQLALCHEMY_DATABASE_URI=f"sqlite:///{AUTH_DATABASE_PATH}",
     )
 
     # config.py should contain a real secret key and
@@ -96,9 +94,6 @@ def create_app(config=None):
 
     db.init_app(app)
     migrate = Migrate(app, db)
-    if not os.path.exists(AUTH_DATABASE_PATH):
-        with app.app_context():
-            db.create_all()
 
     app.register_blueprint(auth_bp, url_prefix="/users")
 
