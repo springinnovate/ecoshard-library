@@ -20,10 +20,14 @@ from osgeo import ogr
 from osgeo import osr
 import ecoshard
 import flask
+from flask_migrate import Migrate
 import numpy
 import pygeoprocessing
 import requests
 import retrying
+
+from .auth import auth_bp, db
+
 
 LOCAL_GEOSERVER = 'localhost:8080'
 LOCAL_API_SERVER = 'localhost:8888'
@@ -49,7 +53,7 @@ logger = logging.getLogger('waitress')
 logger.setLevel(logging.DEBUG)
 
 
-def create_app(test_config=None):
+def create_app(config=None):
     """Create the Geoserver STAC Flask app."""
     LOGGER.debug('starting up!')
     # wait for API calls
@@ -58,10 +62,15 @@ def create_app(test_config=None):
     app.config.from_mapping(
         SECRET_KEY='dev',
         SERVER_NAME=LOCAL_API_SERVER,
+        SQLALCHEMY_TRACK_MODIFICATIONS=False,
     )
+
     # config.py should contain a real secret key and
     # a real IP address/hostname
     app.config.from_pyfile('config.py', silent=False)
+
+    if config is not None:
+        app.config.from_mapping(config)
 
     initalize_geoserver(DATABASE_PATH, app.config['SERVER_NAME'])
 
@@ -74,6 +83,7 @@ def create_app(test_config=None):
     expiration_monitor_thread = threading.Thread(
         target=expiration_monitor,
         args=(DATABASE_PATH,))
+    expiration_monitor_thread.daemon = True
     expiration_monitor_thread.start()
 
     # ensure the instance folder exists
@@ -81,6 +91,11 @@ def create_app(test_config=None):
         os.makedirs(app.instance_path)
     except OSError:
         pass
+
+    db.init_app(app)
+    migrate = Migrate(app, db)
+
+    app.register_blueprint(auth_bp, url_prefix="/users")
 
     @app.route('/api/v1/pixel_pick', methods=["POST"])
     def pixel_pick():

@@ -1,29 +1,20 @@
 # Install GeoServer and supporing Python libraries
 FROM therealspring/python-gdal:3.0.4
 
-RUN apt-get install -y openjdk-11-jdk-headless
-
-RUN apt-get install -y \
+RUN apt-get update -qq && \
+    apt-get install -y \
+    openjdk-11-jdk-headless \
     emacs \
-    openjdk-11-jdk
-
-RUN apt update -y && apt upgrade -y
-RUN apt install libspatialindex-dev -y
-
-RUN apt install python3-pip -y
-RUN pip3 install --no-cache-dir \
-    Cython \
-    flask \
-    matplotlib \
-    requests \
-    retrying \
-    rtree \
-    scipy \
-    shapely
-
-RUN apt install -y \
+    openjdk-11-jdk \
+    libspatialindex-dev \
+    python3-pip \
+    postgresql-client \
     openssl \
-    curl
+    curl \
+    git \
+    && \
+    rm -rf /var/lib/apt/lists/*
+
 SHELL ["/bin/bash", "-c"]
 WORKDIR /usr/local/gcloud-sdk
 RUN wget https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-284.0.0-linux-x86_64.tar.gz && tar -xvzf google-cloud-sdk-284.0.0-linux-x86_64.tar.gz
@@ -42,11 +33,6 @@ WORKDIR /usr/local
 # RUN rm geoserver-2.17.0-bin.zip
 # We'll mount our own data dir so don't use the default
 #RUN rm -rf geoserver/data_dir/*
-
-RUN apt install git -y
-RUN pip3 install pygeoprocessing==2.0.0
-RUN pip3 install ecoshard==0.4.0
-RUN pip3 install waitress
 
 RUN mkdir -p /usr/local/geoserver/bin
 WORKDIR /usr/local/geoserver/bin/
@@ -67,7 +53,11 @@ COPY api_key_manager.py /usr/local/geoserver/bin
 COPY styles /usr/local/geoserver/bin/styles/
 COPY stac_api /usr/local/geoserver/bin/stac_api
 COPY setup.py /usr/local/geoserver/bin
+COPY requirements.txt /usr/local/geoserver/bin
+RUN pip3 install -r requirements.txt
 RUN pip3 install -e .
 
 WORKDIR /usr/local/geoserver
+EXPOSE 8888
+EXPOSE 8080
 ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]
