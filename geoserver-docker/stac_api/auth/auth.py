@@ -152,7 +152,7 @@ def create_user():
         utils.log("user created")
 
         return jsonify(
-            id=user.id, email=user.email, token=utils.make_jwt(user).decode("utf-8"),
+            uuid=user.uuid, email=user.email, token=utils.make_jwt(user).decode("utf-8"),
         )
     except ValueError as value_error:
         utils.log(f"could not create user: {value_error}", logging.WARN)
@@ -215,7 +215,7 @@ def auth_user():
 
     utils.log("authorized user")
     return jsonify(
-        id=user.id, email=user.email, token=utils.make_jwt(user).decode("utf-8"),
+        uuid=user.uuid, email=user.email, token=utils.make_jwt(user).decode("utf-8"),
     )
 
 

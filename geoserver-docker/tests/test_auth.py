@@ -83,8 +83,8 @@ def test_create_user_200(client):
     )
     user = find_user_by_email(AN_EMAIL)
     assert result.status_code == 200
-    assert set(result.json.keys()) == set(["id", "email", "token"])
-    assert result.json["id"] == user.id
+    assert set(result.json.keys()) == set(["uuid", "email", "token"])
+    assert result.json["uuid"] == user.uuid
 
     # Attempting to create a second user with the same email should return a 400
     result = client.post(
@@ -131,6 +131,8 @@ def test_auth_user(client, user):
     )
     assert result.status_code == 200
     assert verify_jwt(user, result.json["token"])
+    assert set(result.json.keys()) == set(["uuid", "email", "token"])
+    assert result.json["uuid"] == user.uuid
 
 
 def test_jwt_required(client, user):

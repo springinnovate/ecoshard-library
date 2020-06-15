@@ -1,4 +1,5 @@
 import pytest
+import uuid
 
 from flanker.addresslib import address
 from stac_api import create_app
@@ -39,6 +40,7 @@ def client(app):
 def user(app):
     p_hash, p_salt = make_hash(USER_PASSWORD)
     return User(
+        uuid=uuid.uuid4().hex,
         email="anemail@example.com",
         first_name="firstname",
         last_name="lastname",
