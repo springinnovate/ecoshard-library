@@ -1,11 +1,12 @@
 import time
 from datetime import datetime, timedelta
 
+import stac_api.auth.utils
 from freezegun import freeze_time
-
+from stac_api.auth.auth import handle_error
 from stac_api.auth.models import db
 from stac_api.auth.queries import find_user_by_email
-from stac_api.auth.utils import make_jwt, verify_jwt, decode_jwt
+from stac_api.auth.utils import decode_jwt, make_jwt, verify_jwt
 
 from .conftest import USER_PASSWORD
 
@@ -232,3 +233,9 @@ def test_refresh_max_exp(client, user):
             headers={"Authorization": f"Bearer {calling_token}"},
         )
         assert result.status_code == 401
+
+
+def test_handleerror(client):
+    json, status_code = handle_error("an error")
+    assert status_code == 500
+    assert json == {}
