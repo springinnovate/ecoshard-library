@@ -88,7 +88,7 @@ def decode_jwt(jwt_string, secret=None):
         a_jwt = jwt.decode(jwt_string, secret, algorithms=JWT_ALGORITHM)
 
         if "id" not in a_jwt or "max-exp" not in a_jwt:
-            current_app.logger.info("decode_jwt: missing id/max-exp")
+            current_app.logger.warn("decode_jwt: missing id/max-exp")
             return False
 
         return a_jwt

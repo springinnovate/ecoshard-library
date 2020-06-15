@@ -17,29 +17,29 @@ def jwt_required(view):
     @wraps(view)
     def wrapper(*args, **kwargs):
         if "Authorization" not in request.headers:
-            current_app.logger.info("no authorization header")
+            current_app.warn("no authorization header")
             return {}, 401
         if not request.headers["Authorization"].startswith("Bearer "):
-            current_app.logger.info("authorization header not a bearer type")
+            current_app.warn("authorization header not a bearer type")
             return {}, 401
 
         matches = re.match(r"^Bearer (\S+)$", request.headers["Authorization"])
         if not matches:
-            current_app.logger.info("invalid bearer token format")
+            current_app.warn("invalid bearer token format")
             return {}, 401
 
         g.jwt = utils.decode_jwt(matches.group(1))
         if not g.jwt:
-            current_app.logger.info("unable to decode JWT")
+            current_app.warn("unable to decode JWT")
             return {}, 401
 
         g.jwt_user = queries.find_user_by_id(g.jwt["id"])
         if not g.jwt_user:
-            current_app.logger.info("no such user")
+            current_app.warn("no such user")
             return {}, 401
 
         if not utils.verify_jwt(g.jwt_user, matches.group(1)):
-            current_app.logger.info("invalid JWT token")
+            current_app.warn("invalid JWT token")
             return {}, 401
 
         return view(*args, **kwargs)
@@ -54,19 +54,19 @@ def verify_content_type_and_params(required_keys, optional_keys):
         @wraps(view)
         def wrapper(*args, **kwargs):
             if request.headers.get("Content-Type", None) != "application/json":
-                current_app.logger.info("invalid content type")
+                current_app.warn("invalid content type")
                 return {}, 400
 
             request_keys = set(request.json.keys())
             required_set = set(required_keys)
             optional_set = set(optional_keys)
             if not required_set <= request_keys:
-                current_app.logger.info(
+                current_app.warn(
                     f"create: invalid payload keys {list(request.json.keys())}"
                 )
                 return {}, 400
             if len(request_keys - required_set.union(optional_set)) > 0:
-                current_app.logger.info("unknown key passed to request")
+                current_app.warn("unknown key passed to request")
                 return {}, 400
 
             return view(*args, **kwargs)
@@ -137,7 +137,7 @@ def create_user():
     if "organization" in request.json.keys():
         organization = request.json["organization"]
     if queries.find_user_by_email(email):
-        current_app.logger.info("create: user exists")
+        current_app.warn("create: user exists")
         return {}, 400
 
     try:
@@ -150,7 +150,7 @@ def create_user():
             id=user.id, email=user.email, token=utils.make_jwt(user).decode("utf-8"),
         )
     except ValueError as value_error:
-        current_app.logger.info(f"create: {value_error}")
+        current_app.warn(f"create: {value_error}")
         return {}, 400
 
 
@@ -201,11 +201,11 @@ def auth_user():
     password = request.json["password"]
     user = queries.find_user_by_email(email)
     if user is None:
-        current_app.logger.info("auth: user does not exist")
+        current_app.warn("auth: user does not exist")
         return {}, 401
 
     if not utils.verify_hash(password, user.password_hash, user.password_salt):
-        current_app.logger.info("auth: verify hash failed")
+        current_app.warn("auth: verify hash failed")
         return {}, 401
 
     return jsonify(
@@ -243,7 +243,7 @@ def refresh():
         description: "Invalid input"
     """
     if request.headers.get("Content-Type", None) != "application/json":
-        current_app.logger.info("invalid content type")
+        current_app.warn("invalid content type")
         return {}, 400
 
     return jsonify(
