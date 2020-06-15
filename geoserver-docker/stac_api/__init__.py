@@ -153,11 +153,11 @@ def create_app(config=None):
                     inv_gt, point.GetX(), point.GetY())]
             if (x_coord < 0 or y_coord < 0 or
                     x_coord >= b.XSize or y_coord >= b.YSize):
-                return flask.jsonify({
-                        'val': 'out of range',
-                        'x': x_coord,
-                        'y': y_coord
-                    })
+                response_dict = {
+                    'val': 'out of range',
+                    'x': x_coord,
+                    'y': y_coord
+                }
 
             # must cast the right type for json
             val = r.ReadAsArray(x_coord, y_coord, 1, 1)[0, 0]
@@ -167,17 +167,21 @@ def create_app(config=None):
                 val = float(val)
             nodata = b.GetNoDataValue()
             if numpy.isclose(val, nodata):
-                return flask.jsonify({
+                response_dict = {
                     'val': 'nodata',
                     'x': x_coord,
                     'y': y_coord
-                })
+                }
             else:
-                return flask.jsonify({
+                response_dict = {
                     'val': val,
                     'x': x_coord,
                     'y': y_coord
-                })
+                }
+
+            response = flask.jsonify(response_dict)
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            return response
         except Exception as e:
             LOGGER.exception('something bad happened')
             return str(e), 500
