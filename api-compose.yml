@@ -1,11 +1,13 @@
 version: '3'
 services:
   stac_manager:
-    container_name: "stac_manager"
-    build: "geoserver-docker"
+    container_name: stac_manager
+    build: geoserver-docker
+    port:
+      - 8082:8082
     networks:
       - web_nw
-    network_mode: "host"
+    network_mode: host
     command: ['api.salo.ai', '8888', 'maps.salo.ai', '8080', '4g']
 
   nginx:
