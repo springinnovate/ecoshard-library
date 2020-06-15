@@ -23,5 +23,5 @@ echo "SERVER_NAME = '$1:$2'" > stac_api/config.py
 echo "GEOSERVER_HOST = '$3:$4'" >> stac_api/config.py
 echo "SECRET_KEY = 'none'" >> stac_api/config.py
 echo "SQLALCHEMY_DATABASE_URI = 'postgresql://salo-api-user:$6@$7/salo-api-auth'" >> stac_api/config.py
-nohup waitress-serve --listen=0.0.0.0:$2 --call stac_api:create_app > log.txt &
-tail -f log.txt
+nohup waitress-serve --listen=0.0.0.0:$2 --call stac_api:create_app 2>&1 &
+tail -f nohup.out
