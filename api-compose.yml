@@ -1,25 +1,27 @@
 version: '3'
 services:
-  flaskapp:
-    container_name: "flaskapp"
-    build: "test_flask_docker"
+  stac_manager:
+    container_name: "stac_manager"
+    build: "geoserver-docker"
     networks:
       - web_nw
+    network-mode: "host"
+    command: ['api.salo.ai', '8888', 'maps.salo.ai', '8080', '4g']
 
   nginx:
     image: "nginx:1.13.5"
     container_name: "nginx"
     command: [nginx-debug, '-g', 'daemon off;']
     ports:
-      - "8080:80"
+      - "80:80"
       - "443:443"
     volumes:
       - ./conf.d:/etc/nginx/conf.d
-      - ./nginx_cert:/var/nginx_cert
+      - /etc/letsencrypt/live/api.salo.ai/:/etc/letsencrypt/live/api.salo.ai/
     networks:
       - web_nw
     depends_on:
-      - flaskapp
+      - stac_manager
 
 networks:
   web_nw:
