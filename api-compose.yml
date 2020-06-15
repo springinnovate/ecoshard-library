@@ -5,7 +5,7 @@ services:
     build: "geoserver-docker"
     networks:
       - web_nw
-    network-mode: "host"
+    network_mode: "host"
     command: ['api.salo.ai', '8888', 'maps.salo.ai', '8080', '4g']
 
   nginx:
