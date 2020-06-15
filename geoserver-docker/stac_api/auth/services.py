@@ -1,3 +1,4 @@
+import uuid
 from flanker.addresslib import address
 
 from . import utils
@@ -25,6 +26,7 @@ def create_user(email, password, first_name, last_name, organization):
 
     p_hash, p_salt = utils.make_hash(password)
     user = User(
+        uuid=uuid.uuid4().hex,
         email=email,
         password_hash=p_hash,
         password_salt=p_salt,

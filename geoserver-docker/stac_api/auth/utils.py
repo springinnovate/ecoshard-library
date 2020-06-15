@@ -1,17 +1,19 @@
 import hashlib
+import logging
 import secrets
 from datetime import datetime, timedelta, timezone
 from calendar import timegm
 from typing import Tuple
 
 import jwt
-from flask import current_app
+from flask import current_app, has_request_context, request, g
 from jwt.exceptions import PyJWTError
 
 JWT_EXPIRATION_DAYS = 14
 JWT_MAX_EXPIRATION_DAYS = 3 * JWT_EXPIRATION_DAYS
 JWT_ALGORITHM = "HS256"
 
+logger = logging.getLogger('auth')
 
 def _s_since_epoch(dt):
     """ Convert datetime to seconds since the Unix epoch """
@@ -88,7 +90,7 @@ def decode_jwt(jwt_string, secret=None):
         a_jwt = jwt.decode(jwt_string, secret, algorithms=JWT_ALGORITHM)
 
         if "id" not in a_jwt or "max-exp" not in a_jwt:
-            current_app.logger.info("decode_jwt: missing id/max-exp")
+            log("decode_jwt: missing id/max-exp", logging.WARN)
             return False
 
         return a_jwt
@@ -110,3 +112,18 @@ def verify_jwt(user, jwt_string, secret=None):
         return False
 
     return a_jwt["id"] == user.id
+
+
+def log(message, level=logging.INFO):
+    user_id = 0
+    event = ''
+
+    if has_request_context():
+        event = request.path
+        if 'user' in g and g.user:
+            user_id = g.user.id
+
+    logger.log(level, message, extra={
+        'user_id': user_id,
+        'event': event
+    })
