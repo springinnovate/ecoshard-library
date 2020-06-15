@@ -3,6 +3,11 @@ services:
   stac_manager:
     container_name: stac_manager
     build: geoserver-docker
+    ports:
+      - target: 8082
+        published: 8082
+        protocol: tcp
+        mode: host
     networks:
       - web_nw
     command: ['api.salo.ai', '8888', 'maps.salo.ai', '8080', '4g']
