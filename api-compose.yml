@@ -3,7 +3,7 @@ services:
   stac_manager:
     container_name: stac_manager
     build: geoserver-docker
-    port:
+    ports:
       - 8082:8082
     networks:
       - web_nw
@@ -15,8 +15,8 @@ services:
     container_name: "nginx"
     command: [nginx-debug, '-g', 'daemon off;']
     ports:
-      - "80:80"
-      - "443:443"
+      - 80:80
+      - 443:443
     volumes:
       - ./conf.d:/etc/nginx/conf.d
       - /etc/letsencrypt/live/api.salo.ai/:/etc/letsencrypt/live/api.salo.ai/
