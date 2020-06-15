@@ -3,6 +3,8 @@ services:
   stac_manager:
     container_name: stac_manager
     build: geoserver-docker
+    volumes:
+      - /mnt/geoserver_data:/usr/local/geoserver/data_dir
     networks:
       - web_nw
     command: ['api.salo.ai', '8888', 'maps.salo.ai', '8080', '4g']
