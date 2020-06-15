@@ -19,8 +19,6 @@ services:
       - /etc/letsencrypt/live/api.salo.ai:/etc/letsencrypt/live/api.salo.ai
     networks:
       - web_nw
-    depends_on:
-      - stac_manager
 
 networks:
   web_nw:
