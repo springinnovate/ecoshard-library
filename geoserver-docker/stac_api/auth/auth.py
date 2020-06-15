@@ -1,5 +1,6 @@
 from functools import wraps
 import re
+import logging
 
 from flask import Blueprint, current_app, jsonify, request, g
 
@@ -11,35 +12,35 @@ auth_bp = Blueprint("auth", __name__)
 def jwt_required(view):
     """ Decorator to require a valid JWT token to access an endpoint.
 
-    Adds g.jwt_user and g.jwt on success.
+    Adds g.user and g.jwt on success.
     """
 
     @wraps(view)
     def wrapper(*args, **kwargs):
         if "Authorization" not in request.headers:
-            current_app.logger.info("no authorization header")
+            utils.log("no authorization header", logging.WARN)
             return {}, 401
         if not request.headers["Authorization"].startswith("Bearer "):
-            current_app.logger.info("authorization header not a bearer type")
+            utils.log("authorization header not a bearer type", logging.WARN)
             return {}, 401
 
         matches = re.match(r"^Bearer (\S+)$", request.headers["Authorization"])
         if not matches:
-            current_app.logger.info("invalid bearer token format")
+            utils.log("invalid bearer token format", logging.WARN)
             return {}, 401
 
         g.jwt = utils.decode_jwt(matches.group(1))
         if not g.jwt:
-            current_app.logger.info("unable to decode JWT")
+            utils.log("unable to decode JWT", logging.WARN)
             return {}, 401
 
-        g.jwt_user = queries.find_user_by_id(g.jwt["id"])
-        if not g.jwt_user:
-            current_app.logger.info("no such user")
+        g.user = queries.find_user_by_id(g.jwt["id"])
+        if not g.user:
+            utils.log("no such user", logging.WARN)
             return {}, 401
 
-        if not utils.verify_jwt(g.jwt_user, matches.group(1)):
-            current_app.logger.info("invalid JWT token")
+        if not utils.verify_jwt(g.user, matches.group(1)):
+            utils.log("invalid JWT token", logging.WARN)
             return {}, 401
 
         return view(*args, **kwargs)
@@ -54,19 +55,20 @@ def verify_content_type_and_params(required_keys, optional_keys):
         @wraps(view)
         def wrapper(*args, **kwargs):
             if request.headers.get("Content-Type", None) != "application/json":
-                current_app.logger.info("invalid content type")
+                utils.log("invalid content type", logging.WARN)
                 return {}, 400
 
             request_keys = set(request.json.keys())
             required_set = set(required_keys)
             optional_set = set(optional_keys)
             if not required_set <= request_keys:
-                current_app.logger.info(
-                    f"create: invalid payload keys {list(request.json.keys())}"
+                utils.log(
+                    f"create: invalid payload keys {list(request.json.keys())}",
+                    logging.WARN
                 )
                 return {}, 400
             if len(request_keys - required_set.union(optional_set)) > 0:
-                current_app.logger.info("unknown key passed to request")
+                utils.log("unknown key passed to request", logging.WARN)
                 return {}, 400
 
             return view(*args, **kwargs)
@@ -137,7 +139,7 @@ def create_user():
     if "organization" in request.json.keys():
         organization = request.json["organization"]
     if queries.find_user_by_email(email):
-        current_app.logger.info("create: user exists")
+        utils.log("create: user exists", logging.WARN)
         return {}, 400
 
     try:
@@ -145,12 +147,15 @@ def create_user():
             email, password, first_name, last_name, organization
         )
         models.db.session.commit()
+        g.user = user
+
+        utils.log("user created")
 
         return jsonify(
-            id=user.id, email=user.email, token=utils.make_jwt(user).decode("utf-8"),
+            uuid=user.uuid, email=user.email, token=utils.make_jwt(user).decode("utf-8"),
         )
     except ValueError as value_error:
-        current_app.logger.info(f"create: {value_error}")
+        utils.log(f"could not create user: {value_error}", logging.WARN)
         return {}, 400
 
 
@@ -201,15 +206,16 @@ def auth_user():
     password = request.json["password"]
     user = queries.find_user_by_email(email)
     if user is None:
-        current_app.logger.info("auth: user does not exist")
+        utils.log("user does not exist", logging.WARN)
         return {}, 401
 
     if not utils.verify_hash(password, user.password_hash, user.password_salt):
-        current_app.logger.info("auth: verify hash failed")
+        utils.log("verify hash failed", logging.WARN)
         return {}, 401
 
+    utils.log("authorized user")
     return jsonify(
-        id=user.id, email=user.email, token=utils.make_jwt(user).decode("utf-8"),
+        uuid=user.uuid, email=user.email, token=utils.make_jwt(user).decode("utf-8"),
     )
 
 
@@ -243,11 +249,18 @@ def refresh():
         description: "Invalid input"
     """
     if request.headers.get("Content-Type", None) != "application/json":
-        current_app.logger.info("invalid content type")
+        utils.log("invalid content type", logging.WARN)
         return {}, 400
 
+    utils.log("token refreshed")
     return jsonify(
-        token=utils.make_jwt(g.jwt_user, utils.to_datetime(g.jwt["max-exp"])).decode(
+        token=utils.make_jwt(g.user, utils.to_datetime(g.jwt["max-exp"])).decode(
             "utf-8"
         )
     )
+
+
+@auth_bp.errorhandler(500)
+def handle_error(e):
+    utils.log(f"unspecified error: {e}")
+    return {}, 500

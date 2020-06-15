@@ -3,6 +3,7 @@ import datetime
 import hashlib
 import json
 import logging
+import logging.config
 import math
 import os
 import pathlib
@@ -42,15 +43,12 @@ DEFAULT_STYLE = 'vegetation'
 STYLE_DIR_PATH = os.path.abspath(os.path.join('..', 'data_dir', 'styles'))
 SCHEMA_SQL_PATH = 'schema.sql'
 EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
+LOG_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logging.json')
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format=(
-        '%(asctime)s (%(relativeCreated)d) %(processName)s %(levelname)s '
-        '%(name)s [%(funcName)s:%(lineno)d] %(message)s'))
+with open(LOG_FILE_PATH) as f:
+    logging.config.dictConfig(json.load(f))
 LOGGER = logging.getLogger(__name__)
 logger = logging.getLogger('waitress')
-logger.setLevel(logging.DEBUG)
 
 
 def create_app(config=None):
@@ -1225,7 +1223,7 @@ def add_raster_worker(
         if additional_b_needed > 0:
             # calcualte additional GB needed
             additional_gb = int(math.ceil(additional_b_needed/2**30))
-            LOGGER.warn(f'need an additional {additional_gb}G')
+            LOGGER.warning(f'need an additional {additional_gb}G')
             session = requests.Session()
             resize_disk_request = do_rest_action(
                 session.post,
