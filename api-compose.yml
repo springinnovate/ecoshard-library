@@ -1,0 +1,24 @@
+version: '3'
+services:
+  flaskapp:
+    container_name: "flaskapp"
+    build: "test_flask_docker"
+    networks:
+      - web_nw
+
+  nginx:
+    image: "nginx:1.13.5"
+    container_name: "nginx"
+    command: [nginx-debug, '-g', 'daemon off;']
+    ports:
+      - "8080:80"
+    volumes:
+      - ./conf.d:/etc/nginx/conf.d
+    networks:
+      - web_nw
+    depends_on:
+      - flaskapp
+
+networks:
+  web_nw:
+    driver: bridge
