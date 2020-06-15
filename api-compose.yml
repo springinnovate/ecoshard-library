@@ -16,7 +16,7 @@ services:
       - 443:443
     volumes:
       - ./conf.d:/etc/nginx/conf.d
-      - /etc/letsencrypt/live/api.salo.ai/:/etc/letsencrypt/live/api.salo.ai/
+      - /etc/letsencrypt/live/api.salo.ai:/etc/letsencrypt/live/api.salo.ai
     networks:
       - web_nw
     depends_on:
