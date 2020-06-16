@@ -124,7 +124,8 @@ def create_app(test_config=None):
             wgs84_to_raster_trans = osr.CoordinateTransformation(
                 wgs84_srs, raster_srs)
             point = ogr.Geometry(ogr.wkbPoint)
-            point.AddPoint(picker_data['lng'], picker_data['lat'])
+            point.AddPoint(
+                float(picker_data['lng']), float(picker_data['lat'])
             error_code = point.Transform(wgs84_to_raster_trans)
             if error_code != 0:  # error
                 return "error on transform", 500
