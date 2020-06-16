@@ -49,12 +49,12 @@ COPY tomcat_conf/server.xml /opt/tomcat/conf
 COPY geoserver-2.17.0-war.zip .
 RUN unzip geoserver-2.17.0-war.zip geoserver.war -d /opt/tomcat/webapps/
 
+COPY requirements.txt /usr/local/geoserver/bin
+RUN pip3 install -r requirements.txt
 COPY api_key_manager.py /usr/local/geoserver/bin
 COPY styles /usr/local/geoserver/bin/styles/
 COPY stac_api /usr/local/geoserver/bin/stac_api
 COPY setup.py /usr/local/geoserver/bin
-COPY requirements.txt /usr/local/geoserver/bin
-RUN pip3 install -r requirements.txt
 RUN pip3 install -e .
 COPY start_geoserver.sh /usr/local/geoserver/bin
 
