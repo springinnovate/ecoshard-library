@@ -7,7 +7,7 @@ services:
       - /mnt/geoserver_data:/usr/local/geoserver/data_dir
     networks:
       - web_nw
-    command: ['api.salo.ai', '8888', 'api.salo.ai:80', 'maps.salo.ai', '8080', '4g', 'dbpassword', 'dbhost']
+    command: ['api.salo.ai', '80', 'api.salo.ai:80', 'maps.salo.ai', '8080', '4g', 'dbpassword', 'dbhost']
     tty: true
 
   nginx:
