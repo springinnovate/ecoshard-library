@@ -1,13 +1,13 @@
 version: '3.2'
 services:
-  stac_manager.localhost:
+  api.salo.ai:
     container_name: stac_manager
     build: geoserver-docker
     volumes:
       - /mnt/geoserver_data:/usr/local/geoserver/data_dir
     networks:
       - web_nw
-    command: ['stac_manager.localhost', '8888', 'api.salo.ai:80', 'maps.salo.ai', '8080', '4g', 'dbpassword', 'dbhost']
+    command: ['api.salo.ai', '8888', 'api.salo.ai:80', 'maps.salo.ai', '8080', '4g', 'dbpassword', 'dbhost']
     tty: true
 
   nginx:
@@ -23,7 +23,7 @@ services:
     networks:
       - web_nw
     depends_on:
-      - stac_manager.localhost
+      - api.salo.ai
 
 networks:
   web_nw:
