@@ -20,7 +20,7 @@ export JAVA_BIN=/usr/bin/java
 cd bin
 
 touch stac_api/config.py
-echo "SERVER_NAME = '$1:$2'" > stac_api/config.py
+#echo "SERVER_NAME = '$1:$2'" > stac_api/config.py
 echo "EXTERNAL_API_HOST = '$3'" >> stac_api/config.py
 echo "GEOSERVER_HOST = '$4:$5'" >> stac_api/config.py
 echo "SECRET_KEY = 'none'" >> stac_api/config.py
