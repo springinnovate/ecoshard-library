@@ -141,6 +141,9 @@ def create_app(test_config=None):
                         'x': x_coord,
                         'y': y_coord
                     }
+                response = flask.jsonify(response_dict)
+                response.headers.add('Access-Control-Allow-Origin', '*')
+                return response
 
             # must cast the right type for json
             LOGGER.debug(f'{x_coord}, {y_coord}, {b.XSize} {b.YSize}')
@@ -692,7 +695,6 @@ def create_app(test_config=None):
             response = flask.jsonify(callback_payload)
             response.headers.add('Access-Control-Allow-Origin', '*')
             return response
-            return callback_payload
         except Exception:
             LOGGER.exception('something bad happened on publish')
             _execute_sqlite(
