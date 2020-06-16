@@ -25,4 +25,4 @@ echo "EXTERNAL_API_HOST = '$3'" >> stac_api/config.py
 echo "GEOSERVER_HOST = '$4:$5'" >> stac_api/config.py
 echo "SECRET_KEY = 'none'" >> stac_api/config.py
 echo "SQLALCHEMY_DATABASE_URI = 'postgresql://salo-api-user:$7@$8/salo-api-auth'" >> stac_api/config.py
-waitress-serve --listen=0.0.0.0:$2 --call stac_api:create_app
+waitress-serve --listen=0.0.0.f:$2 --call stac_api:create_app
