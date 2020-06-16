@@ -142,6 +142,7 @@ def create_app(test_config=None):
                     })
 
             # must cast the right type for json
+            LOGGER.debug(f'{x_coord}, {y_coord}, {b.XSize} {b.YSize}')
             val = r.ReadAsArray(x_coord, y_coord, 1, 1)[0, 0]
             if numpy.issubdtype(val, numpy.integer):
                 val = int(val)
