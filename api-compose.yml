@@ -8,6 +8,7 @@ services:
     networks:
       - web_nw
     command: ['api.salo.ai', '8888', 'maps.salo.ai', '8080', '4g']
+    tty: true
 
   nginx:
     image: "nginx:1.13.5"
