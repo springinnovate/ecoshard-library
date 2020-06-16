@@ -11,11 +11,11 @@ export GEOSERVER_DATA_DIR=${GEOSERVER_HOME}/data_dir
 export JAVA_OPTS="-Xms2g -Xmx$5 -XX:SoftRefLRUPolicyMSPerMB=36000 -server -XX:+UseParallelGC -DGEOSERVER_DATA_DIR=$GEOSERVER_DATA_DIR"
 export JAVA_BIN=/usr/bin/java
 
-cd $GEOSERVER_HOME
-echo $JAVA_OPTS >> java_opts.txt
+# cd $GEOSERVER_HOME
+# echo $JAVA_OPTS >> java_opts.txt
 
-touch bin/nohup.out
-nohup /opt/tomcat/bin/catalina.sh run > tomcatlog.txt &
+# touch bin/nohup.out
+# nohup /opt/tomcat/bin/catalina.sh run > tomcatlog.txt &
 cd bin
 
 touch stac_api/config.py

@@ -1,6 +1,6 @@
 version: '3.2'
 services:
-  stac_manager:
+  stac_manager.localhost:
     container_name: stac_manager
     build: geoserver-docker
     volumes:
