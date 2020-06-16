@@ -7,7 +7,7 @@ services:
       - /mnt/geoserver_data:/usr/local/geoserver/data_dir
     networks:
       - web_nw
-    command: ['stac_manager', '8888', 'maps.salo.ai', '8080', '4g']
+    command: ['stac_manager.localhost', '8888', 'maps.salo.ai', '8080', '4g']
     tty: true
 
   nginx:
@@ -23,7 +23,7 @@ services:
     networks:
       - web_nw
     depends_on:
-      - stac_manager
+      - stac_manager.localhost
 
 networks:
   web_nw:
