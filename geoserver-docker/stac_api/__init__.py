@@ -270,7 +270,7 @@ def create_app(test_config=None):
                 f'&p0={raster_min}&p2={p2}&p25={p25}&p30={p30}&p50={p50}'
                 f'&p60={p60}&p75={p75}&p90={p90}&p98={p98}&p100={raster_max}')
 
-        return {
+        response_dict = {
             'type': fetch_data['type'],
             'link': link,
             'raster_min': raster_min,
@@ -278,6 +278,9 @@ def create_app(test_config=None):
             'raster_mean': raster_mean,
             'raster_stdev': raster_stdev,
         }
+        response = flask.jsonify(response_dict)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
 
     @app.route('/api/v1/styles')
     def styles():
@@ -291,10 +294,14 @@ def create_app(test_config=None):
             f'http://{LOCAL_GEOSERVER}',
             f'geoserver/rest/styles.json').json()
 
-        return {'styles': [
+        response_dict = {'styles': [
             style['name']
             for style in available_styles['styles']['style']
             if style['name'] not in ['generic', 'line', 'point', 'polygon']]}
+
+        response = flask.jsonify(response_dict)
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
 
     @app.route('/list')
     def render_list():
@@ -516,9 +523,13 @@ def create_app(test_config=None):
                         'description': description,
                         'attribute_dict': attribute_dict,
                     })
-            return {
+            response_dict = {
                 'features': feature_list,
                 'utc_now': utc_now()}
+
+            response = flask.jsonify(response_dict)
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            return response
         except Exception as e:
             LOGGER.exception('something went wrong')
             return str(e), 500
@@ -677,6 +688,10 @@ def create_app(test_config=None):
                       ),
                 kwargs={'force': force})
             raster_worker_thread.start()
+
+            response = flask.jsonify(callback_payload)
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            return response
             return callback_payload
         except Exception:
             LOGGER.exception('something bad happened on publish')
