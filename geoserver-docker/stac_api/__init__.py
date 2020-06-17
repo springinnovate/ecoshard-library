@@ -20,6 +20,7 @@ from osgeo import ogr
 from osgeo import osr
 import ecoshard
 import flask
+import flask_cors
 import numpy
 import pygeoprocessing
 import requests
@@ -53,6 +54,7 @@ def create_app(test_config=None):
     # wait for API calls
 
     app = flask.Flask(__name__, instance_relative_config=False)
+    flask_cors.CORS(app)
     app.config.from_mapping(
         SECRET_KEY='dev',
     )
@@ -136,14 +138,11 @@ def create_app(test_config=None):
                     inv_gt, point.GetX(), point.GetY())]
             if (x_coord < 0 or y_coord < 0 or
                     x_coord >= b.XSize or y_coord >= b.YSize):
-                response_dict = {
+                return {
                         'val': 'out of range',
                         'x': x_coord,
                         'y': y_coord
                     }
-                response = flask.jsonify(response_dict)
-                response.headers.add('Access-Control-Allow-Origin', '*')
-                return response
 
             # must cast the right type for json
             LOGGER.debug(f'{x_coord}, {y_coord}, {b.XSize} {b.YSize}')
@@ -154,21 +153,17 @@ def create_app(test_config=None):
                 val = float(val)
             nodata = b.GetNoDataValue()
             if numpy.isclose(val, nodata):
-                response_dict = {
+                return {
                     'val': 'nodata',
                     'x': x_coord,
                     'y': y_coord
                 }
             else:
-                response_dict = {
+                return {
                     'val': val,
                     'x': x_coord,
                     'y': y_coord
                 }
-
-            response = flask.jsonify(response_dict)
-            response.headers.add('Access-Control-Allow-Origin', '*')
-            return response
 
         except Exception as e:
             LOGGER.exception('something bad happened')
@@ -273,7 +268,7 @@ def create_app(test_config=None):
                 f'&p0={raster_min}&p2={p2}&p25={p25}&p30={p30}&p50={p50}'
                 f'&p60={p60}&p75={p75}&p90={p90}&p98={p98}&p100={raster_max}')
 
-        response_dict = {
+        return {
             'type': fetch_data['type'],
             'link': link,
             'raster_min': raster_min,
@@ -281,9 +276,6 @@ def create_app(test_config=None):
             'raster_mean': raster_mean,
             'raster_stdev': raster_stdev,
         }
-        response = flask.jsonify(response_dict)
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        return response
 
     @app.route('/api/v1/styles')
     def styles():
@@ -297,14 +289,10 @@ def create_app(test_config=None):
             f'http://{LOCAL_GEOSERVER}',
             f'geoserver/rest/styles.json').json()
 
-        response_dict = {'styles': [
+        return {'styles': [
             style['name']
             for style in available_styles['styles']['style']
             if style['name'] not in ['generic', 'line', 'point', 'polygon']]}
-
-        response = flask.jsonify(response_dict)
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        return response
 
     @app.route('/list')
     def render_list():
@@ -526,13 +514,11 @@ def create_app(test_config=None):
                         'description': description,
                         'attribute_dict': attribute_dict,
                     })
-            response_dict = {
+            return {
                 'features': feature_list,
-                'utc_now': utc_now()}
+                'utc_now': utc_now()
+                }
 
-            response = flask.jsonify(response_dict)
-            response.headers.add('Access-Control-Allow-Origin', '*')
-            return response
         except Exception as e:
             LOGGER.exception('something went wrong')
             return str(e), 500
@@ -563,7 +549,7 @@ def create_app(test_config=None):
 
     @app.route('/api/v1/publish', methods=['POST'])
     def publish():
-        """Adds a raster to the GeoServer from a local storage.
+        """Add a raster to the GeoServer from a local storage.
 
         Request parameters:
             query parameters:
@@ -692,9 +678,7 @@ def create_app(test_config=None):
                 kwargs={'force': force})
             raster_worker_thread.start()
 
-            response = flask.jsonify(callback_payload)
-            response.headers.add('Access-Control-Allow-Origin', '*')
-            return response
+            return callback_payload
         except Exception:
             LOGGER.exception('something bad happened on publish')
             _execute_sqlite(
@@ -708,7 +692,7 @@ def create_app(test_config=None):
 
     @app.route('/api/v1/delete', methods=['POST'])
     def delete():
-        """Adds a raster to the GeoServer from a local storage.
+        """Add a raster to the GeoServer from a local storage.
 
         Request parameters:
             query parameters:
@@ -778,6 +762,7 @@ def delete_raster(local_path, asset_id, catalog):
 
     Returns:
         None.
+
     """
     with open(PASSWORD_FILE_PATH, 'r') as password_file:
         master_geoserver_password = password_file.read()
@@ -888,7 +873,7 @@ def _execute_sqlite(
     stop_max_attempt_number=5)
 def do_rest_action(
         session_fn, host, suburl, data=None, json=None, headers=None):
-    """A wrapper around HTML functions to make for easy retry.
+    """Easy retry of HTML functions.
 
     Args:
         sesson_fn (function): takes a url, optional data parameter, and
@@ -1138,7 +1123,7 @@ def add_raster_worker(
         uri_path, mediatype, catalog, raster_id, asset_description,
         utc_datetime, default_style, job_id, attribute_dict,
         expiration_utc_datetime, force=False):
-    """This is used to copy and update a coverage set asynchronously.
+    """Copy and update a coverage set asynchronously.
 
     Args:
         uri_path (str): path to base gs:// bucket to copy from.
