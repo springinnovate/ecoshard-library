@@ -3,7 +3,6 @@ import datetime
 import hashlib
 import json
 import logging
-import logging.config
 import math
 import os
 import pathlib
@@ -21,17 +20,13 @@ from osgeo import ogr
 from osgeo import osr
 import ecoshard
 import flask
-from flask_migrate import Migrate
+import flask_cors
 import numpy
 import pygeoprocessing
 import requests
 import retrying
 
-from .auth import auth_bp, db
-
-
 LOCAL_GEOSERVER = 'localhost:8080'
-LOCAL_API_SERVER = 'localhost:8888'
 LOCAL_DISK_RESIZE_SERVICE = 'localhost:8082'
 INTER_DATA_DIR = 'data'
 FULL_DATA_DIR = os.path.abspath(
@@ -43,32 +38,29 @@ DEFAULT_STYLE = 'vegetation'
 STYLE_DIR_PATH = os.path.abspath(os.path.join('..', 'data_dir', 'styles'))
 SCHEMA_SQL_PATH = 'schema.sql'
 EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
-LOG_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logging.json')
 
-with open(LOG_FILE_PATH) as f:
-    logging.config.dictConfig(json.load(f))
+logging.basicConfig(
+    level=logging.DEBUG,
+    format=(
+        '%(asctime)s (%(relativeCreated)d) %(processName)s %(levelname)s '
+        '%(name)s [%(funcName)s:%(lineno)d] %(message)s'))
 LOGGER = logging.getLogger(__name__)
-logger = logging.getLogger('waitress')
+logging.getLogger('waitress').setLevel(logging.DEBUG)
 
 
-def create_app(config=None):
+def create_app(test_config=None):
     """Create the Geoserver STAC Flask app."""
     LOGGER.debug('starting up!')
     # wait for API calls
 
     app = flask.Flask(__name__, instance_relative_config=False)
+    flask_cors.CORS(app)
     app.config.from_mapping(
         SECRET_KEY='dev',
-        SERVER_NAME=LOCAL_API_SERVER,
-        SQLALCHEMY_TRACK_MODIFICATIONS=False,
     )
-
     # config.py should contain a real secret key and
     # a real IP address/hostname
     app.config.from_pyfile('config.py', silent=False)
-
-    if config is not None:
-        app.config.from_mapping(config)
 
     initalize_geoserver(DATABASE_PATH, app.config['SERVER_NAME'])
 
@@ -81,7 +73,6 @@ def create_app(config=None):
     expiration_monitor_thread = threading.Thread(
         target=expiration_monitor,
         args=(DATABASE_PATH,))
-    expiration_monitor_thread.daemon = True
     expiration_monitor_thread.start()
 
     # ensure the instance folder exists
@@ -89,11 +80,6 @@ def create_app(config=None):
         os.makedirs(app.instance_path)
     except OSError:
         pass
-
-    db.init_app(app)
-    migrate = Migrate(app, db)
-
-    app.register_blueprint(auth_bp, url_prefix="/users")
 
     @app.route('/api/v1/pixel_pick', methods=["POST"])
     def pixel_pick():
@@ -140,7 +126,8 @@ def create_app(config=None):
             wgs84_to_raster_trans = osr.CoordinateTransformation(
                 wgs84_srs, raster_srs)
             point = ogr.Geometry(ogr.wkbPoint)
-            point.AddPoint(picker_data['lng'], picker_data['lat'])
+            point.AddPoint(
+                float(picker_data['lng']), float(picker_data['lat']))
             error_code = point.Transform(wgs84_to_raster_trans)
             if error_code != 0:  # error
                 return "error on transform", 500
@@ -151,13 +138,14 @@ def create_app(config=None):
                     inv_gt, point.GetX(), point.GetY())]
             if (x_coord < 0 or y_coord < 0 or
                     x_coord >= b.XSize or y_coord >= b.YSize):
-                response_dict = {
-                    'val': 'out of range',
-                    'x': x_coord,
-                    'y': y_coord
-                }
+                return {
+                        'val': 'out of range',
+                        'x': x_coord,
+                        'y': y_coord
+                    }
 
             # must cast the right type for json
+            LOGGER.debug(f'{x_coord}, {y_coord}, {b.XSize} {b.YSize}')
             val = r.ReadAsArray(x_coord, y_coord, 1, 1)[0, 0]
             if numpy.issubdtype(val, numpy.integer):
                 val = int(val)
@@ -165,21 +153,18 @@ def create_app(config=None):
                 val = float(val)
             nodata = b.GetNoDataValue()
             if numpy.isclose(val, nodata):
-                response_dict = {
+                return {
                     'val': 'nodata',
                     'x': x_coord,
                     'y': y_coord
                 }
             else:
-                response_dict = {
+                return {
                     'val': val,
                     'x': x_coord,
                     'y': y_coord
                 }
 
-            response = flask.jsonify(response_dict)
-            response.headers.add('Access-Control-Allow-Origin', '*')
-            return response
         except Exception as e:
             LOGGER.exception('something bad happened')
             return str(e), 500
@@ -263,8 +248,7 @@ def create_app(config=None):
         elif fetch_type == 'wms_preview':
             link = flask.url_for(
                 'viewer', catalog=fetch_data['catalog'],
-                asset_id=fetch_data['asset_id'], api_key=api_key,
-                _external=True)
+                asset_id=fetch_data['asset_id'], api_key=api_key)
         elif fetch_type == 'wms':
             p2 = raster_min+(raster_max-raster_min)*0.02
             p25 = raster_min+(raster_max-raster_min)*0.25
@@ -317,10 +301,10 @@ def create_app(config=None):
             api_key = flask.request.args['api_key']
             return flask.render_template('list.html', **{
                 'search_url': flask.url_for(
-                    'search', api_key=api_key, _external=True),
+                    'search', api_key=api_key),
                 'fetch_url': flask.url_for(
-                    'fetch', api_key=api_key, _external=True),
-            }, _external=True)
+                    'fetch', api_key=api_key),
+            })
         except Exception:
             LOGGER.exception('error on render list')
 
@@ -370,16 +354,16 @@ def create_app(config=None):
             'original_style': default_style,
             'p0': raster_min,
             'p100': raster_max,
-            'pixel_pick_url': flask.url_for('pixel_pick', _external=True),
+            'pixel_pick_url': flask.url_for('pixel_pick'),
             'x_center': x_center,
             'y_center': y_center,
             'min_lat': ymin,
             'min_lng': xmin,
             'max_lat': ymax,
             'max_lng': xmax,
-            'geoserver_style_url': flask.url_for('styles', _external=True),
+            'geoserver_style_url': flask.url_for('styles'),
             'nodata': nodata,
-        }, _external=True)
+        })
 
     @app.route('/api/v1/search', methods=["POST"])
     def search():
@@ -532,7 +516,9 @@ def create_app(config=None):
                     })
             return {
                 'features': feature_list,
-                'utc_now': utc_now()}
+                'utc_now': utc_now()
+                }
+
         except Exception as e:
             LOGGER.exception('something went wrong')
             return str(e), 500
@@ -563,7 +549,7 @@ def create_app(config=None):
 
     @app.route('/api/v1/publish', methods=['POST'])
     def publish():
-        """Adds a raster to the GeoServer from a local storage.
+        """Add a raster to the GeoServer from a local storage.
 
         Request parameters:
             query parameters:
@@ -646,7 +632,7 @@ def create_app(config=None):
             # build job
             job_id = build_job_hash(asset_args)
             callback_url = flask.url_for(
-                'get_status', job_id=job_id, api_key=api_key, _external=True)
+                'get_status', job_id=job_id, api_key=api_key)
             callback_payload = json.dumps({'callback_url': callback_url})
 
             # see if job already running and hasn't previously errored
@@ -691,6 +677,7 @@ def create_app(config=None):
                       ),
                 kwargs={'force': force})
             raster_worker_thread.start()
+
             return callback_payload
         except Exception:
             LOGGER.exception('something bad happened on publish')
@@ -705,7 +692,7 @@ def create_app(config=None):
 
     @app.route('/api/v1/delete', methods=['POST'])
     def delete():
-        """Adds a raster to the GeoServer from a local storage.
+        """Add a raster to the GeoServer from a local storage.
 
         Request parameters:
             query parameters:
@@ -775,6 +762,7 @@ def delete_raster(local_path, asset_id, catalog):
 
     Returns:
         None.
+
     """
     with open(PASSWORD_FILE_PATH, 'r') as password_file:
         master_geoserver_password = password_file.read()
@@ -885,7 +873,7 @@ def _execute_sqlite(
     stop_max_attempt_number=5)
 def do_rest_action(
         session_fn, host, suburl, data=None, json=None, headers=None):
-    """A wrapper around HTML functions to make for easy retry.
+    """Easy retry of HTML functions.
 
     Args:
         sesson_fn (function): takes a url, optional data parameter, and
@@ -1135,7 +1123,7 @@ def add_raster_worker(
         uri_path, mediatype, catalog, raster_id, asset_description,
         utc_datetime, default_style, job_id, attribute_dict,
         expiration_utc_datetime, force=False):
-    """This is used to copy and update a coverage set asynchronously.
+    """Copy and update a coverage set asynchronously.
 
     Args:
         uri_path (str): path to base gs:// bucket to copy from.
@@ -1227,7 +1215,7 @@ def add_raster_worker(
         if additional_b_needed > 0:
             # calcualte additional GB needed
             additional_gb = int(math.ceil(additional_b_needed/2**30))
-            LOGGER.warning(f'need an additional {additional_gb}G')
+            LOGGER.warn(f'need an additional {additional_gb}G')
             session = requests.Session()
             resize_disk_request = do_rest_action(
                 session.post,
