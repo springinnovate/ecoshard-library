@@ -632,7 +632,7 @@ def create_app(test_config=None):
             # build job
             job_id = build_job_hash(asset_args)
             callback_url = flask.url_for(
-                'get_status', job_id=job_id, api_key=api_key)
+                'get_status', job_id=job_id, api_key=api_key, _external=True)
             callback_payload = json.dumps({'callback_url': callback_url})
 
             # see if job already running and hasn't previously errored
