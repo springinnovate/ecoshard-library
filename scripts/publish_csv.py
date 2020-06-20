@@ -42,7 +42,7 @@ def publish(
         None
 
     """
-    post_url = f'http://{host_port}/api/v1/publish'
+    post_url = f'https://{host_port}/api/v1/publish'
 
     LOGGER.debug('publish posting to here: %s' % post_url)
     publish_response = requests.post(
