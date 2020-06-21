@@ -26,7 +26,7 @@ RUN chgrp -R tomcat /opt/tomcat && \
 COPY geoserver-2.17.1-war.zip .
 RUN unzip geoserver-2.17.1-war.zip geoserver.war -d /opt/tomcat/webapps/ && rm geoserver-2.17.1-war.zip
 
-COPY start_geoserver.sh /usr/local/geoserver/bin
+COPY start_geoserver.sh /usr/local/geoserver/bin/
 COPY styles /usr/local/geoserver/bin/styles/
 
 WORKDIR /usr/local/geoserver
