@@ -13,6 +13,8 @@ services:
   stac-manager:
     container_name: stac-manager
     build: geoserver-docker
+    ports:
+      - 8888:8888
     volumes:
       - /mnt/geoserver_data:/usr/local/geoserver/data_dir
     networks:
@@ -30,7 +32,7 @@ services:
       - 80:80
       - 443:443
     volumes:
-      - ./stac_api_nginx_conf.d:/etc/nginx/conf.d
+      - ./nginx_configurations/stac_api_nginx_conf:/etc/nginx/conf.d
       - /etc/letsencrypt:/etc/letsencrypt
     networks:
       - api_stac_nw
@@ -38,5 +40,5 @@ services:
       - stac-manager
 
 networks:
-  web_nw:
+  api_stac_nw:
     driver: bridge
