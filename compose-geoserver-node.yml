@@ -5,6 +5,8 @@ services:
     build: docker_contexts/geoserver_node_docker
     networks:
       - geoserver_web_nw
+    volumes:
+      - /mnt/geoserver_data:/opt/tomcat/webapps/geoserver/data
     command: ['${GEOSERVER_MAX_RAM}']
     tty: true
 
