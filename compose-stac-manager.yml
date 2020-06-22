@@ -19,7 +19,6 @@ services:
       - /mnt/geoserver_data:/usr/local/geoserver/data_dir
     networks:
       - api_stac_nw
-    command: ['api.salo.ai', '8888', 'maps.salo.ai', '8080', '4g']
     tty: true
     depends_on:
       - geoserver-node

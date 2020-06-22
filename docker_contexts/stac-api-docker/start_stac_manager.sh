@@ -1,11 +1,6 @@
 #!/bin/bash -x
-# $1 -- max ram in g (i.e. 5g)
-export GEOSERVER_HOME=/usr/local/geoserver
-export GEOSERVER_DATA_DIR=${GEOSERVER_HOME}/data_dir
-export JAVA_OPTS="-Xms2g -Xmx$1 -XX:SoftRefLRUPolicyMSPerMB=36000 -server -XX:+UseParallelGC -DGEOSERVER_DATA_DIR=$GEOSERVER_DATA_DIR"
-export JAVA_BIN=/usr/bin/java
-
-cd $GEOSERVER_HOME
-
-touch bin/nohup.out
-/opt/tomcat/bin/catalina.sh run > tomcatlog.txt
+touch stac_api/config.py
+echo "GEOSERVER_MANAGER_HOST = '${GEOSERVER_MANAGER_HOST}'" >> stac_api/config.py
+echo "SECRET_KEY = '${SECRET_KEY}'" >> stac_api/config.py
+echo "SQLALCHEMY_DATABASE_URI = '${SQLALCHEMY_DATABASE_URI}" >> stac_api/config.py
+waitress-serve --listen=0.0.0.0:$2 --call stac_api:create_app 2>&1
