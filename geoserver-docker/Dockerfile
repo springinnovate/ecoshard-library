@@ -16,24 +16,18 @@ SHELL ["/bin/bash", "-c"]
 WORKDIR /usr/local
 
 RUN useradd -r -m -U -d /opt/tomcat -s /bin/false tomcat
-COPY apache-tomcat-9.0.35.tar.gz .
-RUN tar xzvf apache-tomcat-9.0.35.tar.gz -C /opt/tomcat --strip-components=1 && rm apache-tomcat-9.0.35.tar.gz
+COPY apache-tomcat-9.0.36.tar.gz .
+RUN tar xzvf apache-tomcat-9.0.36.tar.gz -C /opt/tomcat --strip-components=1 && rm apache-tomcat-9.0.36.tar.gz
 RUN chgrp -R tomcat /opt/tomcat && \
     chmod -R g+r /opt/tomcat/conf && \
     chmod g+x /opt/tomcat/conf && \
     chown -R tomcat /opt/tomcat/webapps/ /opt/tomcat/work/ /opt/tomcat/temp/ /opt/tomcat/logs/
 
-COPY geoserver-2.17.0-war.zip .
-RUN unzip geoserver-2.17.0-war.zip geoserver.war -d /opt/tomcat/webapps/ && rm geoserver-2.17.0-war.zip
+COPY geoserver-2.17.1-war.zip .
+RUN unzip geoserver-2.17.1-war.zip geoserver.war -d /opt/tomcat/webapps/ && rm geoserver-2.17.1-war.zip
 
-COPY start_geoserver.sh /usr/local/geoserver/bin
-COPY api_key_manager.py /usr/local/geoserver/bin
+COPY start_geoserver.sh /usr/local/geoserver/bin/
 COPY styles /usr/local/geoserver/bin/styles/
-COPY stac_api /usr/local/geoserver/bin/stac_api
-COPY setup.py /usr/local/geoserver/bin
-COPY requirements.txt /usr/local/geoserver/bin
-RUN pip3 install -r requirements.txt
-RUN pip3 install -e .
 
 WORKDIR /usr/local/geoserver
 EXPOSE 8080
