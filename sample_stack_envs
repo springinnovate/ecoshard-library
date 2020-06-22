@@ -1,1 +1,2 @@
 GEOSERVER_MAX_RAM=5g
+HOST_GEOSERVER_DATA_DRIVE=/mnt/geoserver_data
