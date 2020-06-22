@@ -7,7 +7,7 @@ services:
       - 8080:8080
     networks:
       - api_stac_nw
-    command: ['5g']
+    command: ['${GEOSERVER_MAX_RAM}']
     tty: true
 
   stac-manager:
