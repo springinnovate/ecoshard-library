@@ -16,10 +16,6 @@ RUN apt-get update -qq && \
 SHELL ["/bin/bash", "-c"]
 RUN mkdir -p /usr/local/stac_manager
 
-COPY start_stac_manager.sh /usr/local/stac_manager/
-COPY api_key_manager.py /usr/local/stac_manager/
-COPY geoserver_styles /usr/local/stac_manager/geoserver_styles/
-
 COPY . /usr/local/stac_manager/
 WORKDIR /usr/local/stac_manager
 RUN pip3 install -r requirements.txt
