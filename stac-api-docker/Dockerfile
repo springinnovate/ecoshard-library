@@ -1,4 +1,4 @@
-# Install GeoServer and supporing Python libraries
+# Container for STAC API manager
 FROM therealspring/python-gdal:3.0.4
 
 RUN apt-get update -qq && \
