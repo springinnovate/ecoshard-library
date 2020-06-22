@@ -3,10 +3,10 @@ services:
   geoserver-node:
     container_name: geoserver-node
     build: docker_contexts/geoserver_node_docker
-    ports:
-      - 8080:8080
     networks:
       - api_stac_nw
+    volumes:
+      - ${HOST_GEOSERVER_DATA_DRIVE}:/opt/tomcat/webapps/geoserver/data
     command: ['${GEOSERVER_MAX_RAM}']
     tty: true
 
