@@ -3,6 +3,8 @@ services:
   geoserver-node:
     container_name: geoserver-node
     build: geoserver-docker
+    ports:
+      - 8080:8080
     networks:
       - web_nw
     command: ['5g']
