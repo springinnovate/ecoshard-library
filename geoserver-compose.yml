@@ -21,8 +21,6 @@ services:
       - ./geoserver-node_nginx_conf.d:/etc/nginx/conf.d
     networks:
       - web_nw
-    depends_on:
-      - geoserver-node
 
 networks:
   web_nw:
