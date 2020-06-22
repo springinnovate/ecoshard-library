@@ -29,4 +29,4 @@ RUN rm -rf /opt/tomcat/webapps/geoserver/data_dir
 COPY start_geoserver.sh /usr/local/bin/
 
 EXPOSE 8080
-ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]
+ENTRYPOINT ["bash",  "-i", "/usr/local/bin/start_geoserver.sh"]
