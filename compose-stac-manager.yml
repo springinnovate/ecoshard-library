@@ -2,7 +2,7 @@ version: '3.2'
 services:
   geoserver-node:
     container_name: geoserver-node
-    build: geoserver-docker
+    build: docker_contexts/geoserver_node_docker
     ports:
       - 8080:8080
     networks:
@@ -12,7 +12,7 @@ services:
 
   stac-manager:
     container_name: stac-manager
-    build: geoserver-docker
+    build: stac-api-docker
     ports:
       - 8888:8888
     volumes:

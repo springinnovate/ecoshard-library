@@ -3,9 +3,7 @@ FROM therealspring/python-gdal:3.0.4
 
 RUN apt-get update -qq && \
     apt-get install -y \
-    openjdk-11-jdk-headless \
     emacs \
-    openjdk-11-jdk \
     libspatialindex-dev \
     python3-pip \
     postgresql-client \
@@ -28,36 +26,19 @@ RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud auth activate-service-acco
 RUN rm /usr/local/salo-api-5de978810708.json
 
 WORKDIR /usr/local
-# COPY geoserver-2.17.0-bin.zip .
-# RUN unzip geoserver-2.17.0-bin.zip -d geoserver
-# RUN rm geoserver-2.17.0-bin.zip
-# We'll mount our own data dir so don't use the default
-#RUN rm -rf geoserver/data_dir/*
 
-RUN mkdir -p /usr/local/geoserver/bin
-WORKDIR /usr/local/geoserver/bin/
+RUN mkdir -p /usr/local/stac_manager
 
-RUN useradd -r -m -U -d /opt/tomcat -s /bin/false tomcat
-COPY apache-tomcat-9.0.35.tar.gz .
-RUN tar xzvf apache-tomcat-9.0.35.tar.gz -C /opt/tomcat --strip-components=1
-RUN chgrp -R tomcat /opt/tomcat
-RUN chmod -R g+r /opt/tomcat/conf
-RUN chmod g+x /opt/tomcat/conf
-RUN chown -R tomcat /opt/tomcat/webapps/ /opt/tomcat/work/ /opt/tomcat/temp/ /opt/tomcat/logs/
+COPY start_stac_manager.sh /usr/local/stac_manager/
+COPY api_key_manager.py /usr/local/stac_manager/
+COPY geoserver_styles /usr/local/stac_manager/geoserver_styles/
 
-COPY geoserver-2.17.0-war.zip .
-RUN unzip geoserver-2.17.0-war.zip geoserver.war -d /opt/tomcat/webapps/
-
-COPY start_geoserver.sh /usr/local/geoserver/bin
-COPY api_key_manager.py /usr/local/geoserver/bin
-COPY styles /usr/local/geoserver/bin/styles/
-COPY stac_api /usr/local/geoserver/bin/stac_api
-COPY setup.py /usr/local/geoserver/bin
-COPY requirements.txt /usr/local/geoserver/bin
+COPY stac_api /usr/local/stac_api/
+COPY setup.py /usr/local/stac_api/
+COPY requirements.txt /usr/local/stac_api/
 RUN pip3 install -r requirements.txt
 RUN pip3 install -e .
 
-WORKDIR /usr/local/geoserver
+WORKDIR /usr/local/stac_api
 EXPOSE 8888
-EXPOSE 8080
-ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/start_geoserver.sh"]
+ENTRYPOINT ["bash",  "-i", "/usr/local/geoserver/bin/launch_stac_manager.sh"]

@@ -1531,7 +1531,7 @@ def initalize_geoserver(database_path, api_server_name):
 
     # overwrite style directory with pre-baked one
     shutil.rmtree(STYLE_DIR_PATH, ignore_errors=True)
-    shutil.copytree('./styles', STYLE_DIR_PATH)
+    shutil.copytree('./geoserver_styles', STYLE_DIR_PATH)
 
     # make new random admin password
     try:
