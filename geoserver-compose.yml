@@ -6,7 +6,7 @@ services:
     ports:
       - 8080:8080
     networks:
-      - web_nw
+      - geoserver_web_nw
     command: ['5g']
     tty: true
 
@@ -20,8 +20,8 @@ services:
     volumes:
       - ./geoserver_node_nginx_conf.d:/etc/nginx/conf.d
     networks:
-      - web_nw
+      - geoserver_web_nw
 
 networks:
-  web_nw:
+  geoserver_web_nw:
     driver: bridge
