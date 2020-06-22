@@ -4,8 +4,8 @@ GEOSERVER_MANAGER_HOST=localhost:8080
 
 SECRET_KEY=replace_with_real_secret
 
+DB_HOST=localhost:5432
 DB_USER=replace_with_real_db_user
 DB_PASSWORD=replace_with_real_db_password
-DB_HOST=localhost:5432
 DATABASE_NAME=stac_api_db
-SQLALCHEMY_DATABASE_URI = postgresql://${DB_HOST}:${DB_USER}@${DB_PASSWORD}/${DATABASE_NAME}
+SQLALCHEMY_DATABASE_URI=postgresql://${DB_HOST}:${DB_USER}@${DB_PASSWORD}/${DATABASE_NAME}
