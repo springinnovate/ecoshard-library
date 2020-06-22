@@ -3,8 +3,6 @@ services:
   geoserver-node:
     container_name: geoserver-node
     build: geoserver-docker
-    volumes:
-      - /mnt/geoserver_data:/usr/local/geoserver/data_dir
     networks:
       - web_nw
     command: ['5g']
@@ -19,7 +17,6 @@ services:
       - 443:443
     volumes:
       - ./geoserver-node_nginx_conf.d:/etc/nginx/conf.d
-      - /etc/letsencrypt:/etc/letsencrypt
     networks:
       - web_nw
     depends_on:
