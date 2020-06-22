@@ -12,7 +12,7 @@ services:
 
   stac-manager:
     container_name: stac-manager
-    build: stac-api-docker
+    build: docker_contexts/stac-api-docker
     ports:
       - 8888:8888
     volumes:
