@@ -3,11 +3,9 @@ services:
   geoserver-node:
     container_name: geoserver-node
     build: docker_contexts/geoserver_node_docker
-    ports:
-      - 8080:8080
     networks:
       - geoserver_web_nw
-    command: ['5g']
+    command: ['${GEOSERVER_MAX_RAM}']
     tty: true
 
   nginx:
