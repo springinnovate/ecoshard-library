@@ -18,7 +18,7 @@ services:
       - 80:80
       - 443:443
     volumes:
-      - ./geoserver-node_nginx_conf.d:/etc/nginx/conf.d
+      - ./geoserver_node_nginx_conf.d:/etc/nginx/conf.d
     networks:
       - web_nw
 
