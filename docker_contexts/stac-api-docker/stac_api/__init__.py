@@ -29,26 +29,16 @@ import retrying
 
 from .auth import auth_bp, db
 
-
-LOCAL_GEOSERVER = 'localhost:8080'
-LOCAL_API_SERVER = 'localhost:8888'
-LOCAL_DISK_RESIZE_SERVICE = 'localhost:8082'
-INTER_DATA_DIR = 'data'
-FULL_DATA_DIR = os.path.abspath(
-    os.path.join('..', 'data_dir', INTER_DATA_DIR))
 DATABASE_PATH = os.path.join(FULL_DATA_DIR, 'flask_manager.db')
 PASSWORD_FILE_PATH = os.path.join(FULL_DATA_DIR, 'secrets', 'adminpass')
-GEOSERVER_USER = 'admin'
-DEFAULT_STYLE = 'vegetation'
-STYLE_DIR_PATH = os.path.abspath(os.path.join('..', 'data_dir', 'styles'))
 SCHEMA_SQL_PATH = 'schema.sql'
 EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
-LOG_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logging.json')
+LOG_FILE_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)), 'logging.json')
 
 with open(LOG_FILE_PATH) as f:
     logging.config.dictConfig(json.load(f))
 LOGGER = logging.getLogger(__name__)
-logger = logging.getLogger('waitress')
 
 
 def create_app(config=None):
@@ -59,7 +49,6 @@ def create_app(config=None):
     app = flask.Flask(__name__, instance_relative_config=False)
     app.config.from_mapping(
         SECRET_KEY='dev',
-        SERVER_NAME=LOCAL_API_SERVER,
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
     )
 
@@ -70,7 +59,8 @@ def create_app(config=None):
     if config is not None:
         app.config.from_mapping(config)
 
-    initalize_geoserver(DATABASE_PATH, app.config['SERVER_NAME'])
+    initalize_geoserver(
+        app.config['STAC_DATABASE_URI'], app.config['SERVER_NAME'])
 
     # remove any old jobs
     _execute_sqlite(
@@ -230,7 +220,6 @@ def create_app(config=None):
         valid_check = validate_api(api_key, f'READ:{fetch_data["catalog"]}')
         if valid_check != 'valid':
             return valid_check
-
         fetch_payload = _execute_sqlite(
             '''
             SELECT
@@ -299,10 +288,11 @@ def create_app(config=None):
         with open(PASSWORD_FILE_PATH, 'r') as password_file:
             master_geoserver_password = password_file.read()
         session = requests.Session()
-        session.auth = (GEOSERVER_USER, master_geoserver_password)
+        session.auth = (
+            app.config['GEOSERVER_USER'], master_geoserver_password)
         available_styles = do_rest_action(
             session.get,
-            f'http://{LOCAL_GEOSERVER}',
+            f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
             f'geoserver/rest/styles.json').json()
 
         return {'styles': [
@@ -563,7 +553,7 @@ def create_app(config=None):
 
     @app.route('/api/v1/publish', methods=['POST'])
     def publish():
-        """Adds a raster to the GeoServer from a local storage.
+        """Add a raster to GeoServer from local storage.
 
         Request parameters:
             query parameters:
@@ -687,8 +677,8 @@ def create_app(config=None):
                       asset_args['catalog'], asset_args['asset_id'],
                       asset_args['description'],
                       utc_datetime, default_style, job_id, attribute_dict,
-                      expiration_utc_datetime
-                      ),
+                      expiration_utc_datetime,
+                      app.config['INTERNAL_GEOSERVER_DATA_DIR']),
                 kwargs={'force': force})
             raster_worker_thread.start()
             return callback_payload
@@ -705,7 +695,7 @@ def create_app(config=None):
 
     @app.route('/api/v1/delete', methods=['POST'])
     def delete():
-        """Adds a raster to the GeoServer from a local storage.
+        """Remove from the GeoServer.
 
         Request parameters:
             query parameters:
@@ -775,16 +765,17 @@ def delete_raster(local_path, asset_id, catalog):
 
     Returns:
         None.
+
     """
     with open(PASSWORD_FILE_PATH, 'r') as password_file:
         master_geoserver_password = password_file.read()
     session = requests.Session()
-    session.auth = (GEOSERVER_USER, master_geoserver_password)
+    session.auth = (app.config['GEOSERVER_USER'], master_geoserver_password)
 
     cover_id = f'{asset_id}_cover'
     delete_coverstore_result = do_rest_action(
         session.delete,
-        f'http://{LOCAL_GEOSERVER}',
+        f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
         f'geoserver/rest/workspaces/{catalog}/'
         f'coveragestores/{cover_id}/?purge=all&recurse=true')
     if not delete_coverstore_result:
@@ -885,7 +876,7 @@ def _execute_sqlite(
     stop_max_attempt_number=5)
 def do_rest_action(
         session_fn, host, suburl, data=None, json=None, headers=None):
-    """A wrapper around HTML functions to make for easy retry.
+    """Wrapper around REST functions to make for easy retry.
 
     Args:
         sesson_fn (function): takes a url, optional data parameter, and
@@ -924,19 +915,19 @@ def publish_to_geoserver(
     with open(PASSWORD_FILE_PATH, 'r') as password_file:
         master_geoserver_password = password_file.read()
     session = requests.Session()
-    session.auth = (GEOSERVER_USER, master_geoserver_password)
+    session.auth = (app.config['GEOSERVER_USER'], master_geoserver_password)
 
     # make workspace
     LOGGER.debug('create workspace if it does not exist')
     workspace_exists_result = do_rest_action(
         session.get,
-        f'http://{LOCAL_GEOSERVER}',
+        f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
         f'geoserver/rest/workspaces/{catalog}')
     if not workspace_exists_result:
         LOGGER.debug(f'{catalog} does not exist, creating it')
         create_workspace_result = do_rest_action(
             session.post,
-            f'http://{LOCAL_GEOSERVER}',
+            f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
             'geoserver/rest/workspaces',
             json={'workspace': {'name': catalog}})
         if not create_workspace_result:
@@ -947,7 +938,7 @@ def publish_to_geoserver(
     cover_id = f'{raster_id}_cover'
     coverstore_exists_result = do_rest_action(
         session.get,
-        f'http://{LOCAL_GEOSERVER}',
+        f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
         f'geoserver/rest/workspaces/{catalog}/coveragestores/{cover_id}')
 
     LOGGER.debug(
@@ -958,7 +949,7 @@ def publish_to_geoserver(
         # coverstore exists, delete it
         delete_coverstore_result = do_rest_action(
             session.delete,
-            f'http://{LOCAL_GEOSERVER}',
+            f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
             f'geoserver/rest/workspaces/{catalog}/'
             f'coveragestores/{cover_id}/?purge=all&recurse=true')
         if not delete_coverstore_result:
@@ -980,7 +971,7 @@ def publish_to_geoserver(
 
     create_coverstore_result = do_rest_action(
         session.post,
-        f'http://{LOCAL_GEOSERVER}',
+        f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
         f'geoserver/rest/workspaces/{catalog}/coveragestores',
         json=coveragestore_payload)
     if not create_coverstore_result:
@@ -1013,7 +1004,7 @@ def publish_to_geoserver(
                     {
                         "name": catalog,
                         "href": (
-                            f"http://{LOCAL_GEOSERVER}/"
+                            f"http://{app.config['GEOSERVER_MANAGER_HOST']}/"
                             f"geoserver/rest/namespaces/{catalog}.json")
                     },
                 "title": raster_id,
@@ -1050,7 +1041,7 @@ def publish_to_geoserver(
                     "@class": "coverageStore",
                     "name": f"{catalog}:{raster_id}",
                     "href": (
-                        f"http://{LOCAL_GEOSERVER}/"
+                        f"http://{app.config['GEOSERVER_MANAGER_HOST']}/"
                         "geoserver/rest",
                         f"/workspaces/{catalog}/coveragestores/"
                         f"{urllib.parse.quote(raster_id)}.json")
@@ -1111,7 +1102,7 @@ def publish_to_geoserver(
     LOGGER.debug('send cover request to GeoServer')
     create_cover_result = do_rest_action(
         session.post,
-        f'http://{LOCAL_GEOSERVER}',
+        f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
         f'geoserver/rest/workspaces/{catalog}/'
         f'coveragestores/{urllib.parse.quote(cover_id)}/coverages/',
         json=cover_payload)
@@ -1134,8 +1125,8 @@ def get_lat_lng_bounding_box(raster_path):
 def add_raster_worker(
         uri_path, mediatype, catalog, raster_id, asset_description,
         utc_datetime, default_style, job_id, attribute_dict,
-        expiration_utc_datetime, force=False):
-    """This is used to copy and update a coverage set asynchronously.
+        expiration_utc_datetime, inter_data_dir, force=False):
+    """Copy and update a coverage set asynchronously.
 
     Args:
         uri_path (str): path to base gs:// bucket to copy from.
@@ -1151,6 +1142,8 @@ def add_raster_worker(
         expiration_utc_datetime (str): either None or UTC formatted string
             indicating when this raster should be automatically removed from
             database and local storage.
+        inter_data_dir (str): directory path to prefix for the geoserver's
+            internal raster path relative to its own data directory.
         force (bool): if True will overwrite existing local data, otherwise
             does not re-copy data.
 
@@ -1162,7 +1155,7 @@ def add_raster_worker(
         local_raster_path = None
         # geoserver raster path is for it's local data dir
         geoserver_raster_path = os.path.join(
-            INTER_DATA_DIR, catalog, f'{raster_id}.tif')
+            inter_data_dir, catalog, f'{raster_id}.tif')
         # local data dir is for path to copy to from working directory
         catalog_data_dir = os.path.join(FULL_DATA_DIR, catalog)
         try:
@@ -1225,13 +1218,13 @@ def add_raster_worker(
             f'available_b: {available_b}f'
             f'additional_b needed: {additional_b_needed}')
         if additional_b_needed > 0:
-            # calcualte additional GB needed
+            # calculate additional GB needed
             additional_gb = int(math.ceil(additional_b_needed/2**30))
             LOGGER.warning(f'need an additional {additional_gb}G')
             session = requests.Session()
             resize_disk_request = do_rest_action(
                 session.post,
-                f'http://{LOCAL_DISK_RESIZE_SERVICE}',
+                f'http://{app.config['DISK_RESIZE_SERVICE_HOST']}',
                 f'resize',
                 json={'gb_to_add': additional_gb})
 
@@ -1545,10 +1538,10 @@ def initalize_geoserver(database_path, api_server_name):
     session = requests.Session()
     # 'geoserver' is the default geoserver password, we'll need to be
     # authenticated to do the push
-    session.auth = (GEOSERVER_USER, 'geoserver')
+    session.auth = (app.config['GEOSERVER_USER'], 'geoserver')
     password_update_request = do_rest_action(
         session.put,
-        f'http://{LOCAL_GEOSERVER}',
+        f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
         'geoserver/rest/security/self/password',
         json={
             'newPassword': geoserver_password
@@ -1562,7 +1555,7 @@ def initalize_geoserver(database_path, api_server_name):
     # configuration before the new password is used
     password_update_request = do_rest_action(
         session.post,
-        f'http://{LOCAL_GEOSERVER}',
+        f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
         'geoserver/rest/reload')
 
 

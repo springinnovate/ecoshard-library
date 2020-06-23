@@ -38,6 +38,25 @@ services:
     depends_on:
       - stac-manager
 
+  ${DB_HOST}:
+    image: postgres
+    container_name: ${DB_HOST}
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USER}
+    networks:
+      - api_stac_nw
+
+  test:
+    container_name: test
+    build: docker_contexts/test-docker
+    networks:
+      - api_stac_nw
+    tty: true
+    depends_on:
+      - ${DB_HOST}
+
 networks:
   api_stac_nw:
     driver: bridge

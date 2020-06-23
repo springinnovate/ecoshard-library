@@ -1,6 +1,14 @@
 GEOSERVER_MAX_RAM=5g
 HOST_GEOSERVER_DATA_DRIVE=/mnt/geoserver_data
 GEOSERVER_MANAGER_HOST=localhost:8080
+GEOSERVER_USER=admin
+INTERNAL_GEOSERVER_DATA_DIR=data
+LOCAL_GEOSERVER_DATA_DIR=/opt/tomcat/webapps/geoserver/data
+
+DEFAULT_STYLE=vegetation
+
+
+DISK_RESIZE_SERVICE_HOST=localhost:8082
 
 SECRET_KEY=replace_with_real_secret
 

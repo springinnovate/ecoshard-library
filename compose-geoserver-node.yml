@@ -6,7 +6,7 @@ services:
     networks:
       - geoserver_web_nw
     volumes:
-      - ${HOST_GEOSERVER_DATA_DRIVE}:/opt/tomcat/webapps/geoserver/data
+      - ${HOST_GEOSERVER_DATA_DRIVE}:${LOCAL_GEOSERVER_DATA_DIR}
     command: ['${GEOSERVER_MAX_RAM}']
     tty: true
 
