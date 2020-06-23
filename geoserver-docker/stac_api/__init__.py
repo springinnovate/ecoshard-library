@@ -991,6 +991,11 @@ def publish_to_geoserver(
         [raster_srs.GetAttrValue('AUTHORITY', i) for i in [0, 1]])
 
     LOGGER.debug('construct the cover_payload')
+    nodata = raster_info['nodata'][0]
+    if nodata is not None:
+        null_value_dict = {"double": nodata},
+    else:
+        null_value_dict = {}
 
     cover_payload = {
         "coverage":
@@ -1078,9 +1083,8 @@ def publish_to_geoserver(
                         "description": (
                             "GridSampleDimension[-Infinity,Infinity]"),
                         "range": {"min": raster_min, "max": raster_max},
-                        "nullValues": {"double": [
-                            raster_info['nodata'][0]]},
-                        "dimensionType":{"name": "REAL_32BITS"}
+                        "nullValues": null_value_dict,
+                        "dimensionType": {"name": "REAL_32BITS"}
                         }]
                     },
                 "parameters": {
