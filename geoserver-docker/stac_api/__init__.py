@@ -152,7 +152,7 @@ def create_app(test_config=None):
             else:
                 val = float(val)
             nodata = b.GetNoDataValue()
-            if numpy.isclose(val, nodata):
+            if nodata is not None and numpy.isclose(val, nodata):
                 return {
                     'val': 'nodata',
                     'x': x_coord,
