@@ -39,7 +39,7 @@ To build the docker image:
 The docker image uses `start_geoserver.sh` as the entrypoint, which takes
 several configuration paramaters (illustrated in ALL CAPS here):
 
-    docker run --rm -d -it -v /mnt/geoserver_data/:/usr/local/geoserver/data_dir -p 8888:8888 --name geoserver_node us.gcr.io/salo-api/stac-geoserver-container:latest API_HOST API_PORT GEOSERVER_HOST GEOSERVER_PORT AUTH_DATABASE_PASSWORD AUTH_DATABASE_HOST
+    docker run --rm -d -it -v /mnt/geoserver_data/:/usr/local/geoserver/data_dir -p 8888:8888 --name geoserver_node us.gcr.io/salo-api/stac-geoserver-container:latest API_HOST GEOSERVER_HOST:GEOSERVER_PORT MAX_RAM AUTH_DATABASE_PASSWORD AUTH_DATABASE_HOST
 
 
 Authentication
