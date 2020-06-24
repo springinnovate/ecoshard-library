@@ -3,6 +3,7 @@ import datetime
 import hashlib
 import json
 import logging
+import logging.config
 import math
 import os
 import pathlib
@@ -21,10 +22,14 @@ from osgeo import osr
 import ecoshard
 import flask
 import flask_cors
+from flask_migrate import Migrate
 import numpy
 import pygeoprocessing
 import requests
 import retrying
+
+from .auth import auth_bp, db
+
 
 LOCAL_GEOSERVER = 'localhost:8080'
 LOCAL_DISK_RESIZE_SERVICE = 'localhost:8082'
@@ -38,17 +43,15 @@ DEFAULT_STYLE = 'vegetation'
 STYLE_DIR_PATH = os.path.abspath(os.path.join('..', 'data_dir', 'styles'))
 SCHEMA_SQL_PATH = 'schema.sql'
 EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
+LOG_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logging.json')
 
-logging.basicConfig(
-    level=logging.DEBUG,
-    format=(
-        '%(asctime)s (%(relativeCreated)d) %(processName)s %(levelname)s '
-        '%(name)s [%(funcName)s:%(lineno)d] %(message)s'))
+with open(LOG_FILE_PATH) as f:
+    logging.config.dictConfig(json.load(f))
 LOGGER = logging.getLogger(__name__)
-logging.getLogger('waitress').setLevel(logging.DEBUG)
+logger = logging.getLogger('waitress')
 
 
-def create_app(test_config=None):
+def create_app(config=None):
     """Create the Geoserver STAC Flask app."""
     LOGGER.debug('starting up!')
     # wait for API calls
@@ -57,10 +60,15 @@ def create_app(test_config=None):
     flask_cors.CORS(app)
     app.config.from_mapping(
         SECRET_KEY='dev',
+        SQLALCHEMY_TRACK_MODIFICATIONS=False,
     )
+
     # config.py should contain a real secret key and
     # a real IP address/hostname
     app.config.from_pyfile('config.py', silent=False)
+
+    if config is not None:
+        app.config.from_mapping(config)
 
     initalize_geoserver(DATABASE_PATH, app.config['SERVER_NAME'])
 
@@ -73,6 +81,7 @@ def create_app(test_config=None):
     expiration_monitor_thread = threading.Thread(
         target=expiration_monitor,
         args=(DATABASE_PATH,))
+    expiration_monitor_thread.daemon = True
     expiration_monitor_thread.start()
 
     # ensure the instance folder exists
@@ -80,6 +89,11 @@ def create_app(test_config=None):
         os.makedirs(app.instance_path)
     except OSError:
         pass
+
+    db.init_app(app)
+    migrate = Migrate(app, db)
+
+    app.register_blueprint(auth_bp, url_prefix="/users")
 
     @app.route('/api/v1/pixel_pick', methods=["POST"])
     def pixel_pick():
