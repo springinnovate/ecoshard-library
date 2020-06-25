@@ -50,7 +50,7 @@ services:
 
   test:
     container_name: test
-    build: docker_contexts/test-docker
+    build: docker_contexts/test_docker
     networks:
       - api_stac_nw
     tty: true
