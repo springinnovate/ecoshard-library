@@ -38,7 +38,7 @@ services:
     depends_on:
       - stac-manager
 
-  db:
+  ${DB_HOST}:
     image: postgres
     container_name: ${DB_HOST}
     restart: always
@@ -55,7 +55,7 @@ services:
       - api_stac_nw
     tty: true
     depends_on:
-      - db
+      - ${DB_HOST}
 
 networks:
   api_stac_nw:
