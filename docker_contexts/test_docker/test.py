@@ -1,14 +1,15 @@
-import argparse
-import sqlalchemy
-print(sqlalchemy.__version__)
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
 
-parser = argparse.ArgumentParser(description='Connect to DB')
-parser.add_argument('db_user', type=str)
-parser.add_argument('db_password', type=str)
-parser.add_argument('db_server', type=str)
-args = parser.parse_args()
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/test.db'
+db = SQLAlchemy(app)
 
-engine = sqlalchemy.create_engine(
-    f'postgres://{args.db_user}:{args.db_password}@{args.db_server}') # connect to server
-engine.execute("CREATE DATABASE dbname") #create db
-engine.execute("USE dbname") # select new db
+
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+
+    def __repr__(self):
+        return '<User %r>' % self.username
