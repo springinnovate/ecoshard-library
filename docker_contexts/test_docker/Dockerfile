@@ -6,4 +6,4 @@ RUN pip3 install sqlalchemy
 
 WORKDIR /usr/local/test
 COPY . /usr/local/test/
-CMD ["python3", "test.py"]
+ENTRYPOINT ["python3", "test.py"]
