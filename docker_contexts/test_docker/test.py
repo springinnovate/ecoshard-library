@@ -44,5 +44,18 @@ if __name__ == '__main__':
 
     db.create_all()
 
+    guest = User(
+        id='guest',
+        uuid='sdfjkldsfljk',
+        first_name='test',
+        last_name='test',
+        organization='test',
+        email='test',
+        password_hash='test',
+        password_salt='test',
+        )
+    db.session.add(guest)
+    db.session.commit()
+
     for user in User.query.all():
         print(user)
