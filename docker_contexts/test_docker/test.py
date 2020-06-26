@@ -45,7 +45,6 @@ if __name__ == '__main__':
     db.create_all()
 
     guest = User(
-        id='guest',
         uuid='sdfjkldsfljk',
         first_name='test',
         last_name='test',
