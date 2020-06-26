@@ -31,7 +31,6 @@ from .auth import auth_bp, db
 
 DATABASE_PATH = os.path.join(FULL_DATA_DIR, 'flask_manager.db')
 PASSWORD_FILE_PATH = os.path.join(FULL_DATA_DIR, 'secrets', 'adminpass')
-SCHEMA_SQL_PATH = 'schema.sql'
 EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
 LOG_FILE_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'logging.json')
