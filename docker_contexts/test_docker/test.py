@@ -41,3 +41,8 @@ if __name__ == '__main__':
 
         def __repr__(self):
             return f"<User {self.id}: {self.email}>"
+
+    db.create_all()
+
+    for user in User.query.all():
+        print(user)
