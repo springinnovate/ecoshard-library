@@ -1,6 +1,6 @@
 """Tracer code for setting up sqlalchemy."""
 import argparse
-import datetime
+from datetime import datetime
 
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
