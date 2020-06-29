@@ -1,6 +1,10 @@
 # Container for STAC API manager
 FROM therealspring/python-gdal:3.0.4
 
+# copy public key authorization for creating signed urls for public file downloads
+COPY cfo-public-auth.json /usr/local/cfo-public-auth.json
+ENV CFO_PUBLIC_KEY=/usr/local/cfo-public-auth.json
+
 RUN apt-get update -qq && \
     apt-get install -y \
     emacs \
