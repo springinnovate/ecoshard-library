@@ -34,7 +34,8 @@ import sys
 from google.oauth2 import service_account
 from urllib.parse import quote
 
-from .auth import auth_bp, db
+# SQLAlchamy
+from . import queries
 
 DATABASE_PATH = os.path.join(FULL_DATA_DIR, 'flask_manager.db')
 PASSWORD_FILE_PATH = os.path.join(FULL_DATA_DIR, 'secrets', 'adminpass')
@@ -114,15 +115,9 @@ def create_app(config=None):
         try:
             picker_data = json.loads(flask.request.get_data())
             LOGGER.debug(str(picker_data))
-            local_path_payload = _execute_sqlite(
-                '''
-                SELECT local_path
-                FROM catalog_table
-                WHERE asset_id=? AND catalog=?
-                ''', DATABASE_PATH, argument_list=[
-                    picker_data["asset_id"], picker_data["catalog"]],
-                execute='execute', fetch='one')
-            r = gdal.OpenEx(local_path_payload[0], gdal.OF_RASTER)
+            catalog_entry = queries.find_catalog_by_id(
+                picker_data["catalog"], picker_data["asset_id"])
+            r = gdal.OpenEx(catalog_entry.local_path, gdal.OF_RASTER)
             b = r.GetRasterBand(1)
             gt = r.GetGeoTransform()
             inv_gt = gdal.InvGeoTransform(gt)
