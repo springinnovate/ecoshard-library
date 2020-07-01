@@ -224,39 +224,27 @@ def create_app(config=None):
         valid_check = validate_api(api_key, f'READ:{fetch_data["catalog"]}')
         if valid_check != 'valid':
             return valid_check
-        fetch_payload = _execute_sqlite(
-            '''
-            SELECT
-                uri, raster_min, raster_max, raster_mean, raster_stdev,
-                default_style
-            FROM catalog_table
-            WHERE asset_id=? AND catalog=?
-            ''', DATABASE_PATH, argument_list=[
-                fetch_data["asset_id"], fetch_data["catalog"]],
-            execute='execute', fetch='one')
+        fetch_catalog = queries.find_catalog_by_id(
+            fetch_data['catalog'], fetch_data['asset_id'])
 
-        if not fetch_payload:
+        if not fetch_catalog:
             return (
                 f'{fetch_data["asset_id"]}:{fetch_data["catalog"]} not found',
                 400)
-
-        LOGGER.debug(fetch_payload)
-        raster_min, raster_max, raster_mean, raster_stdev, default_style = \
-            fetch_payload[1:6]
+        LOGGER.debug(fetch_catalog)
 
         fetch_type = fetch_data['type'].lower()
         if fetch_type == 'uri':
-            link = fetch_payload[0]
+            link = fetch_catalog.uri
         elif fetch_data['type'] == 'url':
-            gs_link = fetch_payload[0]
             # google storage links of the form gs://[VALUE] have https
             # equivalents of https://storage.cloud.google.com/[VALUE]
             link = os.path.join(
-                'https://storage.cloud.google.com', gs_link.split('gs://')[1])
+                'https://storage.cloud.google.com',
+                fetch_catalog.uri.split('gs://')[1])
         elif fetch_data['type'] == 'signed_url':
-            # split the bucket path into the bucket name and the full object path
-            gs_link = fetch_payload[0]
-            bucket_path = gs_link.split('gs://')[1]
+            # split the bucket path into the bucket name and full object path
+            bucket_path = fetch_catalog.uri.split('gs://')[1]
             bucket_end = bucket_path.find('/')
             bucket_name = bucket_path[:bucket_end]
             object_name = bucket_path[bucket_end+1:]
@@ -264,41 +252,41 @@ def create_app(config=None):
             # handle catalog-specific authentication
             if fetch_data['catalog'].lower() == 'cfo':
                 link = generate_signed_url(
-                    bucket_name, object_name, service_account_file=CFO_PUBLIC_KEY)
+                    bucket_name, object_name,
+                    service_account_file=CFO_PUBLIC_KEY)
             else:
-                return ("Signed URLS only available for CFO catalog. Entered; {}".format(
-                    fetch_data['catalog']), 400)
+                return (
+                    f"Signed URLS only available for CFO catalog. Entered; "
+                    f"{fetch_data['catalog']}", 400)
         elif fetch_type == 'wms_preview':
             link = flask.url_for(
                 'viewer', catalog=fetch_data['catalog'],
                 asset_id=fetch_data['asset_id'], api_key=api_key,
                 _external=True)
         elif fetch_type == 'wms':
-            p2 = raster_min+(raster_max-raster_min)*0.02
-            p25 = raster_min+(raster_max-raster_min)*0.25
-            p30 = raster_min+(raster_max-raster_min)*0.30
-            p50 = raster_min+(raster_max-raster_min)*0.50
-            p60 = raster_min+(raster_max-raster_min)*0.60
-            p75 = raster_min+(raster_max-raster_min)*0.75
-            p90 = raster_min+(raster_max-raster_min)*0.90
-            p98 = raster_min+(raster_max-raster_min)*0.98
+            percent_thresholds = [0, 2, 25, 30, 50, 60, 75, 90, 98, 100]
+            scaled_value_strings = [
+                f'''p{percent_threshold}={
+                    fetch_catalog.raster_min + percent_threshold / 100.0 * (
+                        fetch_catalog.raster_max -
+                        fetch_catalog.raster_min)}'''
+                for percent_threshold in percent_thresholds]
 
             link = (
                 f"http://{app.config['GEOSERVER_HOST']}/geoserver/"
                 f"{fetch_data['catalog']}/wms"
                 f"?layers={fetch_data['catalog']}:{fetch_data['asset_id']}"
                 f'&format="image/png"'
-                f'&styles={default_style}'
-                f'&p0={raster_min}&p2={p2}&p25={p25}&p30={p30}&p50={p50}'
-                f'&p60={p60}&p75={p75}&p90={p90}&p98={p98}&p100={raster_max}')
+                f'&styles={fetch_catalog.default_style}&'
+                f'{"&".join(scaled_value_strings)}')
 
         response = flask.Response({
              'type': fetch_data['type'],
              'link': link,
-             'raster_min': raster_min,
-             'raster_max': raster_max,
-             'raster_mean': raster_mean,
-             'raster_stdev': raster_stdev,
+             'raster_min': fetch_catalog.raster_min,
+             'raster_max': fetch_catalog.raster_max,
+             'raster_mean': fetch_catalog.raster_mean,
+             'raster_stdev': fetch_catalog.raster_stdev,
         })
 
         # handle browser compatibility problem where safari default reads
@@ -320,7 +308,7 @@ def create_app(config=None):
             app.config['GEOSERVER_USER'], master_geoserver_password)
         available_styles = do_rest_action(
             session.get,
-            f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
+            f'http://{app.config["GEOSERVER_MANAGER_HOST"]}',
             f'geoserver/rest/styles.json').json()
 
         return {'styles': [
@@ -803,7 +791,7 @@ def delete_raster(local_path, asset_id, catalog):
     cover_id = f'{asset_id}_cover'
     delete_coverstore_result = do_rest_action(
         session.delete,
-        f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
+        f'http://{app.config["GEOSERVER_MANAGER_HOST"]}',
         f'geoserver/rest/workspaces/{catalog}/'
         f'coveragestores/{cover_id}/?purge=all&recurse=true')
     if not delete_coverstore_result:
@@ -949,13 +937,13 @@ def publish_to_geoserver(
     LOGGER.debug('create workspace if it does not exist')
     workspace_exists_result = do_rest_action(
         session.get,
-        f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
+        f'http://{app.config["GEOSERVER_MANAGER_HOST"]}',
         f'geoserver/rest/workspaces/{catalog}')
     if not workspace_exists_result:
         LOGGER.debug(f'{catalog} does not exist, creating it')
         create_workspace_result = do_rest_action(
             session.post,
-            f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
+            f'http://{app.config["GEOSERVER_MANAGER_HOST"]}',
             'geoserver/rest/workspaces',
             json={'workspace': {'name': catalog}})
         if not create_workspace_result:
@@ -966,7 +954,7 @@ def publish_to_geoserver(
     cover_id = f'{raster_id}_cover'
     coverstore_exists_result = do_rest_action(
         session.get,
-        f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
+        f'http://{app.config["GEOSERVER_MANAGER_HOST"]}',
         f'geoserver/rest/workspaces/{catalog}/coveragestores/{cover_id}')
 
     LOGGER.debug(
@@ -977,7 +965,7 @@ def publish_to_geoserver(
         # coverstore exists, delete it
         delete_coverstore_result = do_rest_action(
             session.delete,
-            f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
+            f'http://{app.config["GEOSERVER_MANAGER_HOST"]}',
             f'geoserver/rest/workspaces/{catalog}/'
             f'coveragestores/{cover_id}/?purge=all&recurse=true')
         if not delete_coverstore_result:
@@ -999,7 +987,7 @@ def publish_to_geoserver(
 
     create_coverstore_result = do_rest_action(
         session.post,
-        f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
+        f'http://{app.config["GEOSERVER_MANAGER_HOST"]}',
         f'geoserver/rest/workspaces/{catalog}/coveragestores',
         json=coveragestore_payload)
     if not create_coverstore_result:
@@ -1130,7 +1118,7 @@ def publish_to_geoserver(
     LOGGER.debug('send cover request to GeoServer')
     create_cover_result = do_rest_action(
         session.post,
-        f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
+        f'http://{app.config["GEOSERVER_MANAGER_HOST"]}',
         f'geoserver/rest/workspaces/{catalog}/'
         f'coveragestores/{urllib.parse.quote(cover_id)}/coverages/',
         json=cover_payload)
@@ -1252,7 +1240,7 @@ def add_raster_worker(
             session = requests.Session()
             resize_disk_request = do_rest_action(
                 session.post,
-                f'http://{app.config['DISK_RESIZE_SERVICE_HOST']}',
+                f'http://{app.config["DISK_RESIZE_SERVICE_HOST"]}',
                 f'resize',
                 json={'gb_to_add': additional_gb})
 
@@ -1569,7 +1557,7 @@ def initalize_geoserver(database_path, api_server_name):
     session.auth = (app.config['GEOSERVER_USER'], 'geoserver')
     password_update_request = do_rest_action(
         session.put,
-        f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
+        f'http://{app.config["GEOSERVER_MANAGER_HOST"]}',
         'geoserver/rest/security/self/password',
         json={
             'newPassword': geoserver_password
@@ -1583,7 +1571,7 @@ def initalize_geoserver(database_path, api_server_name):
     # configuration before the new password is used
     password_update_request = do_rest_action(
         session.post,
-        f'http://{app.config['GEOSERVER_MANAGER_HOST']}',
+        f'http://{app.config["GEOSERVER_MANAGER_HOST"]}',
         'geoserver/rest/reload')
 
 
