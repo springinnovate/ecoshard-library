@@ -48,6 +48,20 @@ services:
     networks:
       - api_stac_nw
 
+  expand-drive-service:
+    container_name: expand_drive_service
+    restart: always
+    networks:
+      - api_stac_nw
+    command: [
+      '--app_port', '${DISK_RESIZE_SERVICE_APP_PORT}',
+      '--disk_name', '${DISK_RESIZE_SERVICE_DISK_NAME}',
+      '--device_name', '${DISK_RESIZE_SERVICE_DEVICE_NAME}',
+      '--zone', '${DISK_RESIZE_SERVICE_ZONE}',
+      '--max_size_gb', '${DISK_RESIZE_SERVICE_MAX_SIZE_GB}',
+      '--project', '${DISK_RESIZE_SERVICE_PROJECT}'
+      ]
+
   test:
     container_name: test
     build: docker_contexts/test_docker
