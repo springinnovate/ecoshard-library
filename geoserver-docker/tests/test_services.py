@@ -9,7 +9,7 @@ A_LAST = "Fitzgerald"
 AN_ORG = "AnyCo"
 
 
-def test_create_user_validate_email(app, monkeypatch):
+def test_create_user_validate_email(app):
     # When no email is provided a ValueError is raised
     with pytest.raises(ValueError):
         services.create_user("", A_PASSWORD, A_FIRST, A_LAST, AN_ORG)

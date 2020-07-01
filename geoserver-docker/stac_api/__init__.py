@@ -28,7 +28,7 @@ import pygeoprocessing
 import requests
 import retrying
 
-from .auth import auth_bp, db
+from .auth import auth_bp, db, jwt_required
 
 
 LOCAL_GEOSERVER = 'localhost:8080'
@@ -184,15 +184,18 @@ def create_app(config=None):
             return str(e), 500
 
     @app.route('/api/v1/fetch', methods=["POST"])
+    @jwt_required
     def fetch():
         """Search the catalog using STAC format.
 
         Fetch a link from the catalog
 
         Args:
-            query parameter:
-                api_key, used to filter query results, must have READ:* or
-                    READ:[catalog] access to get results from that catalog.
+            securitySchemes:
+              bearerAuth:
+                type: http
+                scheme: bearer
+                bearerFormat: JWT
             body parameters include:
                 catalog (str): catalog the asset is located in
                 asset_id (str): asset it of the asset in the given catalog.
@@ -225,10 +228,6 @@ def create_app(config=None):
             fetch_data = json.loads(flask.request.json)
         else:
             fetch_data = flask.request.json
-        api_key = flask.request.args['api_key']
-        valid_check = validate_api(api_key, f'READ:{fetch_data["catalog"]}')
-        if valid_check != 'valid':
-            return valid_check
 
         fetch_payload = _execute_sqlite(
             '''
@@ -262,7 +261,7 @@ def create_app(config=None):
         elif fetch_type == 'wms_preview':
             link = flask.url_for(
                 'viewer', catalog=fetch_data['catalog'],
-                asset_id=fetch_data['asset_id'], api_key=api_key)
+                asset_id=fetch_data['asset_id'])
         elif fetch_type == 'wms':
             p2 = raster_min+(raster_max-raster_min)*0.02
             p25 = raster_min+(raster_max-raster_min)*0.25
