@@ -11,7 +11,6 @@ Secrets
 
 In order to allow for automatic disk resizing, a GCE drive must be mounted on the host where the device is formatted as ext4. If this is the case then you can define the following variables in the ``stac_envs`` file:
 
-    * ``DISK_RESIZE_SERVICE_PROJECT`` -- GCE project containing the disk
     * ``DISK_RESIZE_SERVICE_ZONE`` -- GCE service zone for the disk
     * ``DISK_RESIZE_SERVICE_DISK_NAME`` -- the name of the disk in the GCE console/context.
     * ``DISK_RESIZE_SERVICE_MAX_SIZE_GB`` -- max allowed size of the disk in GB
