@@ -86,4 +86,4 @@ networks:
 
 secrets:
   service_account_key:
-    file: '${SERVICE_ACCOUNT_KEYFILE}'
+    file: ${SERVICE_ACCOUNT_KEYFILE}
