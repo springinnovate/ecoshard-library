@@ -24,7 +24,7 @@ services:
     depends_on:
       - geoserver-node
     secrets:
-      - service_account_key
+      - bucket_read_service_account_key
 
   nginx:
     image: "nginx:1.13.5"
@@ -86,4 +86,6 @@ networks:
 
 secrets:
   disk_resize_service_account_key:
+    file: ${DISK_RESIZE_SERVICE_ACCOUNT_KEYFILE}
+  bucket_read_service_account_key:
     file: ${DISK_RESIZE_SERVICE_ACCOUNT_KEYFILE}
