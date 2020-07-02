@@ -53,6 +53,7 @@ services:
 
   expand-drive-service:
     container_name: expand_drive_service
+    build: docker_contexts/expand_drive_service
     restart: always
     networks:
       - api_stac_nw
