@@ -15,7 +15,7 @@ RUN echo "export PATH=$PATH:/usr/local/gcloud-sdk/google-cloud-sdk/bin" >> /root
 
 WORKDIR /usr/local/expand_drive_service
 COPY . /usr/local/expand_drive_service
-RUN pip3 install -r requirements
+RUN pip3 install -r requirements.txt
 
 EXPOSE ${DISK_RESIZE_SERVICE_PORT}
 ENTRYPOINT ["./launch_expand_drive_service.sh"]
