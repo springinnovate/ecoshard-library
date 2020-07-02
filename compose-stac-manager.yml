@@ -53,6 +53,8 @@ services:
     restart: always
     networks:
       - api_stac_nw
+    devices:
+      - ${DISK_RESIZE_SERVICE_DEVICE_NAME}:${DISK_RESIZE_SERVICE_DEVICE_NAME}
     command: [
       '--app_port', '${DISK_RESIZE_SERVICE_APP_PORT}',
       '--disk_name', '${DISK_RESIZE_SERVICE_DISK_NAME}',
