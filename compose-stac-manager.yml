@@ -1,4 +1,4 @@
-version: '3.2'
+version: '3.6'
 services:
   geoserver-node:
     container_name: geoserver-node
@@ -22,6 +22,8 @@ services:
     tty: true
     depends_on:
       - geoserver-node
+    secrets:
+      - service-account-key
 
   nginx:
     image: "nginx:1.13.5"
@@ -63,6 +65,8 @@ services:
       '--max_size_gb', '${DISK_RESIZE_SERVICE_MAX_SIZE_GB}',
       '--project', '${DISK_RESIZE_SERVICE_PROJECT}'
       ]
+  secrets:
+      - service-account-key
 
   test:
     container_name: test
@@ -72,8 +76,12 @@ services:
     tty: true
     depends_on:
       - db
-    command: ['${DB_USER}', '${DB_PASSWORD}', 'db:5432']
+    command: ['${DB_USER}', '${DB_PASSWORD}', 'db:${DB_PORT}']
 
 networks:
   api_stac_nw:
     driver: bridge
+
+secrets:
+  service-account-key:
+    file: ${SERVICE_ACCOUNT_KEYFILE}
