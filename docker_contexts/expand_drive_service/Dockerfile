@@ -12,12 +12,10 @@ RUN ./google-cloud-sdk/install.sh
 RUN source /usr/local/gcloud-sdk/google-cloud-sdk/completion.bash.inc
 RUN source /usr/local/gcloud-sdk/google-cloud-sdk/path.bash.inc
 RUN echo "export PATH=$PATH:/usr/local/gcloud-sdk/google-cloud-sdk/bin" >> /root/.bashrc
-RUN echo `ls /run/secrets`
-RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=/run/secrets/service_account_key
 
 WORKDIR /usr/local/expand_drive_service
 COPY . /usr/local/expand_drive_service
 RUN pip3 install -r requirements
 
 EXPOSE ${DISK_RESIZE_SERVICE_PORT}
-ENTRYPOINT ["./expand_drive_serivce.py"]
+ENTRYPOINT ["./launch_expand_drive_service.sh"]
