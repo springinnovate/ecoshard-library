@@ -1,4 +1,5 @@
 version: '3.6'
+
 services:
   geoserver-node:
     container_name: geoserver-node
@@ -23,7 +24,7 @@ services:
     depends_on:
       - geoserver-node
     secrets:
-      - service-account-key
+      - service_account_key
 
   nginx:
     image: "nginx:1.13.5"
@@ -66,7 +67,7 @@ services:
       '--project', '${DISK_RESIZE_SERVICE_PROJECT}'
       ]
   secrets:
-      - service-account-key
+      - service_account_key
 
   test:
     container_name: test
@@ -83,5 +84,5 @@ networks:
     driver: bridge
 
 secrets:
-  service-account-key:
+  service_account_key:
     file: '${SERVICE_ACCOUNT_KEYFILE}'
