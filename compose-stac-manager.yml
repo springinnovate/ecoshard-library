@@ -60,7 +60,7 @@ services:
     devices:
       - ${DISK_RESIZE_SERVICE_DEVICE_NAME}:${DISK_RESIZE_SERVICE_DEVICE_NAME}
     command: [
-      '--app_port', '${DISK_RESIZE_SERVICE_APP_PORT}',
+      '--app_port', '${DISK_RESIZE_SERVICE_PORT}',
       '--disk_name', '${DISK_RESIZE_SERVICE_DISK_NAME}',
       '--device_name', '${DISK_RESIZE_SERVICE_DEVICE_NAME}',
       '--zone', '${DISK_RESIZE_SERVICE_ZONE}',
@@ -68,7 +68,7 @@ services:
       '--project', '${DISK_RESIZE_SERVICE_PROJECT}'
       ]
     secrets:
-      - service_account_key
+      - disk_resize_service_account_key
 
   test:
     container_name: test
@@ -85,5 +85,5 @@ networks:
     driver: bridge
 
 secrets:
-  service_account_key:
-    file: ./service_account_key.json
+  disk_resize_service_account_key:
+    file: ${DISK_RESIZE_SERVICE_ACCOUNT_KEYFILE}
