@@ -1,15 +1,17 @@
 STAC/Geoserver Platform
 =======================
 
-Architecture
-------------
+Services
+--------
 
-    * Disk resize service listens on port 8082
+    * `geoserver` (port 8080), serves WMS tiles and used by STAC manager to register new assets
+    * `expand_drive_service` (port 8082), used to inrease the size of the disk used by the Geoserver node.
+         * ``/resize``, ``POST``, ``{'gb_to_add': '12'}
 
-Secrets
--------
+Configuration
+-------------
 
-In order to allow for automatic disk resizing, a GCE drive must be mounted on the host where the device is formatted as ext4. If this is the case then you can define the following variables in the ``stac_envs`` file:
+When deploying the platform you must create a file call ``stac_envs``. This file sets environment variables for the Docker containers that allow them to operate correctly. An example file is given in the root of this project at ``example_stac_envs``.
 
     * ``DISK_RESIZE_SERVICE_ZONE`` -- GCE service zone for the disk
     * ``DISK_RESIZE_SERVICE_DISK_NAME`` -- the name of the disk in the GCE console/context.
@@ -19,3 +21,4 @@ In order to allow for automatic disk resizing, a GCE drive must be mounted on th
         * ``compute.disks.create`` on the project to be able to create a new disk
         * ``compute.instances.attachDisk`` on the VM instance
         * ``compute.disks.use`` permission on the disk to attach
+

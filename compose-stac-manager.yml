@@ -1,8 +1,8 @@
 version: '3.6'
 
 services:
-  geoserver-node:
-    container_name: geoserver-node
+  geoserver:
+    container_name: geoserver
     build: docker_contexts/geoserver_node_docker
     networks:
       - api_stac_nw
@@ -11,8 +11,8 @@ services:
     command: ['${GEOSERVER_MAX_RAM}']
     tty: true
 
-  stac-manager:
-    container_name: stac-manager
+  stac_manager:
+    container_name: stac_manager
     build: docker_contexts/stac-api-docker
     ports:
       - 8888:8888
@@ -22,7 +22,7 @@ services:
       - api_stac_nw
     tty: true
     depends_on:
-      - geoserver-node
+      - geoserver
     secrets:
       - bucket_read_service_account_key
 
@@ -39,7 +39,7 @@ services:
     networks:
       - api_stac_nw
     depends_on:
-      - stac-manager
+      - stac_manager
 
   db:
     image: postgres
@@ -51,7 +51,7 @@ services:
     networks:
       - api_stac_nw
 
-  expand-drive-service:
+  expand_drive_service:
     container_name: expand_drive_service
     build: docker_contexts/expand_drive_service
     restart: always
