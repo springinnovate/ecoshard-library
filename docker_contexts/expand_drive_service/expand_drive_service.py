@@ -20,7 +20,33 @@ LOGGER = logging.getLogger(__name__)
 
 @APP.route('/resize', methods=['POST'])
 def resize():
-    """Resize the disk."""
+    """Resize the disk.
+    ---
+
+    post:
+      description: "add disk space"
+      content:
+        application/json:
+          schema:
+            type: "object"
+            required:
+              - gb_to_add
+            properties:
+              gb_to_add:
+                type: "string"
+
+    responses:
+      "200":
+        description: "Resized"
+        content:
+          text/plain:
+            schema:
+              type: string
+              example: success
+      "500":
+        description: "disk too big, cannot increase size"
+
+    """
     gb_to_add = json.loads(flask.request.get_data())['gb_to_add']
     LOGGER.debug(f'increase by {gb_to_add}G')
     gsutil_ls_result = subprocess.run([
@@ -45,7 +71,6 @@ def resize():
     # resize the file system
     LOGGER.debug('resize the filesystem')
     subprocess.run(['resize2fs', DEVICE_NAME], check=True)
-
     return 'success', 200
 
 
