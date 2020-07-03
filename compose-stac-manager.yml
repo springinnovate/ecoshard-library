@@ -34,7 +34,7 @@ services:
       - 80:80
       - 443:443
     volumes:
-      - ./nginx_configurations/stac_api_nginx_conf:/etc/nginx/conf.d
+      - ./nginx_configurations/stac_api_nginx_conf.d:/etc/nginx/conf.d
       - /etc/letsencrypt:/etc/letsencrypt
     networks:
       - api_stac_nw
