@@ -28,6 +28,9 @@ services:
     depends_on:
       - geoserver
       - db
+    environment:
+      - BUCKET_READ_SERVICE_ACCOUNT_KEYFILE=/run/secrets/bucket_read_service_account_key
+      - SIGN_URL_PUBLIC_KEY_PATH=/run/secrets/sign_url_public_key
     secrets:
       - bucket_read_service_account_key
       - sign_url_public_key
@@ -57,6 +60,8 @@ services:
       '--zone', '${DISK_RESIZE_SERVICE_ZONE}',
       '--max_size_gb', '${DISK_RESIZE_SERVICE_MAX_SIZE_GB}',
       ]
+    environment:
+      - DISK_RESIZE_SERVICE_ACCOUNT_KEY=/run/secrets/disk_resize_service_account_key
     secrets:
       - disk_resize_service_account_key
 

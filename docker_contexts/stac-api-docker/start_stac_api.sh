@@ -1,6 +1,6 @@
 #!/bin/bash -x
 # Authenticate the gcloud SDK so it can read from buckets
-/usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=/run/secrets/bucket_read_service_account_key
+/usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=${BUCKET_READ_SERVICE_ACCOUNT_KEYFILE}
 
 touch stac_api/config.py
 echo "GEOSERVER_MANAGER_HOST = '${GEOSERVER_MANAGER_HOST}'" >> stac_api/config.py

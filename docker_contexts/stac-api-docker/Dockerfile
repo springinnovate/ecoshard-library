@@ -22,9 +22,6 @@ RUN source /usr/local/gcloud-sdk/google-cloud-sdk/completion.bash.inc
 RUN source /usr/local/gcloud-sdk/google-cloud-sdk/path.bash.inc
 RUN echo "export PATH=$PATH:/usr/local/gcloud-sdk/google-cloud-sdk/bin" >> /root/.bashrc
 
-# reference public key authorization for creating signed urls for public file downloads
-ENV SIGN_URL_PUBLIC_KEY_PATH=/run/secrets/sign_url_public_key
-
 RUN mkdir -p /usr/local/stac_manager
 
 COPY . /usr/local/stac_manager/
