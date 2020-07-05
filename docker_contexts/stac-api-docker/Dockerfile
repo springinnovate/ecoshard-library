@@ -31,4 +31,4 @@ RUN pip3 install -e .
 
 WORKDIR /usr/local/stac_manager/stac_api
 EXPOSE ${API_HOST_PORT}
-ENTRYPOINT ["bash",  "-i", "/usr/local/stac_manager/start_stac_manager.sh"]
+ENTRYPOINT ["bash",  "-i", "/usr/local/stac_manager/start_stac_api.sh"]
