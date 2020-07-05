@@ -28,7 +28,7 @@ WORKDIR /usr/local/stac_manager
 COPY requirements.txt /usr/local/stac_manager/
 RUN pip3 install -r requirements.txt
 
-COPY [^start_stac_api.sh]* /usr/local/stac_manager/
+COPY [^start_stac_api]* /usr/local/stac_manager/
 RUN pip3 install -e .
 COPY start_stac_api.sh /usr/local/stac_manager/
 
