@@ -21,6 +21,7 @@ from osgeo import ogr
 from osgeo import osr
 import ecoshard
 import flask
+import flask_cors
 from flask_migrate import Migrate
 import numpy
 import pygeoprocessing
@@ -57,6 +58,7 @@ def create_app(config=None):
     # wait for API calls
 
     app = flask.Flask(__name__, instance_relative_config=False)
+    flask_cors.CORS(app)
     app.config.from_mapping(
         SECRET_KEY='dev',
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
