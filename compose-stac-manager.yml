@@ -4,6 +4,8 @@ services:
   geoserver:
     container_name: geoserver
     build: docker_contexts/geoserver_node_docker
+    ports:
+      - 8080:8080
     networks:
       - api_stac_nw
     volumes:
