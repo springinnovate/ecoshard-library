@@ -1,10 +1,6 @@
 # Container for STAC API manager
 FROM therealspring/python-gdal:3.0.4
 
-# copy public key authorization for creating signed urls for public file downloads
-COPY cfo-public-auth.json /usr/local/cfo-public-auth.json
-ENV CFO_PUBLIC_KEY=/usr/local/cfo-public-auth.json
-
 RUN apt-get update -qq && \
     apt-get install -y \
     emacs \
@@ -27,6 +23,9 @@ RUN source /usr/local/gcloud-sdk/google-cloud-sdk/path.bash.inc
 RUN echo "export PATH=$PATH:/usr/local/gcloud-sdk/google-cloud-sdk/bin" >> /root/.bashrc
 RUN /usr/local/gcloud-sdk/google-cloud-sdk/bin/gcloud auth activate-service-account --key-file=/run/secrets/service_account_key
 
+# reference public key authorization for creating signed urls for public file downloads
+ENV SIGN_URL_PUBLIC_KEY_PATH=/run/secrets/sign_url_public_key
+
 RUN mkdir -p /usr/local/stac_manager
 
 COPY . /usr/local/stac_manager/
@@ -35,5 +34,5 @@ RUN pip3 install -r requirements.txt
 RUN pip3 install -e .
 
 WORKDIR /usr/local/stac_manager/stac_api
-EXPOSE 8888
+EXPOSE ${API_HOST_PORT}
 ENTRYPOINT ["bash",  "-i", "/usr/local/stac_manager/start_stac_manager.sh"]

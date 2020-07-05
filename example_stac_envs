@@ -1,14 +1,20 @@
-GEOSERVER_MAX_RAM=5g
-HOST_GEOSERVER_DATA_DRIVE=/mnt/geoserver_data
+# Host environment
+GEOSERVER_DATA_DIR=/mnt/geoserver_data
+
+# Geoserver environment
 GEOSERVER_MANAGER_HOST=localhost:8080
+GEOSERVER_MAX_RAM=5g
 GEOSERVER_USER=admin
 INTERNAL_GEOSERVER_DATA_DIR=data
-LOCAL_GEOSERVER_DATA_DIR=/opt/tomcat/webapps/geoserver/data
 
+# API manager environment
+API_HOST_PORT=8888
 DEFAULT_STYLE=vegetation
+API_FLASK_SECRET_KEY=replace_with_real_secret
+SIGN_URL_PUBLIC_KEYFILE=./cfo-public-auth.json
+BUCKET_READ_SERVICE_ACCOUNT_KEYFILE=./bucket-read-keyfile-project-name.json
 
-SECRET_KEY=replace_with_real_secret
-
+# Databse environment
 DB_HOST=db_test
 DB_USER=replace_with_real_db_user
 DB_PASSWORD=replace_with_real_db_password
@@ -16,9 +22,9 @@ DB_PORT=5432
 DATABASE_NAME=stac_api_db
 SQLALCHEMY_DATABASE_URI=postgresql://${DB_HOST}:${DB_USER}@${DB_PASSWORD}/${DATABASE_NAME}
 
+# Disk Resize Environment
 DISK_RESIZE_SERVICE_DISK_NAME=geoserver-data-disk
 DISK_RESIZE_SERVICE_DEVICE_NAME=/dev/sdb
 DISK_RESIZE_SERVICE_ZONE=us-west1-b
 DISK_RESIZE_SERVICE_MAX_SIZE_GB=4098
-
 DISK_RESIZE_SERVICE_ACCOUNT_KEYFILE=./disk-resize-keyfile-project-name.json

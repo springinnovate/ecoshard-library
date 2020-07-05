@@ -7,7 +7,7 @@ services:
     networks:
       - api_stac_nw
     volumes:
-      - ${HOST_GEOSERVER_DATA_DRIVE}:/opt/tomcat/webapps/geoserver/data
+      - ${GEOSERVER_DATA_DIR}:${GEOSERVER_DATA_DIR}
     command: ['${GEOSERVER_MAX_RAM}']
     tty: true
 
@@ -15,31 +15,18 @@ services:
     container_name: stac_manager
     build: docker_contexts/stac-api-docker
     ports:
-      - 8888:8888
+      - ${API_HOST_PORT}:${API_HOST_PORT}
     volumes:
-      - /mnt/geoserver_data:/usr/local/geoserver/data_dir
+      - ${GEOSERVER_DATA_DIR}:${GEOSERVER_DATA_DIR}
     networks:
       - api_stac_nw
     tty: true
     depends_on:
       - geoserver
+      - db
     secrets:
       - bucket_read_service_account_key
-
-  nginx:
-    image: "nginx:1.13.5"
-    container_name: "nginx"
-    command: [nginx-debug, '-g', 'daemon off;']
-    ports:
-      - 80:80
-      - 443:443
-    volumes:
-      - ./nginx_configurations/stac_api_nginx_conf.d:/etc/nginx/conf.d
-      - /etc/letsencrypt:/etc/letsencrypt
-    networks:
-      - api_stac_nw
-    depends_on:
-      - stac_manager
+      - sign_url_public_key
 
   db:
     image: postgres
@@ -70,6 +57,21 @@ services:
     secrets:
       - disk_resize_service_account_key
 
+  nginx:
+    image: "nginx:1.13.5"
+    container_name: "nginx"
+    command: [nginx-debug, '-g', 'daemon off;']
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx_configurations/stac_api_nginx_conf.d:/etc/nginx/conf.d
+      - /etc/letsencrypt:/etc/letsencrypt
+    networks:
+      - api_stac_nw
+    depends_on:
+      - stac_manager
+
   test:
     container_name: test
     build: docker_contexts/test_docker
@@ -88,4 +90,6 @@ secrets:
   disk_resize_service_account_key:
     file: ${DISK_RESIZE_SERVICE_ACCOUNT_KEYFILE}
   bucket_read_service_account_key:
-    file: ${DISK_RESIZE_SERVICE_ACCOUNT_KEYFILE}
+    file: ${BUCKET_READ_SERVICE_ACCOUNT_KEYFILE}
+  sign_url_public_key:
+    file: ${SIGN_URL_PUBLIC_KEYFILE}
