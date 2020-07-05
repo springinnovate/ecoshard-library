@@ -10,7 +10,7 @@ services:
       - ${GEOSERVER_DATA_DIR}:${GEOSERVER_DATA_DIR}
     environment:
       - GEOSERVER_DATA_DIR=${GEOSERVER_DATA_DIR}
-    command: ['${GEOSERVER_MAX_RAM}']
+      - GEOSERVER_MAX_RAM=${GEOSERVER_MAX_RAM}
     tty: true
 
   stac_manager:
