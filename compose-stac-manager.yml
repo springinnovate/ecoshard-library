@@ -8,6 +8,8 @@ services:
       - api_stac_nw
     volumes:
       - ${GEOSERVER_DATA_DIR}:${GEOSERVER_DATA_DIR}
+    environment:
+        GEOSERVER_DATA_DIR=${GEOSERVER_DATA_DIR}
     command: ['${GEOSERVER_MAX_RAM}']
     tty: true
 

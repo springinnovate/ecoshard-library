@@ -5,4 +5,4 @@ export JAVA_OPTS="-Xms2g -Xmx$1 -XX:SoftRefLRUPolicyMSPerMB=36000 -server -XX:+U
 export JAVA_BIN=/usr/bin/java
 
 cd $GEOSERVER_HOME
-/opt/tomcat/bin/catalina.sh run > tomcatlog.txt
+/opt/tomcat/bin/catalina.sh run
