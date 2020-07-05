@@ -83,7 +83,7 @@ services:
     tty: true
     depends_on:
       - db
-    command: ['${DB_USER}', '${DB_PASSWORD}', 'db:${DB_PORT}']
+    command: ['${DB_USER}', '${DB_PASSWORD}', 'db:5432']
 
 networks:
   api_stac_nw:
