@@ -56,7 +56,6 @@ services:
       '--device_name', '${DISK_RESIZE_SERVICE_DEVICE_NAME}',
       '--zone', '${DISK_RESIZE_SERVICE_ZONE}',
       '--max_size_gb', '${DISK_RESIZE_SERVICE_MAX_SIZE_GB}',
-      '--project', '${DISK_RESIZE_SERVICE_PROJECT}'
       ]
     secrets:
       - disk_resize_service_account_key

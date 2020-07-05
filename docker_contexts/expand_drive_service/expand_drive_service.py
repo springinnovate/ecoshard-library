@@ -90,16 +90,12 @@ if __name__ == '__main__':
     parser.add_argument(
         '--max_size_gb', type=int, required=True, help=(
             'maximum allowed size of the disk in integer GB'))
-    parser.add_argument(
-        '--project', type=str, required=True,
-        help='name of project disk lives in')
     args = parser.parse_args()
 
     MAX_SIZE_GB = args.max_size_gb
     DEVICE_NAME = args.device_name
     DISK_NAME = args.disk_name
     ZONE = args.zone
-    PROJECT = args.project
 
     APP.run(
         host='0.0.0.0',
