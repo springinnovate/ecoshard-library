@@ -24,11 +24,13 @@ RUN echo "export PATH=$PATH:/usr/local/gcloud-sdk/google-cloud-sdk/bin" >> /root
 
 RUN mkdir -p /usr/local/stac_manager
 
-COPY . /usr/local/stac_manager/
 WORKDIR /usr/local/stac_manager
+COPY requirements.txt /usr/local/stac_manager/
 RUN pip3 install -r requirements.txt
-RUN pip3 install -e .
 
-WORKDIR /usr/local/stac_manager/stac_api
+COPY [^start_stac_api.sh]* /usr/local/stac_manager/
+RUN pip3 install -e .
+COPY start_stac_api.sh /usr/local/stac_manager/
+
 EXPOSE ${API_HOST_PORT}
 ENTRYPOINT ["bash",  "-i", "/usr/local/stac_manager/start_stac_api.sh"]
