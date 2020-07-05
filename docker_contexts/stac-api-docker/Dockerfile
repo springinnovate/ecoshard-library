@@ -28,9 +28,10 @@ WORKDIR /usr/local/stac_manager
 COPY requirements.txt /usr/local/stac_manager/
 RUN pip3 install -r requirements.txt
 
-COPY [^start_stac_api]* /usr/local/stac_manager/
+COPY . /usr/local/stac_manager/
+RUN rm start_stac_api.sh
 RUN pip3 install -e .
-COPY start_stac_api.sh /usr/local/stac_manager/
 
+COPY start_stac_api.sh /usr/local/stac_manager/
 EXPOSE ${API_HOST_PORT}
 ENTRYPOINT ["bash",  "-i", "/usr/local/stac_manager/start_stac_api.sh"]
