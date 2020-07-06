@@ -25,3 +25,6 @@ pytest-cov==2.9.0
 flanker==0.9.11
 PyJWT==1.7.1
 freezegun==0.3.15
+
+# sign url packages
+google-auth==1.18.0
