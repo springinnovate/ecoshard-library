@@ -35,6 +35,10 @@ def create_app(config=None):
     app.config.from_pyfile('config.py', silent=False)
     if config is not None:
         app.config.from_mapping(config)
+
+    app.config['PASSWORD_FILE_PATH'] = os.path.join(
+        app.config['GEOSERVER_DATA_DIR'], 'secrets', 'password')
+
     flask_cors.CORS(app)
 
     db.init_app(app)

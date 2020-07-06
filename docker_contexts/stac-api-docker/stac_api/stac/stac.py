@@ -1412,6 +1412,7 @@ def get_database_layers():
 def initalize_geoserver():
     """Ensure database exists, set security, and set server initial stores."""
     # make new random admin password
+
     if os.path.exists(current_app.config['PASSWORD_FILE_PATH']):
         with open(current_app.config['PASSWORD_FILE_PATH'], 'r') as \
                 password_file:
