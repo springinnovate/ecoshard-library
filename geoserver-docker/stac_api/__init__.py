@@ -30,6 +30,12 @@ import retrying
 
 from .auth import auth_bp, db, jwt_required
 
+# google public auth
+import binascii
+import collections
+import sys
+from google.oauth2 import service_account
+from urllib.parse import quote
 
 LOCAL_GEOSERVER = 'localhost:8080'
 LOCAL_DISK_RESIZE_SERVICE = 'localhost:8082'
@@ -44,6 +50,8 @@ STYLE_DIR_PATH = os.path.abspath(os.path.join('..', 'data_dir', 'styles'))
 SCHEMA_SQL_PATH = 'schema.sql'
 EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
 LOG_FILE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'logging.json')
+
+DOWNLOAD_HEADERS = {"Content-Disposition": "attachment"}
 
 with open(LOG_FILE_PATH) as f:
     logging.config.dictConfig(json.load(f))
@@ -270,6 +278,22 @@ def create_app(config=None):
             # equivalents of https://storage.cloud.google.com/[VALUE]
             link = os.path.join(
                 'https://storage.cloud.google.com', gs_link.split('gs://')[1])
+        elif fetch_data['type'] == 'signed_url':
+            # split the bucket path into the bucket name and the full object path
+            gs_link = fetch_payload[0]
+            bucket_path = gs_link.split('gs://')[1]
+            bucket_end = bucket_path.find('/')
+            bucket_name = bucket_path[:bucket_end]
+            object_name = bucket_path[bucket_end+1:]
+
+            # handle catalog-specific authentication
+            if fetch_data['catalog'].lower() == 'cfo':
+                link = generate_signed_url(
+                    bucket_name, object_name,
+                    service_account_file=app.config['SIGN_URL_PUBLIC_KEY_PATH'])
+            else:
+                return ("Signed URLS only available for CFO catalog. Entered; {}".format(
+                    fetch_data['catalog']), 400)
         elif fetch_type == 'wms_preview':
             link = flask.url_for(
                 'viewer', catalog=fetch_data['catalog'],
@@ -293,14 +317,23 @@ def create_app(config=None):
                 f'&p0={raster_min}&p2={p2}&p25={p25}&p30={p30}&p50={p50}'
                 f'&p60={p60}&p75={p75}&p90={p90}&p98={p98}&p100={raster_max}')
 
-        return {
-            'type': fetch_data['type'],
-            'link': link,
-            'raster_min': raster_min,
-            'raster_max': raster_max,
-            'raster_mean': raster_mean,
-            'raster_stdev': raster_stdev,
-        }
+        response = flask.Response({
+             'type': fetch_data['type'],
+             'link': link,
+             'raster_min': raster_min,
+             'raster_max': raster_max,
+             'raster_mean': raster_mean,
+             'raster_stdev': raster_stdev,
+        })
+
+        # handle browser compatibility problem where safari default reads
+        # bucket links inline instead of downloading the file
+        if fetch_data['type'] in ['url', 'signed_url']:
+            keys = list(DOWNLOAD_HEADERS.keys())
+            for key in keys:
+                response.headers[key] = DOWNLOAD_HEADERS[key]
+
+        return response
 
     @app.route('/api/v1/styles')
     def styles():
@@ -1624,3 +1657,108 @@ def expiration_monitor(database_path):
             time.sleep(EXPIRATION_MONITOR_DELAY)
     except Exception:
         LOGGER.exception('something bad happened in expiration_monitor')
+
+
+def generate_signed_url(
+    bucket_name, object_name, service_account_file,
+    subresource=None, expiration=604800, http_method='GET',
+        query_parameters=None, headers=None):
+    """Uses google authentication to generate a signed URL for direct bucket downloads
+
+    Args:
+        bucket_name (str): the cloud storage bucket storing the object
+        object_name (str): the path to the storage object
+        service_account_file (str): path to a google credentials file with bucket permissions
+        expiration (int): time to link expiration in seconds
+        http_method (str): anticipated request protocol
+        query_parameters (dict): custom query parameters. leave as None for google defaults
+        headers (dict): headers to return
+
+    Returns:
+        signed_url (str): an RSA-signed URL to the cloud storage object
+    """
+    # set limits on the expiration time (max is 7 days)
+    if expiration > 604800:
+        expiration = 604800
+
+    escaped_object_name = quote(str.encode(object_name), safe=b'/~')
+    canonical_uri = '/{}'.format(escaped_object_name)
+
+    # specify active datetime
+    datetime_now = datetime.datetime.utcnow()
+    request_timestamp = datetime_now.strftime('%Y%m%dT%H%M%SZ')
+    datestamp = datetime_now.strftime('%Y%m%d')
+
+    # read the credentials used to format the url
+    google_credentials = service_account.Credentials.from_service_account_file(
+        service_account_file)
+    client_email = google_credentials.service_account_email
+    credential_scope = '{}/auto/storage/goog4_request'.format(datestamp)
+    credential = '{}/{}'.format(client_email, credential_scope)
+
+    # create the google-format headers
+    if headers is None:
+        headers = dict()
+    host = '{}.storage.googleapis.com'.format(bucket_name)
+    headers['host'] = host
+
+    canonical_headers = ''
+    ordered_headers = collections.OrderedDict(sorted(headers.items()))
+    for k, v in ordered_headers.items():
+        lower_k = str(k).lower()
+        strip_v = str(v).lower()
+        canonical_headers += '{}:{}\n'.format(lower_k, strip_v)
+
+    signed_headers = ''
+    for k, _ in ordered_headers.items():
+        lower_k = str(k).lower()
+        signed_headers += '{};'.format(lower_k)
+    signed_headers = signed_headers[:-1]  # remove trailing ';'
+
+    # set google default url params
+    if query_parameters is None:
+        query_parameters = dict()
+    query_parameters['X-Goog-Algorithm'] = 'GOOG4-RSA-SHA256'
+    query_parameters['X-Goog-Credential'] = credential
+    query_parameters['X-Goog-Date'] = request_timestamp
+    query_parameters['X-Goog-Expires'] = expiration
+    query_parameters['X-Goog-SignedHeaders'] = signed_headers
+    if subresource:
+        query_parameters[subresource] = ''
+
+    # join the shit
+    canonical_query_string = ''
+    ordered_query_parameters = collections.OrderedDict(
+        sorted(query_parameters.items()))
+    for k, v in ordered_query_parameters.items():
+        encoded_k = quote(str(k), safe='')
+        encoded_v = quote(str(v), safe='')
+        canonical_query_string += '{}={}&'.format(encoded_k, encoded_v)
+    canonical_query_string = canonical_query_string[:-1]  # remove trailing '&'
+
+    canonical_request = '\n'.join([http_method,
+                                   canonical_uri,
+                                   canonical_query_string,
+                                   canonical_headers,
+                                   signed_headers,
+                                   'UNSIGNED-PAYLOAD'])
+
+    # hash it out
+    canonical_request_hash = hashlib.sha256(
+        canonical_request.encode()).hexdigest()
+
+    string_to_sign = '\n'.join(['GOOG4-RSA-SHA256',
+                                request_timestamp,
+                                credential_scope,
+                                canonical_request_hash])
+
+    # signer.sign() signs using RSA-SHA256 with PKCS1v15 padding
+    signature = binascii.hexlify(
+        google_credentials.signer.sign(string_to_sign)
+    ).decode()
+
+    scheme_and_host = '{}://{}'.format('https', host)
+    signed_url = '{}{}?{}&x-goog-signature={}'.format(
+        scheme_and_host, canonical_uri, canonical_query_string, signature)
+
+    return signed_url
