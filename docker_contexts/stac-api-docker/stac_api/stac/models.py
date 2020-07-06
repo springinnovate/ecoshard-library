@@ -1,4 +1,4 @@
-# SQLAlchemy models for STAC view.
+"""SQLAlchemy models for STAC view."""
 from ..db import db
 
 

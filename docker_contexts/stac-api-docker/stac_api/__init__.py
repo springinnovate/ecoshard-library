@@ -1,16 +1,14 @@
-# sitemaker/__init__.py
-
+"""Top level STAC api app."""
+from .auth import auth_bp
+from .db import db
+#from .stac import stac_bp
 from flask import Flask
-from .auth import auth_bp, auth_db
-from .stac import stac_bp, stac_db
 from flask_migrate import Migrate
 
 app = Flask(__name__)
 
-auth_db.init_app(app)
-auth_migrate = Migrate(app, auth_db)
-app.register_blueprint(auth_bp, url_prefix="/users")
+db.init_app(app)
+migrate = Migrate(app, db)
 
-stac_db.init_app(app)
-stac_migrate = Migrate(app, stac_db)
-app.register_blueprint(stac_bp, url_prefix="/api")
+app.register_blueprint(auth_bp, url_prefix="/users")
+#app.register_blueprint(stac_bp, url_prefix="/api")
