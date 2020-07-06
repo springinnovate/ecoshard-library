@@ -208,7 +208,7 @@ def fetch():
         if fetch_data['catalog'].lower() == 'cfo':
             link = generate_signed_url(
                 bucket_name, object_name,
-                service_account_file=current_app.confg['CFO_PUBLIC_KEY'])
+                current_app.config['SIGN_URL_PUBLIC_KEY_PATH'])
         else:
             return (
                 f"Signed URLS only available for CFO catalog. Entered; "
