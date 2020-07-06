@@ -9,43 +9,49 @@ from . import models, queries, services, utils
 auth_bp = Blueprint("auth", __name__)
 
 
-def jwt_required(view):
+def jwt_required(alternate_parameter=None):
     """ Decorator to require a valid JWT token to access an endpoint.
 
     Adds g.user and g.jwt on success.
     """
 
-    @wraps(view)
-    def wrapper(*args, **kwargs):
-        if "Authorization" not in request.headers:
-            utils.log("no authorization header", logging.WARN)
-            return {}, 401
-        if not request.headers["Authorization"].startswith("Bearer "):
-            utils.log("authorization header not a bearer type", logging.WARN)
-            return {}, 401
+    def decorator(view):
+        @wraps(view)
+        def wrapper(*args, **kwargs):
+            if alternate_parameter is not None and alternate_parameter in request.args:
+                return view(*args, **kwargs)
 
-        matches = re.match(r"^Bearer (\S+)$", request.headers["Authorization"])
-        if not matches:
-            utils.log("invalid bearer token format", logging.WARN)
-            return {}, 401
+            if "Authorization" not in request.headers:
+                utils.log("no authorization header", logging.WARN)
+                return {}, 401
+            if not request.headers["Authorization"].startswith("Bearer "):
+                utils.log("authorization header not a bearer type", logging.WARN)
+                return {}, 401
 
-        g.jwt = utils.decode_jwt(matches.group(1))
-        if not g.jwt:
-            utils.log("unable to decode JWT", logging.WARN)
-            return {}, 401
+            matches = re.match(r"^Bearer (\S+)$", request.headers["Authorization"])
+            if not matches:
+                utils.log("invalid bearer token format", logging.WARN)
+                return {}, 401
 
-        g.user = queries.find_user_by_id(g.jwt["id"])
-        if not g.user:
-            utils.log("no such user", logging.WARN)
-            return {}, 401
+            g.jwt = utils.decode_jwt(matches.group(1))
+            if not g.jwt:
+                utils.log("unable to decode JWT", logging.WARN)
+                return {}, 401
 
-        if not utils.verify_jwt(g.user, matches.group(1)):
-            utils.log("invalid JWT token", logging.WARN)
-            return {}, 401
+            g.user = queries.find_user_by_id(g.jwt["id"])
+            if not g.user:
+                utils.log("no such user", logging.WARN)
+                return {}, 401
 
-        return view(*args, **kwargs)
+            if not utils.verify_jwt(g.user, matches.group(1)):
+                utils.log("invalid JWT token", logging.WARN)
+                return {}, 401
 
-    return wrapper
+            return view(*args, **kwargs)
+
+        return wrapper
+
+    return decorator
 
 
 def verify_content_type_and_params(required_keys, optional_keys):
