@@ -1,11 +1,11 @@
+"""SQLAlchemy models for authentication view."""
 from datetime import datetime
 
-from flask_sqlalchemy import SQLAlchemy
-
-db = SQLAlchemy()
+from ..db import db
 
 
 class User(db.Model):
+    """Represent a user for authentication purposes."""
     __tablename__ = "users"
 
     id = db.Column(db.Integer, primary_key=True)

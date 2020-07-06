@@ -4,6 +4,7 @@ Cython==0.29.19
 ecoshard==0.4.0
 Flask-Cors==3.0.8
 Flask==1.1.2
+Flask-Cors==3.0.8
 GDAL==3.0.4
 matplotlib==3.2.1
 pygeoprocessing==2.0.0
@@ -25,6 +26,7 @@ psycopg2--binary==2.8.5
 PyJWT==1.7.1
 pytest-cov==2.9.0
 pytest==5.4.3
+freezegun==0.3.15
 
 # google cloud storage
 google-auth==1.8.0
