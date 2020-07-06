@@ -38,9 +38,9 @@ def create_app(config=None):
     # config.py should contain a real secret key and
     # a real IP address/hostname
     app.config.from_pyfile('config.py', silent=False)
-
     if config is not None:
         app.config.from_mapping(config)
+    print(app.config)
 
     app.register_blueprint(auth_bp, url_prefix="/users")
     #app.register_blueprint(stac_bp, url_prefix="/api")
