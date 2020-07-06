@@ -184,13 +184,16 @@ def create_app(config=None):
             return str(e), 500
 
     @app.route('/api/v1/fetch', methods=["POST"])
-    @jwt_required
+    @jwt_required('api_key')
     def fetch():
         """Search the catalog using STAC format.
 
         Fetch a link from the catalog
 
         Args:
+            query parameter:
+                api_key, used to filter query results, must have READ:* or
+                    READ:[catalog] access to get results from that catalog.
             securitySchemes:
               bearerAuth:
                 type: http
@@ -228,6 +231,15 @@ def create_app(config=None):
             fetch_data = json.loads(flask.request.json)
         else:
             fetch_data = flask.request.json
+
+        if 'jwt' not in flask.g:
+            if 'api_key' not in flask.request.args:
+                return {}, 401
+
+            api_key = flask.request.args['api_key']
+            valid_check = validate_api(api_key, f'READ:{fetch_data["catalog"]}')
+            if valid_check != 'valid':
+                return valid_check
 
         fetch_payload = _execute_sqlite(
             '''

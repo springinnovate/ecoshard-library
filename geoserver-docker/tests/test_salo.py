@@ -37,3 +37,39 @@ def test_fetch(client, user, monkeypatch):
         }
     )
     assert result.status_code == 200
+
+    # Fetching without a JWT token, but with an api_token works
+    def mock_validate(*args, **kwargs):
+        return 'valid'
+
+    monkeypatch.setattr(stac_api, "validate_api", mock_validate)
+    result = client.post(
+        "/api/v1/fetch?api_key=an-api-key",
+        content_type="application/json",
+        json={
+            'catalog': 'cfo',
+            'asset_id': 'an-asset-id',
+            'type': 'uri',
+        }
+    )
+    assert result.status_code == 200
+    assert result.json["type"] == "uri"
+
+
+def test_fetch_bad_api_token(client, user, monkeypatch):
+    # Fetching without a JWT token, but with an api_token works
+    def mock_validate_failure(*args, **kwargs):
+        return 'invalid'
+
+    monkeypatch.setattr(stac_api, "validate_api", mock_validate_failure)
+    result = client.post(
+        "/api/v1/fetch?api_key=an-api-key",
+        content_type="application/json",
+        json={
+            'catalog': 'cfo',
+            'asset_id': 'an-asset-id',
+            'type': 'uri',
+        }
+    )
+    assert result.status_code == 200
+    assert result.data == b'invalid'
