@@ -25,11 +25,6 @@ def create_app(config=None):
     # wait for API calls
 
     app = Flask(__name__, instance_relative_config=False)
-
-    db.init_app(app)
-    migrate = Migrate(app, db)
-
-    flask_cors.CORS(app)
     app.config.from_mapping(
         SECRET_KEY='dev',
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
@@ -40,6 +35,11 @@ def create_app(config=None):
     app.config.from_pyfile('config.py', silent=False)
     if config is not None:
         app.config.from_mapping(config)
+    flask_cors.CORS(app)
+
+    db.init_app(app)
+    migrate = Migrate(app, db)
+
     print(app.config)
 
     app.register_blueprint(auth_bp, url_prefix="/users")
