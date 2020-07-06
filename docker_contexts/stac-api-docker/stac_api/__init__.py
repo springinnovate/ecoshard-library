@@ -1,6 +1,7 @@
 """Top level STAC api app."""
 import json
 import logging
+import logging.config
 import os
 
 from .auth import auth_bp
