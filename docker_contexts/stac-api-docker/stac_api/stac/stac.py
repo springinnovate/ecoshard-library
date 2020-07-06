@@ -34,14 +34,7 @@ import retrying
 from . import queries
 
 EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
-LOG_FILE_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)), 'logging.json')
-
 DOWNLOAD_HEADERS = {"Content-Disposition": "attachment"}
-
-with open(LOG_FILE_PATH) as f:
-    logging.config.dictConfig(json.load(f))
-LOGGER = logging.getLogger(__name__)
 
 stac_bp = Blueprint("auth", __name__)
 
