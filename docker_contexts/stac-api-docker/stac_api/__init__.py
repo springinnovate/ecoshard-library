@@ -4,8 +4,8 @@ import logging
 import logging.config
 import os
 
-from . import auth
-from . import stac
+from .auth import auth
+from .stac import stac
 from .db import db
 from flask import Flask
 import flask_cors
