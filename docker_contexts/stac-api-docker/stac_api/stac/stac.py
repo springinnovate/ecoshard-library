@@ -1409,7 +1409,7 @@ def get_database_layers():
         f'{catalog}:{asset_id}' for catalog, asset_id in catalog_sql_result]
 
 
-def initalize_geoserver(api_server_name):
+def initalize_geoserver():
     """Ensure database exists, set security, and set server initial stores."""
     # make new random admin password
     if os.path.exists(current_app.config['PASSWORD_FILE_PATH']):

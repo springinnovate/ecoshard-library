@@ -45,8 +45,7 @@ def create_app(config=None):
     app.register_blueprint(auth.auth_bp, url_prefix="/users")
     app.register_blueprint(stac.stac_bp, url_prefix="/api/v1")
 
-    stac.initalize_geoserver(
-        app.config['STAC_DATABASE_URI'], app.config['SERVER_NAME'])
+    stac.initalize_geoserver()
 
     # TODO: remove any old jobs
 
