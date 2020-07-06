@@ -36,7 +36,7 @@ from . import queries
 EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
 DOWNLOAD_HEADERS = {"Content-Disposition": "attachment"}
 
-stac_bp = Blueprint("auth", __name__)
+stac_bp = Blueprint("stac", __name__)
 
 
 @stac_bp.route('/pixel_pick', methods=["POST"])

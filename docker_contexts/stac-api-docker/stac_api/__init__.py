@@ -4,6 +4,8 @@ import logging
 import logging.config
 import os
 
+import auth
+import stac
 from .auth import auth_bp
 from .stac import stac_bp
 from .db import db
@@ -42,21 +44,17 @@ def create_app(config=None):
 
     print(app.config)
 
-    app.register_blueprint(auth_bp, url_prefix="/users")
-    app.register_blueprint(stac_bp, url_prefix="/api/v1")
+    app.register_blueprint(auth.auth_bp, url_prefix="/users")
+    app.register_blueprint(stac.stac_bp, url_prefix="/api/v1")
 
-    initalize_geoserver(
+    stac.initalize_geoserver(
         app.config['STAC_DATABASE_URI'], app.config['SERVER_NAME'])
 
-    # remove any old jobs
-    _execute_sqlite(
-        '''DELETE FROM job_table;''', DATABASE_PATH, mode='modify',
-        execute='execute', argument_list=[])
+    # TODO: remove any old jobs
 
     # start up an expiration monitor
     expiration_monitor_thread = threading.Thread(
-        target=expiration_monitor,
-        args=(DATABASE_PATH,))
+        target=stac.expiration_monitor)
     expiration_monitor_thread.daemon = True
     expiration_monitor_thread.start()
 
