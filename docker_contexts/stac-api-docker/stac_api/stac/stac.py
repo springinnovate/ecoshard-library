@@ -46,10 +46,10 @@ with open(LOG_FILE_PATH) as f:
     logging.config.dictConfig(json.load(f))
 LOGGER = logging.getLogger(__name__)
 
-auth_bp = Blueprint("auth", __name__)
+stac_bp = Blueprint("auth", __name__)
 
 
-@auth_bp.route('/api/v1/pixel_pick', methods=["POST"])
+@stac_bp.route('/pixel_pick', methods=["POST"])
 def pixel_pick():
     """Pick the value from a pixel.
 
@@ -133,7 +133,7 @@ def pixel_pick():
         return str(e), 500
 
 
-@auth_bp.route('/api/v1/fetch', methods=["POST"])
+@stac_bp.route('/fetch', methods=["POST"])
 def fetch():
     """Search the catalog using STAC format.
 
@@ -254,7 +254,7 @@ def fetch():
     return response
 
 
-@auth_bp.route('/api/v1/styles')
+@stac_bp.route('/styles')
 def styles():
     """Return available styles."""
     with open(current_app.config['PASSWORD_FILE_PATH'], 'r') as password_file:
@@ -273,7 +273,7 @@ def styles():
         if style['name'] not in ['generic', 'line', 'point', 'polygon']]}
 
 
-@auth_bp.route('/list')
+@stac_bp.route('/list')
 def render_list():
     """Render a listing webpage."""
     try:
@@ -288,7 +288,7 @@ def render_list():
         LOGGER.exception('error on render list')
 
 
-@auth_bp.route('/viewer')
+@stac_bp.route('/viewer')
 def viewer():
     """Render a viewer webpage."""
     catalog = flask.request.args['catalog']
@@ -346,7 +346,7 @@ def viewer():
     }, _external=True)
 
 
-@auth_bp.route('/api/v1/search', methods=["POST"])
+@stac_bp.route('/search', methods=["POST"])
 def search():
     """Search the catalog using STAC format.
 
@@ -504,7 +504,7 @@ def search():
         return str(e), 500
 
 
-@auth_bp.route('/api/v1/get_status/<job_id>')
+@stac_bp.route('/get_status/<job_id>')
 def get_status(job_id):
     """Return the status of the session."""
     LOGGER.debug('getting status for %s', job_id)
@@ -529,7 +529,7 @@ def get_status(job_id):
         return f'no status for {job_id}', 500
 
 
-@auth_bp.route('/api/v1/publish', methods=['POST'])
+@stac_bp.route('/publish', methods=['POST'])
 def publish():
     """Add a raster to GeoServer from local storage.
 
@@ -674,7 +674,7 @@ def publish():
         raise
 
 
-@auth_bp.route('/api/v1/delete', methods=['POST'])
+@stac_bp.route('/delete', methods=['POST'])
 def delete():
     """Remove from the GeoServer.
 
