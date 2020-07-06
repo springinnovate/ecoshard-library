@@ -5,8 +5,8 @@ import logging.config
 import os
 
 from .auth import auth_bp
+from .stac import stac_bp
 from .db import db
-#from .stac import stac_bp
 from flask import Flask
 import flask_cors
 from flask_migrate import Migrate
@@ -43,9 +43,7 @@ def create_app(config=None):
     print(app.config)
 
     app.register_blueprint(auth_bp, url_prefix="/users")
-    #app.register_blueprint(stac_bp, url_prefix="/api")
-
-    return app
+    app.register_blueprint(stac_bp, url_prefix="/api")
 
     initalize_geoserver(
         app.config['STAC_DATABASE_URI'], app.config['SERVER_NAME'])
@@ -68,5 +66,4 @@ def create_app(config=None):
     except OSError:
         pass
 
-    db.init_app(app)
-    migrate = Migrate(app, db)
+    return app
