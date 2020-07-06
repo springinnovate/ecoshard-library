@@ -31,6 +31,7 @@ services:
     environment:
       - BUCKET_READ_SERVICE_ACCOUNT_KEYFILE=/run/secrets/bucket_read_service_account_key
       - SIGN_URL_PUBLIC_KEY_PATH=/run/secrets/sign_url_public_key
+      - SQLALCHEMY_DATABASE_URI=${SQLALCHEMY_DATABASE_URI}
     secrets:
       - bucket_read_service_account_key
       - sign_url_public_key
