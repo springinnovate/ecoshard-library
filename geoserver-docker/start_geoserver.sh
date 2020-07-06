@@ -20,5 +20,6 @@ touch stac_api/config.py
 echo "SERVER_NAME = '$1'" > stac_api/config.py
 echo "GEOSERVER_HOST = '$2'" >> stac_api/config.py
 echo "SECRET_KEY = 'none'" >> stac_api/config.py
+echo "SIGN_URL_PUBLIC_KEY_PATH = '${SIGN_URL_PUBLIC_KEY_PATH}'" >> stac_api/config.py
 echo "SQLALCHEMY_DATABASE_URI = 'postgresql://salo-api-user:$4@$5/salo-api-auth'" >> stac_api/config.py
 waitress-serve --listen=0.0.0.0:8888 --call stac_api:create_app
