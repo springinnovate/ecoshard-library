@@ -37,9 +37,6 @@ EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
 LOG_FILE_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'logging.json')
 
-STYLE_DIR_PATH = os.path.join(
-    current_app.config['GEOSERVER_DATA_DIR'], 'styles')
-
 DOWNLOAD_HEADERS = {"Content-Disposition": "attachment"}
 
 with open(LOG_FILE_PATH) as f:
@@ -1435,8 +1432,10 @@ def initalize_geoserver(database_path, api_server_name):
         return
 
     # overwrite style directory with pre-baked one
-    shutil.rmtree(STYLE_DIR_PATH, ignore_errors=True)
-    shutil.copytree('./geoserver_styles', STYLE_DIR_PATH)
+    style_dir_path = os.path.join(
+        current_app.config['GEOSERVER_DATA_DIR'], 'styles')
+    shutil.rmtree(style_dir_path, ignore_errors=True)
+    shutil.copytree('./geoserver_styles', style_dir_path)
 
     # make new random admin password
     try:
