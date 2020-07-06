@@ -3,12 +3,10 @@ import datetime
 import hashlib
 import json
 import logging
-import logging.config
 import math
 import os
 import re
 import secrets
-import shutil
 import subprocess
 import threading
 import time
@@ -35,6 +33,8 @@ from . import queries
 
 EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
 DOWNLOAD_HEADERS = {"Content-Disposition": "attachment"}
+
+LOGGER = logging.getLogger(__name__)
 
 stac_bp = Blueprint("stac", __name__)
 
@@ -1409,28 +1409,16 @@ def get_database_layers():
         f'{catalog}:{asset_id}' for catalog, asset_id in catalog_sql_result]
 
 
-def initalize_geoserver(database_path, api_server_name):
+def initalize_geoserver(api_server_name):
     """Ensure database exists, set security, and set server initial stores."""
-    try:
-        os.makedirs(os.path.dirname(database_path))
-    except OSError:
-        pass
-
-    # check if database exists, if it does, everything is already initialized
-    # including master passwords so we can quit
-    if not os.path.exists(database_path):
-        build_schema(database_path)
-    else:
-        LOGGER.info('geoserver previously initialized')
+    # make new random admin password
+    if os.path.exists(current_app.config['PASSWORD_FILE_PATH']):
+        with open(current_app.config['PASSWORD_FILE_PATH'], 'r') as \
+                password_file:
+            geoserver_password = password_file.read()
+        LOGGER.info(f'password already set {geoserver_password}')
         return
 
-    # overwrite style directory with pre-baked one
-    style_dir_path = os.path.join(
-        current_app.config['GEOSERVER_DATA_DIR'], 'styles')
-    shutil.rmtree(style_dir_path, ignore_errors=True)
-    shutil.copytree('./geoserver_styles', style_dir_path)
-
-    # make new random admin password
     try:
         os.makedirs(os.path.dirname(current_app.config['PASSWORD_FILE_PATH']))
     except OSError:
