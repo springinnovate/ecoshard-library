@@ -8,6 +8,9 @@ from flask_migrate import Migrate
 app = Flask(__name__)
 
 auth_db.init_app(app)
-migrate = Migrate(app, auth_db)
-
+auth_migrate = Migrate(app, auth_db)
 app.register_blueprint(auth_bp, url_prefix="/users")
+
+stac_db.init_app(app)
+stac_migrate = Migrate(app, stac_db)
+app.register_blueprint(stac_bp, url_prefix="/api")
