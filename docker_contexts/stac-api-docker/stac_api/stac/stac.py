@@ -365,96 +365,49 @@ def search():
     """
     try:
         api_key = flask.request.args['api_key']
-
-        allowed_permissions = queries.get_allowed_permissions(api_key)
+        allowed_permissions = queries.get_allowed_permissions_map(api_key)
 
         if not allowed_permissions:
             return 'invalid api key', 400
 
-        where_query_list = []
-        argument_list = []
+        if not allowed_permissions['READ']:
+            # No allowed catalogs so no results.
+            return {
+                'features': [],
+                'utc_now': utc_now()}
+
         if not isinstance(flask.request.json, dict):
             search_data = json.loads(flask.request.json)
         else:
             search_data = flask.request.json
         LOGGER.debug(f'incoming search data: {search_data}')
 
+        bounding_box_list = None
         if search_data['bounding_box']:
-            s_xmin, s_ymin, s_xmax, s_ymax = [
-                float(val) for val in search_data['bounding_box'].split(
-                    ',')]
-            where_query_list.append(
-                '(xmax>? and ymax>? and xmin<? and ymin<?)')
-            argument_list.extend([s_xmin, s_ymin, s_xmax, s_ymax])
+            bounding_box_list = [
+                float(val) for val in search_data['bounding_box'].split(',')]
 
-        if search_data['datetime']:
-            min_time, max_time = search_data.split('/')
-            if min_time != '..':
-                where_query_list.append('(utc_datetime>=?)')
-                argument_list.append(min_time)
-            if max_time != '..':
-                where_query_list.append('(utc_datetime<=?)')
-                argument_list.append(max_time)
+        asset_id = search_data.get('asset_id', None)
+        description = search_data.get('description', None)
 
-        all_catalogs_allowed = '*' in allowed_permissions['READ']
-
-        if search_data['catalog_list']:
-            catalog_set = set(search_data['catalog_list'].split(','))
-            if not all_catalogs_allowed:
-                # if not allowed to read everything, restrict query
-                catalog_set = catalog_set.union(allowed_permissions['READ'])
-            where_query_list.append(
-                f"""(catalog IN ({
-                    ','.join([f"'{x}'" for x in catalog_set])}))""")
-        elif not all_catalogs_allowed:
-            where_query_list.append(
-                f"""(catalog IN ({
-                    ','.join([
-                        f"'{x}'" for x in allowed_permissions['READ']])}))""")
-
-        if search_data['asset_id']:
-            where_query_list.append('(asset_id LIKE ?)')
-            argument_list.append(f"%{search_data['asset_id']}%")
-
-        if search_data['description']:
-            where_query_list.append('(description LIKE ?)')
-            argument_list.append(f"%{search_data['description']}%")
-
-        base_query_string = (
-            'SELECT asset_id, catalog, utc_datetime, '
-            'expiration_utc_datetime, description, '
-            'xmin, ymin, xmax, ymax '
-            'FROM catalog_table')
-
-        if where_query_list:
-            base_query_string += f" WHERE {' AND '.join(where_query_list)}"
-
-        search_result = _execute_sqlite(
-            base_query_string,
-            current_app.config['DATABASE_PATH'], argument_list=argument_list,
-            mode='read_only', execute='execute', fetch='all')
+        asset_list = queries.get_assets(
+            bounding_box_list, search_data['datetime'],
+            allowed_permissions['READ'], asset_id, description)
 
         feature_list = []
-        for (asset_id, catalog, utc_datetime, expiration_utc_datetime,
-                description, xmin, ymin, xmax, ymax) in search_result:
+        for asset in asset_list:
             # search for additional attributes
-            attribute_search = _execute_sqlite(
-                '''
-                SELECT key, value
-                FROM attribute_table
-                WHERE asset_id=? AND catalog=?
-                ''', current_app.config['DATABASE_PATH'],
-                argument_list=[asset_id, catalog],
-                mode='read_only', execute='execute', fetch='all')
-            attribute_dict = {
-                key: value for key, value in attribute_search}
+            attribute_dict = queries.get_asset_attributes(
+                asset.asset_id, asset.catalog)
             feature_list.append(
                 {
-                    'id': f'{catalog}:{asset_id}',
-                    'bbox': [xmin, ymin, xmax, ymax],
-                    'utc_datetime': utc_datetime,
-                    'expiration_utc_datetime': expiration_utc_datetime,
-                    'description': description,
+                    'id': f'{asset.catalog}:{asset.asset_id}',
+                    'bbox': [
+                        asset.bb_xmin, asset.bb_ymin,
+                        asset.bb_xmax, asset.bb_ymax],
+                    'utc_datetime': asset.utc_datetime,
+                    'expiration_utc_datetime': asset.expiration_utc_datetime,
+                    'description': asset.description,
                     'attribute_dict': attribute_dict,
                 })
         return {
