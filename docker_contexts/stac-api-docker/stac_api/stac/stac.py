@@ -1438,7 +1438,7 @@ def utc_now():
     return str(datetime.datetime.now(datetime.timezone.utc))
 
 
-def expiration_monitor(database_path):
+def expiration_monitor():
     """Monitor database for any entries that have expired and delete them.
 
     Args:

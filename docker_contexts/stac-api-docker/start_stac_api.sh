@@ -9,9 +9,4 @@ echo "SECRET_KEY = '${API_FLASK_SECRET_KEY}'" >> stac_api/config.py
 echo "SQLALCHEMY_DATABASE_URI = '${SQLALCHEMY_DATABASE_URI}'" >> stac_api/config.py
 echo "SIGN_URL_PUBLIC_KEY_PATH = '${SIGN_URL_PUBLIC_KEY_PATH}'" >> stac_api/config.py
 
-export FLASK_APP=stac_api
-flask db init
-flask db migrate
-flask db upgrade
-
 waitress-serve --expose-tracebacks --listen=0.0.0.0:${API_HOST_PORT} --call stac_api:create_app 2>&1
