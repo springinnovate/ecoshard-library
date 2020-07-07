@@ -317,7 +317,7 @@ def create_app(config=None):
                 f'&p0={raster_min}&p2={p2}&p25={p25}&p30={p30}&p50={p50}'
                 f'&p60={p60}&p75={p75}&p90={p90}&p98={p98}&p100={raster_max}')
 
-        response = flask.Response({
+        response = flask.jsonify({
              'type': fetch_data['type'],
              'link': link,
              'raster_min': raster_min,
