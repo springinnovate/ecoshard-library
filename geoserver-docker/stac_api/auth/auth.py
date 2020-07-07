@@ -226,7 +226,7 @@ def auth_user():
 
 
 @auth_bp.route("/auth/refresh", methods=["POST"])
-@jwt_required
+@jwt_required()
 def refresh():
     """ Refresh a JWT token.
     ---
