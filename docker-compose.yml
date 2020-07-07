@@ -22,6 +22,7 @@ services:
       - ${API_HOST_PORT}:${API_HOST_PORT}
     volumes:
       - ${GEOSERVER_DATA_DIR}:${GEOSERVER_DATA_DIR}
+    image: stac_manager
     networks:
       - api_stac_nw
     tty: true
