@@ -9,4 +9,12 @@ echo "SECRET_KEY = '${API_FLASK_SECRET_KEY}'" >> stac_api/config.py
 echo "SQLALCHEMY_DATABASE_URI = '${SQLALCHEMY_DATABASE_URI}'" >> stac_api/config.py
 echo "SIGN_URL_PUBLIC_KEY_PATH = '${SIGN_URL_PUBLIC_KEY_PATH}'" >> stac_api/config.py
 
-waitress-serve --expose-tracebacks --listen=0.0.0.0:${API_HOST_PORT} --call stac_api:create_app 2>&1
+if [ $MIGRATE = 1 ]
+then
+    echo "migrating database"
+    flask db migrate
+    flask db upgrade
+else
+    echo "launching app"
+    waitress-serve --expose-tracebacks --listen=0.0.0.0:${API_HOST_PORT} --call stac_api:create_app 2>&1
+fi
