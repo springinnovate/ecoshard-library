@@ -366,13 +366,7 @@ def search():
     try:
         api_key = flask.request.args['api_key']
 
-        allowed_permissions = _execute_sqlite(
-            '''
-            SELECT permissions
-            FROM api_keys
-            WHERE api_key=?
-            ''', current_app.config['DATABASE_PATH'], argument_list=[api_key],
-            mode='read_only', execute='execute', fetch='one')
+        allowed_permissions = queries.get_allowed_permissions(api_key)
 
         if not allowed_permissions:
             return 'invalid api key', 400
@@ -402,17 +396,13 @@ def search():
                 where_query_list.append('(utc_datetime<=?)')
                 argument_list.append(max_time)
 
-        allowed_catalog_set = set([
-            permission.split(':')[1]
-            for permission in allowed_permissions[0].split(' ')
-            if permission.startswith('READ:')])
-        all_catalogs_allowed = '*' in allowed_catalog_set
+        all_catalogs_allowed = '*' in allowed_permissions['READ']
 
         if search_data['catalog_list']:
             catalog_set = set(search_data['catalog_list'].split(','))
             if not all_catalogs_allowed:
                 # if not allowed to read everything, restrict query
-                catalog_set = catalog_set.union(allowed_catalog_set)
+                catalog_set = catalog_set.union(allowed_permissions['READ'])
             where_query_list.append(
                 f"""(catalog IN ({
                     ','.join([f"'{x}'" for x in catalog_set])}))""")
@@ -420,7 +410,7 @@ def search():
             where_query_list.append(
                 f"""(catalog IN ({
                     ','.join([
-                        f"'{x}'" for x in allowed_catalog_set])}))""")
+                        f"'{x}'" for x in allowed_permissions['READ']])}))""")
 
         if search_data['asset_id']:
             where_query_list.append('(asset_id LIKE ?)')
