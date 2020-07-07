@@ -4,6 +4,6 @@ services:
   stac_manager:
     volumes:
       - ./docker_contexts/stac-api-docker:/usr/local/stac_manager/
-    entrypoint: source stac_envs && /bin/bash
+    entrypoint: /bin/bash
     stdin_open: true # docker run -i
     tty: true        # docker run -t
