@@ -284,36 +284,17 @@ def viewer():
     catalog = flask.request.args['catalog']
     asset_id = flask.request.args['asset_id']
 
-    fetch_payload = _execute_sqlite(
-        '''
-        SELECT
-            xmin, ymin, xmax, ymax, raster_min, raster_max, default_style,
-            local_path
-        FROM catalog_table
-        WHERE asset_id=? AND catalog=?
-        ''', current_app.config['DATABASE_PATH'],
-        argument_list=[asset_id, catalog], execute='execute', fetch='one')
+    catalog_entry = queries.find_catalog_by_id(catalog, asset_id)
 
-    if not fetch_payload:
+    if catalog_entry is None:
         return (
             f'{asset_id}:{catalog} not found', 400)
 
-    xmin = fetch_payload[0]
-    ymin = fetch_payload[1]
-    xmax = fetch_payload[2]
-    ymax = fetch_payload[3]
-
-    raster_min = fetch_payload[4]
-    raster_max = fetch_payload[5]
-
-    default_style = fetch_payload[6]
-
-    local_raster_path = fetch_payload[7]
     nodata = pygeoprocessing.get_raster_info(
-        local_raster_path)['nodata'][0]
+        catalog_entry.local_path)['nodata'][0]
 
-    x_center = (xmax+xmin)/2
-    y_center = (ymax+ymin)/2
+    x_center = (catalog_entry.bb_xmax+catalog_entry.bb_xmin)/2
+    y_center = (catalog_entry.bb_ymax+catalog_entry.bb_ymin)/2
 
     return flask.render_template('viewer.html', **{
         'catalog': catalog,
@@ -321,16 +302,16 @@ def viewer():
         'geoserver_url': (
             f"http://{current_app.config['GEOSERVER_HOST']}/"
             f"geoserver/{catalog}/wms"),
-        'original_style': default_style,
-        'p0': raster_min,
-        'p100': raster_max,
+        'original_style': catalog_entry.default_style,
+        'p0': catalog_entry.raster_min,
+        'p100': catalog_entry.raster_max,
         'pixel_pick_url': flask.url_for('pixel_pick', _external=True),
         'x_center': x_center,
         'y_center': y_center,
-        'min_lat': ymin,
-        'min_lng': xmin,
-        'max_lat': ymax,
-        'max_lng': xmax,
+        'min_lat': catalog_entry.bb_ymin,
+        'min_lng': catalog_entry.bb_xmin,
+        'max_lat': catalog_entry.bb_ymax,
+        'max_lng': catalog_entry.bb_xmax,
         'geoserver_style_url': flask.url_for('styles', _external=True),
         'nodata': nodata,
     }, _external=True)

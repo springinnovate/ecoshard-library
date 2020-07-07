@@ -1,3 +1,4 @@
+"""Services for STAC API SQLAlchemy."""
 import uuid
 from flanker.addresslib import address
 
