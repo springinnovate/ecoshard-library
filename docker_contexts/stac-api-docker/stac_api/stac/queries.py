@@ -50,18 +50,19 @@ def get_allowed_permissions_map(api_key):
     return allowed_permissions
 
 
-def get_assets(
-        bounding_box_list, datetime_str, catalog_set, asset_id, description):
-    """Get a list of assets that match the search terms.
+def get_assets_query(
+        catalog_set, bounding_box_list=None, datetime_str=None,
+        asset_id=None, description=None):
+    """Get a Query object based on assets that match the search terms.
 
     Args:
+        catalog_set (set): Only assets in these catalogs are returned.
         bounding_box_list (list): bounding box coordinates in order of
             [xmin, ymin, xmax, ymax]. If not None, any assets that intersect
             this box are returned.
         datetime_str (str):  "exact time" | "low_time/high_time" |
             "../high time" | "low time/..". If not None, any assets are bounded
             against this time or time range.
-        catalog_set (set): Only assets in these catalogs are returned.
         asset_id (str): If not None, search for partial or exact match to this
             asset id.
         description (str): If not None, search for this partial or exact match
@@ -98,14 +99,13 @@ def get_assets(
     query_parameter_list.append(CatalogEntry.catalog.in_(*catalog_set))
 
     if asset_id is not None:
-        query_parameter_list.append(CatalogEntry.asset_id.ilike(
-            f'%{asset_id}%'))
+        query_parameter_list.append(CatalogEntry.asset_id.ilike(asset_id))
 
     if description is not None:
         query_parameter_list.append(CatalogEntry.description.ilike(
-            f'%{description}%'))
+            description))
 
-    return CatalogEntry.query.filter(and_(*query_parameter_list)).all()
+    return CatalogEntry.query.filter(and_(*query_parameter_list))
 
 
 def get_asset_attributes(catalog, asset_id):

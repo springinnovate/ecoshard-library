@@ -390,9 +390,10 @@ def search():
         asset_id = search_data.get('asset_id', None)
         description = search_data.get('description', None)
 
-        asset_list = queries.get_assets(
-            bounding_box_list, search_data['datetime'],
-            allowed_permissions['READ'], asset_id, description)
+        asset_list = queries.get_assets.query(
+            allowed_permissions['READ'], bounding_box_list=bounding_box_list,
+            datetime_str=search_data['datetime'], asset_id=asset_id,
+            description=description).all()
 
         feature_list = []
         for asset in asset_list:
@@ -500,18 +501,11 @@ def publish():
 
         # see if catalog/id are already in db
         #   if not force(d), then return 403
-        catalog_id_present = _execute_sqlite(
-            '''
-            SELECT count(*)
-            FROM catalog_table
-            WHERE catalog=? AND asset_id=?
-            ''', current_app.config['DATABASE_PATH'], argument_list=[
-                asset_args['catalog'], asset_args['asset_id']],
-            mode='read_only', execute='execute', fetch='one')
+        asset_count = queries.get_assets_query(
+            [asset_args['catalog']], asset_id=asset_args['asset_id']).count()
 
         force = 'force' in asset_args and asset_args['force']
-
-        if catalog_id_present and catalog_id_present[0] > 0 and not force:
+        if asset_count > 0 and not force:
             return (
                 f'{asset_args["catalog"]}:{asset_args["asset_id"]} '
                 'already published, use force:True to overwrite.'), 400
@@ -523,22 +517,14 @@ def publish():
         callback_payload = json.dumps({'callback_url': callback_url})
 
         # see if job already running and hasn't previously errored
-        job_payload = _execute_sqlite(
-            '''
-            SELECT active
-            FROM job_table
-            WHERE job_id=? AND job_status NOT LIKE 'ERROR%'
-            ''', current_app.config['DATABASE_PATH'], argument_list=[job_id],
-            mode='read_only', execute='execute', fetch='one')
-
-        # if there's job and it's active...
-        if job_payload and job_payload[0]:
+        job_status = queries.get_job_status(job_id)
+        if job_status and 'ERROR' not in job_status.status:
             return (
                 f'{asset_args["catalog"]}:{asset_args["asset_id"]} '
                 f'actively processing from {callback_url}, wait '
                 f'until finished before sending new uri', 400)
 
-        # new job
+        # new job --- TODO this is where I left off, time to make a service
         _execute_sqlite(
             '''
             INSERT OR REPLACE INTO job_table
