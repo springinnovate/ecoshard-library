@@ -2,7 +2,9 @@
 from .models import APIKey
 from .models import Attribute
 from .models import CatalogEntry
+from .models import Job
 from sqlalchemy import and_
+
 
 def find_catalog_by_id(catalog, asset_id):
     """Find the single catalong entry matching catalog:asset_id.
@@ -122,3 +124,16 @@ def get_asset_attributes(catalog, asset_id):
         for attribute in Attribute.query(and_(
             Attribute.asset_id == asset_id,
             Attribute.catalog == catalog)).all()}
+
+
+def get_job_status(job_id):
+    """Get Job status table for the given job_id.
+
+    Args:
+        job_id (str): unique job id
+
+    Returns:
+        a Job object describing given job or None if not in table.
+
+    """
+    return Job.query(Job.job_id == job_id).one_or_none()

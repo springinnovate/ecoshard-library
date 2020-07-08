@@ -423,23 +423,13 @@ def get_status(job_id):
     """Return the status of the session."""
     LOGGER.debug('getting status for %s', job_id)
 
-    status = _execute_sqlite(
-        '''
-        SELECT job_status
-        FROM job_table
-        WHERE job_id=?;
-        ''', current_app.config['DATABASE_PATH'], argument_list=[job_id],
-        mode='read_only', execute='execute', fetch='one')
-    if status:
+    job_status = queries.get_job_status(job_id)
+    if job_status:
         return {
-            'job_id': job_id,
-            'status': status[0],
+            'job_id': job_status.job_id,
+            'status': job_status.job_status,
             }
     else:
-        all_status = _execute_sqlite(
-            '''SELECT * FROM job_table''', current_app.config['DATABASE_PATH'],
-            argument_list=[], mode='read_only', execute='execute', fetch='all')
-        LOGGER.debug('all status: %s', all_status)
         return f'no status for {job_id}', 500
 
 
