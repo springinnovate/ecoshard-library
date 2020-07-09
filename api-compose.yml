@@ -2,6 +2,8 @@ version: '3.2'
 services:
   stac_manager:
     container_name: stac_manager
+    ports:
+      - 8080:8080
     build: geoserver-docker
     volumes:
       - /mnt/geoserver_data:/usr/local/geoserver/data_dir
