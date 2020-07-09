@@ -272,13 +272,13 @@ def create_app(config=None):
         fetch_type = fetch_data['type'].lower()
         if fetch_type == 'uri':
             link = fetch_payload[0]
-        elif fetch_data['type'] == 'url':
+        elif fetch_type == 'url':
             gs_link = fetch_payload[0]
             # google storage links of the form gs://[VALUE] have https
             # equivalents of https://storage.cloud.google.com/[VALUE]
             link = os.path.join(
                 'https://storage.cloud.google.com', gs_link.split('gs://')[1])
-        elif fetch_data['type'] == 'signed_url':
+        elif fetch_type == 'signed_url':
             # split the bucket path into the bucket name and the full object path
             gs_link = fetch_payload[0]
             bucket_path = gs_link.split('gs://')[1]
@@ -290,7 +290,8 @@ def create_app(config=None):
             if fetch_data['catalog'].lower() == 'cfo':
                 link = generate_signed_url(
                     bucket_name, object_name,
-                    service_account_file=app.config['SIGN_URL_PUBLIC_KEY_PATH'])
+                    service_account_file=app.config['SIGN_URL_PUBLIC_KEY_PATH'],
+                    headers=DOWNLOAD_HEADERS)
             else:
                 return ("Signed URLS only available for CFO catalog. Entered; {}".format(
                     fetch_data['catalog']), 400)
@@ -325,13 +326,6 @@ def create_app(config=None):
              'raster_mean': raster_mean,
              'raster_stdev': raster_stdev,
         })
-
-        # handle browser compatibility problem where safari default reads
-        # bucket links inline instead of downloading the file
-        if fetch_data['type'] in ['url', 'signed_url']:
-            keys = list(DOWNLOAD_HEADERS.keys())
-            for key in keys:
-                response.headers[key] = DOWNLOAD_HEADERS[key]
 
         return response
 
