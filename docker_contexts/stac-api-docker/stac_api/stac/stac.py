@@ -941,14 +941,8 @@ def add_raster_worker(
         local_raster_path = os.path.join(
             catalog_data_dir, os.path.basename(geoserver_raster_path))
 
-        _execute_sqlite(
-            '''
-            UPDATE job_table
-            SET job_status='copying local', last_accessed_utc=?
-            WHERE job_id=?;
-            ''', current_app.config['DATABASE_PATH'],
-            argument_list=[utc_now(), job_id],
-            mode='modify', execute='execute')
+        services.update_job_status(job_id, 'copying local')
+        models.db.session.commit()
 
         LOGGER.debug('copy %s to %s', uri_path, local_raster_path)
         if os.path.exists(local_raster_path):
@@ -1025,16 +1019,11 @@ def add_raster_worker(
         compression_alg = raster.GetMetadata(
             'IMAGE_STRUCTURE').get('COMPRESSION', None)
         if compression_alg in [None, 'ZSTD']:
-            _execute_sqlite(
-                '''
-                UPDATE job_table
-                SET job_status=?, last_accessed_utc=?
-                WHERE job_id=?;
-                ''', current_app.config['DATABASE_PATH'], argument_list=[
-                    f'(re)compressing image from {compression_alg}, this can '
-                    'take some time',
-                    utc_now(), job_id],
-                mode='modify', execute='execute')
+            services.update_job_status(
+                job_id,
+                f'(re)compressing image from {compression_alg}, '
+                'this can take some time')
+            models.db.session.commit()
             needs_compression_tmp_file = os.path.join(
                 os.path.dirname(catalog_data_dir),
                 f'NEEDS_COMPRESSION_{job_id}.tif')
@@ -1044,68 +1033,40 @@ def add_raster_worker(
                 compression_algorithm='LZW', compression_predictor=None)
             os.remove(needs_compression_tmp_file)
 
-        _execute_sqlite(
-            '''
-            UPDATE job_table
-            SET job_status='building overviews (can take some time)',
-                last_accessed_utc=?
-            WHERE job_id=?;
-            ''', current_app.config['DATABASE_PATH'], argument_list=[
-                utc_now(), job_id],
-            mode='modify', execute='execute')
+        services.update_job_status(
+            job_id, 'building overviews (can take some time)')
+        models.db.session.commit()
 
         ecoshard.build_overviews(
             local_raster_path, interpolation_method='average',
             overview_type='internal', rebuild_if_exists=False)
 
-        _execute_sqlite(
-            '''
-            UPDATE job_table
-            SET job_status='publishing to geoserver', last_accessed_utc=?
-            WHERE job_id=?;
-            ''', current_app.config['DATABASE_PATH'],
-            argument_list=[utc_now(), job_id],
-            mode='modify', execute='execute')
+        services.update_job_status(job_id, 'publishing to geoserver')
+        models.db.session.commit()
 
         publish_to_geoserver(
             geoserver_raster_path, local_raster_path, catalog, raster_id,
             mediatype)
 
         LOGGER.debug('update job_table with complete')
-        _execute_sqlite(
-            '''
-            UPDATE job_table
-            SET
-                job_status='complete', last_accessed_utc=?
-            WHERE job_id=?;
-            ''', current_app.config['DATABASE_PATH'],
-            argument_list=[utc_now(), job_id],
-            mode='modify', execute='execute')
+        services.update_job_status(job_id, 'complete')
+        models.db.session.commit()
 
         LOGGER.debug('update catalog_table with complete')
         lat_lng_bounding_box = get_lat_lng_bounding_box(local_raster_path)
         band = raster.GetRasterBand(1)
         raster_min, raster_max, raster_mean, raster_stdev = \
             band.GetStatistics(0, 1)
-        _execute_sqlite(
-            '''
-            INSERT OR REPLACE INTO catalog_table (
-                asset_id, catalog, xmin, ymin, xmax, ymax,
-                utc_datetime, mediatype, description, uri, local_path,
-                raster_min, raster_max, raster_mean, raster_stdev,
-                default_style, expiration_utc_datetime)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
-            ''', current_app.config['DATABASE_PATH'], argument_list=[
-                raster_id, catalog,
-                lat_lng_bounding_box[0],
-                lat_lng_bounding_box[1],
-                lat_lng_bounding_box[2],
-                lat_lng_bounding_box[3],
-                utc_datetime, mediatype, asset_description, uri_path,
-                local_raster_path,
-                raster_min, raster_max, raster_mean, raster_stdev,
-                default_style, expiration_utc_datetime],
-            mode='modify', execute='execute')
+        catalog_entry = services.create_or_update_catalog_entry(
+            raster_id, catalog,
+            lat_lng_bounding_box[0],
+            lat_lng_bounding_box[1],
+            lat_lng_bounding_box[2],
+            lat_lng_bounding_box[3],
+            utc_datetime, mediatype, asset_description, uri_path,
+            local_raster_path, raster_min, raster_max, raster_mean,
+            raster_stdev, default_style, expiration_utc_datetime)
+        models.db.session.commit()
 
         if attribute_dict:
             for key, value in attribute_dict.items():
