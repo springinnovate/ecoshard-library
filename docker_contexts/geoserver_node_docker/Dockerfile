@@ -30,3 +30,4 @@ RUN /opt/tomcat/bin/catalina.sh start && sleep 15 && /opt/tomcat/bin/catalina.sh
 COPY start_geoserver.sh /usr/local/bin/
 
 EXPOSE 8080
+ENTRYPOINT ["bash",  "-i", "/usr/local/bin/start_geoserver.sh"]
