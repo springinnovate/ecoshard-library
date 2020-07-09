@@ -15,6 +15,15 @@ services:
       - GEOSERVER_MAX_RAM=${GEOSERVER_MAX_RAM}
     tty: true
 
+  # for manual changes like migration
+  stac_manager_senvironment:
+    container_name: stac_manager_environment
+    volumes:
+      - ./docker_contexts/stac-api-docker:/usr/local/workspace
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    entrypoint: /bin/bash
+
   stac_manager:
     container_name: stac_manager
     build: docker_contexts/stac-api-docker
