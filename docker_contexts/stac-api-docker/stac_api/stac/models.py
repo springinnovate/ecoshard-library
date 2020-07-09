@@ -28,7 +28,7 @@ class CatalogEntry(db.Model):
     bb_ymin = db.Column(db.Float, nullable=False, index=True)
     bb_ymax = db.Column(db.Float, nullable=False, index=True)
     utc_datetime = db.Column(db.String, nullable=False, index=True)
-    expiration_utc_datetime = db.Column(db.String, nullable=False)
+    expiration_utc_datetime = db.Column(db.String, nullable=True)
     mediatype = db.Column(db.String, nullable=False, index=True)
     description = db.Column(db.String, nullable=False)
     uri = db.Column(db.String, nullable=False)

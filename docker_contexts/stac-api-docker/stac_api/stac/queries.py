@@ -137,3 +137,19 @@ def get_job_status(job_id):
 
     """
     return Job.query(Job.job_id == job_id).one_or_none()
+
+
+def get_expired_catalog_entries(current_time):
+    """Returns all catalog entries where expiration time <= `current_time`.
+
+    Args:
+        current_time (str): UTC formatted string of current time.
+
+    Returns:
+        List of CatalogEntry where
+            CatalogEntry.expiration_utc_time <= current time if the
+            CatalogEntry.expiration_utc_time is defined.
+
+    """
+    return CatalogEntry.query.filter(
+        CatalogEntry.expiration_utc_time <= current_time)
