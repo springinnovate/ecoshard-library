@@ -18,16 +18,17 @@ services:
   # for manual changes like migration
   stac_manager_environment:
     container_name: stac_manager_environment
+    entrypoint: ["/bin/bash"]
     build: docker_contexts/stac-api-docker
     volumes:
       - ./docker_contexts/stac-api-docker:/usr/local/workspace
     stdin_open: true # docker run -i
     tty: true        # docker run -t
-    entrypoint: /bin/bash
 
   stac_manager:
     container_name: stac_manager
     build: docker_contexts/stac-api-docker
+    entrypoint: ["bash",  "-i", "/usr/local/bin/start_geoserver.sh"]
     ports:
       - ${API_HOST_PORT}:${API_HOST_PORT}
     volumes:
