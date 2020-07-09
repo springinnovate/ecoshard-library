@@ -9,6 +9,10 @@ services:
       - web_nw
     command: ['api.salo.ai', 'maps.salo.ai:8080', '4g', '${DBPASSWORD}', '${DBHOST}']
     tty: true
+    environment:
+      - SIGN_URL_PUBLIC_KEY_PATH=/run/secrets/sign_url_public_key
+    secrets:
+      - sign_url_public_key
 
   nginx:
     image: "nginx:1.13.5"
@@ -28,3 +32,7 @@ services:
 networks:
   web_nw:
     driver: bridge
+
+secrets:
+  sign_url_public_key:
+    file: ${SIGN_URL_PUBLIC_KEYFILE}

@@ -51,7 +51,7 @@ authenticating, it also includes a decorator(`@jwt_required`) for endpoints that
 authenticauthentication for access. An example:
 
     @app.route('/a/protected/endpoint')
-    @jwt_required
+    @jwt_required()
     def protected_endpoint():
         ...
 
