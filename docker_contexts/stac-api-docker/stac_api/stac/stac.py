@@ -897,7 +897,7 @@ def get_lat_lng_bounding_box(raster_path):
 
 
 def add_raster_worker(
-        uri_path, mediatype, catalog, raster_id, asset_description,
+        uri_path, mediatype, catalog, asset_id, asset_description,
         utc_datetime, default_style, job_id, attribute_dict,
         expiration_utc_datetime, inter_data_dir, force=False):
     """Copy and update a coverage set asynchronously.
@@ -906,7 +906,7 @@ def add_raster_worker(
         uri_path (str): path to base gs:// bucket to copy from.
         mediatype (str): raster mediatype, only GeoTIFF supported
         catalog (str): catalog for asset
-        raster_id (str): raster id for asset
+        asset_id (str): raster id for asset
         asset_description (str): asset description to record
         utc_datetime (str): an ISO standard UTC utc_datetime
         default_style (str): default style to record with this asset
@@ -929,7 +929,7 @@ def add_raster_worker(
         local_raster_path = None
         # geoserver raster path is for it's local data dir
         geoserver_raster_path = os.path.join(
-            inter_data_dir, catalog, f'{raster_id}.tif')
+            inter_data_dir, catalog, f'{asset_id}.tif')
         # local data dir is for path to copy to from working directory
         catalog_data_dir = os.path.join(
             current_app.config['FULL_DATA_DIR'], catalog)
@@ -1045,20 +1045,20 @@ def add_raster_worker(
         models.db.session.commit()
 
         publish_to_geoserver(
-            geoserver_raster_path, local_raster_path, catalog, raster_id,
+            geoserver_raster_path, local_raster_path, catalog, asset_id,
             mediatype)
 
         LOGGER.debug('update job_table with complete')
-        services.update_job_status(job_id, 'complete')
-        models.db.session.commit()
 
-        LOGGER.debug('update catalog_table with complete')
+        services.update_job_status(job_id, 'update catlog database geoserver')
+        models.db.session.commit()
+        LOGGER.debug('update catalog_table with final values')
         lat_lng_bounding_box = get_lat_lng_bounding_box(local_raster_path)
         band = raster.GetRasterBand(1)
         raster_min, raster_max, raster_mean, raster_stdev = \
             band.GetStatistics(0, 1)
-        catalog_entry = services.create_or_update_catalog_entry(
-            raster_id, catalog,
+        _ = services.create_or_update_catalog_entry(
+            asset_id, catalog,
             lat_lng_bounding_box[0],
             lat_lng_bounding_box[1],
             lat_lng_bounding_box[2],
@@ -1066,31 +1066,19 @@ def add_raster_worker(
             utc_datetime, mediatype, asset_description, uri_path,
             local_raster_path, raster_min, raster_max, raster_mean,
             raster_stdev, default_style, expiration_utc_datetime)
-        models.db.session.commit()
 
         if attribute_dict:
-            for key, value in attribute_dict.items():
-                _execute_sqlite(
-                    '''
-                    INSERT OR REPLACE INTO attribute_table (
-                        asset_id, catalog, key, value)
-                    VALUES (?, ?, ?, ?);
-                    ''', current_app.config['DATABASE_PATH'], argument_list=[
-                        raster_id, catalog, key, value],
-                    mode='modify', execute='execute')
+            LOGGER.debug('updating additional attributes')
+            services.update_attributes(asset_id, catalog, attribute_dict)
 
-        LOGGER.debug(f'successful publish of {catalog}:{raster_id}')
+        services.update_job_status(job_id, 'complete')
+        models.db.session.commit()
+        LOGGER.debug(f'successful publish of {catalog}:{asset_id}')
 
     except Exception as e:
         LOGGER.exception('something bad happened when doing raster worker')
-        _execute_sqlite(
-            '''
-            UPDATE job_table
-            SET job_status=?, last_accessed_utc=?, active=?
-            WHERE job_id=?;
-            ''', current_app.config['DATABASE_PATH'], argument_list=[
-                f'ERROR: {str(e)}', time.time(), 0, job_id],
-            mode='modify', execute='execute')
+        services.update_job_status(job_id, f'ERROR: {str(e)}')
+        models.db.session.commit()
         if local_raster_path:
             # try to delete the local file in case it errored
             try:

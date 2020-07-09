@@ -1,5 +1,6 @@
 """Services for STAC API SQLAlchemy."""
 from .models import db
+from .models import Attribute
 from .models import CatalogEntry
 from .models import Job
 
@@ -111,3 +112,31 @@ def create_or_update_catalog_entry(
         catalog_entry.default_style = default_style
         catalog_entry.expiration_utc_datetime = expiration_utc_datetime
     return catalog_entry
+
+
+def update_attributes(asset_id, catalog, attribute_dict):
+    """Update arbitrary attributes associated with catalog:asset_id.
+
+    Args:
+        asset_id (str): asset ID string
+        catalog (str): catalog ID string
+        attribute_dict (dict): mapping of key/value pairs to store associated
+        with catalog:asset_id
+
+    Returns:
+        None.
+
+    """
+    for key, value in attribute_dict.items():
+        attribute = Attribute.query.filter(
+            Attribute.asset_id == asset_id,
+            Attribute.catalog == catalog).one_or_none()
+        if attribute is None:
+            attribute = Attribute(
+                asset_id=asset_id,
+                catalog=catalog,
+                key=key,
+                value=value)
+            db.session.add(attribute)
+        else:
+            attribute.value = value
