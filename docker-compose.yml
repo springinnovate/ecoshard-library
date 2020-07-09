@@ -16,7 +16,7 @@ services:
     tty: true
 
   # for manual changes like migration
-  stac_manager_senvironment:
+  stac_manager_environment:
     container_name: stac_manager_environment
     volumes:
       - ./docker_contexts/stac-api-docker:/usr/local/workspace
