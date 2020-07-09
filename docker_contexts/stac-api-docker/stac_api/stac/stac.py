@@ -29,7 +29,9 @@ import requests
 import retrying
 
 # SQLAlchamy
+from . import models
 from . import queries
+from . import services
 
 EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
 DOWNLOAD_HEADERS = {"Content-Disposition": "attachment"}
@@ -524,22 +526,13 @@ def publish():
                 f'actively processing from {callback_url}, wait '
                 f'until finished before sending new uri', 400)
 
-        # new job --- TODO this is where I left off, time to make a service
-        _execute_sqlite(
-            '''
-            INSERT OR REPLACE INTO job_table
-                (job_id, uri, job_status, active, last_accessed_utc)
-            VALUES (?, ?, 'scheduled', 1, ?);
-            ''', current_app.config['DATABASE_PATH'], argument_list=[
-                job_id, asset_args['uri'],
-                utc_now()],
-            mode='modify', execute='execute')
+        # new job
+        _ = services.create_job(job_id, asset_args['uri'], 'scheduled')
 
         if 'attribute_dict' in asset_args:
             attribute_dict = asset_args['attribute_dict']
         else:
             attribute_dict = None
-
         raster_worker_thread = threading.Thread(
             target=add_raster_worker,
             args=(asset_args['uri'], asset_args['mediatype'],
@@ -550,6 +543,8 @@ def publish():
                   current_app.config['INTERNAL_GEOSERVER_DATA_DIR']),
             kwargs={'force': force})
         raster_worker_thread.start()
+
+        models.db.session.commit()
         return callback_payload
     except Exception:
         LOGGER.exception('something bad happened on publish')
@@ -1100,8 +1095,7 @@ def add_raster_worker(
             '''
             UPDATE job_table
             SET
-                job_status='complete', last_accessed_utc=?,
-                active=0
+                job_status='complete', last_accessed_utc=?
             WHERE job_id=?;
             ''', current_app.config['DATABASE_PATH'],
             argument_list=[utc_now(), job_id],

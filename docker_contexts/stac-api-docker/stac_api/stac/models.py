@@ -7,17 +7,14 @@ class Job(db.Model):
     __tablename__ = 'job_table'
 
     job_id = db.Column(db.String, primary_key=True)
-    uri = db.Column(db.String, nullable=False)
+    data_uri = db.Column(db.String, nullable=False)
     job_status = db.Column(db.String, nullable=False)
-    active = db.Column(db.Integer, nullable=False)
-    last_accessed_utc = db.Column(db.String, nullable=False, index=True)
 
     def __repr__(self):
         """Job status."""
         return (
-            f"<Job ID: {self.job_id}, uri: {self.uri}, "
-            f"job status: {self.job_status}, active: {self.active}, "
-            f"last_accessed: {self.last_accessed_utc}")
+            f"<Job ID: {self.job_id}, data_uri: {self.data_uri}, "
+            f"job status: {self.job_status}")
 
 
 class CatalogEntry(db.Model):
