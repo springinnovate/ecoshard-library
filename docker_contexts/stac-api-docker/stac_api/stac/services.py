@@ -2,7 +2,6 @@
 import uuid
 from flanker.addresslib import address
 
-from . import utils
 from .models import db
 from .models import Job
 
@@ -18,7 +17,7 @@ def create_job(job_id, data_uri, job_status):
         job_status (str): string of job status to report when queried
 
     Returns:
-        None.
+        new Job object (not committed)
 
     """
     job = Job(
@@ -26,4 +25,20 @@ def create_job(job_id, data_uri, job_status):
         job_status=job_status,
         )
     db.session.add(job)
+    return job
+
+
+def update_job_status(job_id, new_job_status):
+    """Update Job object matching `job_id` with the new job status.
+
+    Args:
+        job_id (str): unique job ID string.
+        new_job_status (str): job status string to replace current with.
+
+    Returns:
+        updated Job object (not committed)
+
+    """
+    job = Job.query.filter(Job.job_id == job_id).one()
+    job.job_id = job_id
     return job
