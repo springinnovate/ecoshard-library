@@ -588,23 +588,17 @@ def delete():
                 f'{asset_args["catalog"]}:{asset_args["asset_id"]}'), 401
 
         # see if catalog/id are already in db if not, return 403
-        local_path_result = _execute_sqlite(
-            '''
-            SELECT local_path
-            FROM catalog_table
-            WHERE catalog=? AND asset_id=?
-            ''', current_app.config['DATABASE_PATH'], argument_list=[
-                asset_args['catalog'], asset_args['asset_id']],
-            mode='read_only', execute='execute', fetch='one')
+        catalog_entry = queries.find_catalog_by_id(
+            asset_args['catalog'], asset_args['asset_id'])
 
-        if not local_path_result:
+        if catalog_entry is None:
             return (
                 f'{asset_args["catalog"]}:{asset_args["asset_id"]} '
                 'is not in the catalog, nothing to delete.'), 400
 
-        delete_raster(
-            local_path_result[0], asset_args['asset_id'],
-            asset_args['catalog'])
+        delete_raster(catalog_entry)
+        models.db.session.delete(catalog_entry)
+        models.db.session.commit()
 
         return (
             f'{asset_args["catalog"]}:{asset_args["asset_id"]} deleted',
@@ -614,13 +608,12 @@ def delete():
         raise
 
 
-def delete_raster(local_path, asset_id, catalog):
+def delete_raster(catalog_entry):
     """Delete a given asset from the geoserver and local stoarge.
 
     Args:
-        local_path (str): path to raster in local storage.
-        asset_id (str): asset id in database
-        catalog (str): catalog in database.
+        catalog_entry (models.CatalogEntry): asset object that refers to a
+            raster to be deleted.
 
     Returns:
         None.
@@ -632,27 +625,20 @@ def delete_raster(local_path, asset_id, catalog):
     session.auth = (
         current_app.config['GEOSERVER_USER'], master_geoserver_password)
 
-    cover_id = f'{asset_id}_cover'
+    cover_id = f'{catalog_entry.asset_id}_cover'
     delete_coverstore_result = do_rest_action(
         session.delete,
         f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
-        f'geoserver/rest/workspaces/{catalog}/'
+        f'geoserver/rest/workspaces/{catalog_entry.catalog}/'
         f'coveragestores/{cover_id}/?purge=all&recurse=true')
     if not delete_coverstore_result:
         raise RuntimeError(f"Unable to delete {cover_id}")
-    _execute_sqlite(
-        '''
-        DELETE FROM catalog_table
-        WHERE catalog=? AND asset_id=?
-        ''', current_app.config['DATABASE_PATH'], argument_list=[
-            catalog, asset_id],
-        mode='modify', execute='execute')
 
     # Don't wait for the remove to happen before returning, it could
     # take a bit of time.
     remove_thread = threading.Thread(
         target=os.remove,
-        args=(local_path,))
+        args=(catalog_entry.local_path,))
     remove_thread.start()
 
 
