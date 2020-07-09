@@ -3,7 +3,7 @@ services:
   stac_manager:
     container_name: stac_manager
     ports:
-      - 8888:8888
+      - 8080:8080
     build: geoserver-docker
     volumes:
       - /mnt/geoserver_data:/usr/local/geoserver/data_dir
