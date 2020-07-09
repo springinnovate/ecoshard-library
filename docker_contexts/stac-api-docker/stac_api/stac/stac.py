@@ -1103,23 +1103,16 @@ def validate_api(api_key, permission):
     if not re.match(r"^(READ:|WRITE:)([a-z0-9]+|\*)$", permission):
         return f'invalid permission: "{permission}"', 401
 
-    allowed_permissions = _execute_sqlite(
-        '''
-        SELECT permissions
-        FROM api_keys
-        WHERE api_key=?
-        ''', current_app.config['DATABASE_PATH'], argument_list=[api_key],
-        mode='read_only', execute='execute', fetch='one')
+    allowed_permissions = queries.get_allowed_permissions_map(api_key)
 
     if not allowed_permissions:
         return 'invalid api key', 400
 
-    LOGGER.debug(
-        f'allowed permissions for {api_key}: {str(allowed_permissions)}')
-    # either permission is directly in there or a wildcard is allowed
-    if permission in allowed_permissions[0] or \
-            f'{permission.split(":")[0]}:*' in allowed_permissions[0]:
+    permission_type, catalog_id = permission.split(':')
+
+    if catalog_id in allowed_permissions[permission_type]:
         return 'valid'
+
     return 'api key does not not have permission', 401
 
 
