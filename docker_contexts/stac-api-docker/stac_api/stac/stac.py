@@ -1198,24 +1198,21 @@ def expiration_monitor():
         while True:
             current_time = utc_now()
             LOGGER.debug(f'checking for expired data at {current_time}')
-            expired_assets = _execute_sqlite(
-                '''
-                SELECT asset_id, catalog, local_path, expiration_utc_datetime
-                FROM catalog_table
-                WHERE
-                    ifnull(expiration_utc_datetime, '') != '' AND
-                    expiration_utc_datetime <= ?;''',
-                database_path, mode='read_only', execute='execute',
-                fetch='all', argument_list=[current_time])
+            expired_entries = queries.get_expired_catalog_entries(current_time)
 
-            for asset_id, catalog, local_path, expiration_utc_datetime in \
-                    expired_assets:
+            for expired_catalog_entry in expired_entries:
                 LOGGER.info(
-                    f'{asset_id}:{catalog} expired on '
-                    f'{expiration_utc_datetime} '
+                    f'{expired_catalog_entry.asset_id}:'
+                    f'{expired_catalog_entry.catalog} expired on '
+                    f'{expired_catalog_entry.expiration_utc_datetime} '
                     f'current time is {current_time}. Deleting...')
-                delete_raster(local_path, asset_id, catalog)
+                delete_raster(
+                    expired_catalog_entry.local_path,
+                    expired_catalog_entry.asset_id,
+                    expired_catalog_entry.catalog)
 
+                models.db.session.delete(expired_catalog_entry)
+            models.db.session.commit()
             time.sleep(EXPIRATION_MONITOR_DELAY)
     except Exception:
         LOGGER.exception('something bad happened in expiration_monitor')
