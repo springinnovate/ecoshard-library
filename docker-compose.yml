@@ -26,7 +26,7 @@ services:
     tty: true        # docker run -t
     environment:
       - FLASK_APP=stac_api
-      - SQLALCHEMY_DATABASE_URI=sqlite://\:memory\:
+      - SQLALCHEMY_DATABASE_URI=sqlite:///:memory:
 
   stac_manager:
     container_name: stac_manager
