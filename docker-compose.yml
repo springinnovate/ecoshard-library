@@ -24,6 +24,8 @@ services:
       - ./docker_contexts/stac-api-docker:/usr/local/workspace
     stdin_open: true # docker run -i
     tty: true        # docker run -t
+    environment:
+      - FLASK_APP=stac_api
 
   stac_manager:
     container_name: stac_manager
