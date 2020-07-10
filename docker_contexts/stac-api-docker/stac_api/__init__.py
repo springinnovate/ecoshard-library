@@ -20,15 +20,22 @@ with open(LOG_FILE_PATH) as f:
 LOGGER = logging.getLogger(__name__)
 
 
-def create_app(config=None):
+def create_app():
     """Create the Geoserver STAC Flask app."""
     LOGGER.debug('starting up!')
     # wait for API calls
 
     app = Flask(__name__, instance_relative_config=False)
     app.config.from_mapping(
-        SECRET_KEY='dev',
+        SECRET_KEY=os.environ.get('SECRET_KEY', None),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
+        PASSWORD_FILE_PATH=os.environ.get('PASSWORD_FILE_PATH', None),
+        GEOSERVER_DATA_DIR=os.environ.get('GEOSERVER_DATA_DIR', None),
+        GEOSERVER_MANAGER_HOST=os.environ.get('GEOSERVER_MANAGER_HOST', None),
+        SQLALCHEMY_DATABASE_URI=os.environ.get(
+            'SQLALCHEMY_DATABASE_URI', None),
+        SIGN_URL_PUBLIC_KEY_PATH=os.environ.get(
+            'SIGN_URL_PUBLIC_KEY_PATH', None),
     )
 
     # config.py should contain a real secret key and
@@ -37,10 +44,11 @@ def create_app(config=None):
         app.config.from_pyfile('config.py', silent=False)
         app.config['PASSWORD_FILE_PATH'] = os.path.join(
             app.config['GEOSERVER_DATA_DIR'], 'secrets', 'password')
+        with app.app_context():
+            stac.initalize_geoserver()
+
     else:
         LOGGER.warning("config.py not found")
-    if config is not None:
-        app.config.from_mapping(config)
 
     flask_cors.CORS(app)
 
@@ -51,9 +59,6 @@ def create_app(config=None):
 
     app.register_blueprint(auth.auth_bp, url_prefix="/users")
     app.register_blueprint(stac.stac_bp, url_prefix="/api/v1")
-
-    with app.app_context():
-        stac.initalize_geoserver()
 
     # TODO: remove any old jobs
 

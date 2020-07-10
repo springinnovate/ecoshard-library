@@ -1138,6 +1138,11 @@ def build_job_hash(asset_args):
 def initalize_geoserver():
     """Ensure database exists, set security, and set server initial stores."""
     # make new random admin password
+    if current_app.config['PASSWORD_FILE_PATH'] is None:
+        LOGGER.warn(
+            'no password file path defined, assuming unconfigured and'
+            'not initalizing geoserver')
+        return
 
     if os.path.exists(current_app.config['PASSWORD_FILE_PATH']):
         with open(current_app.config['PASSWORD_FILE_PATH'], 'r') as \
