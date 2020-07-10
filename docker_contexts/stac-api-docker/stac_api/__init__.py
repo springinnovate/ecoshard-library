@@ -33,7 +33,10 @@ def create_app(config=None):
 
     # config.py should contain a real secret key and
     # a real IP address/hostname
-    app.config.from_pyfile('config.py', silent=False)
+    if os.path.exists('config.py'):
+        app.config.from_pyfile('config.py', silent=False)
+    else:
+        LOGGER.warning("config.py not found")
     if config is not None:
         app.config.from_mapping(config)
 
