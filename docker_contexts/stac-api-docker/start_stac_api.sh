@@ -11,9 +11,7 @@ echo "SIGN_URL_PUBLIC_KEY_PATH = '${SIGN_URL_PUBLIC_KEY_PATH}'" >> stac_api/conf
 
 if [ $MIGRATE = 1 ]
 then
-    echo "migrating database"
-    flask db migrate
-    flask db upgrade
+    exec /bin/bash
 else
     echo "launching app"
     waitress-serve --expose-tracebacks --listen=0.0.0.0:${API_HOST_PORT} --call stac_api:create_app 2>&1

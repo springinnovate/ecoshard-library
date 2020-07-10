@@ -34,6 +34,7 @@ from . import models
 from . import queries
 from . import services
 
+GEOSERVER_USER = 'admin'
 EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
 DOWNLOAD_HEADERS = {"Content-Disposition": "attachment"}
 
@@ -253,8 +254,7 @@ def styles():
     with open(current_app.config['PASSWORD_FILE_PATH'], 'r') as password_file:
         master_geoserver_password = password_file.read()
     session = requests.Session()
-    session.auth = (
-        current_app.config['GEOSERVER_USER'], master_geoserver_password)
+    session.auth = (GEOSERVER_USER, master_geoserver_password)
     available_styles = do_rest_action(
         session.get,
         f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
@@ -623,7 +623,7 @@ def delete_raster(catalog_entry):
         master_geoserver_password = password_file.read()
     session = requests.Session()
     session.auth = (
-        current_app.config['GEOSERVER_USER'], master_geoserver_password)
+        GEOSERVER_USER, master_geoserver_password)
 
     cover_id = f'{catalog_entry.asset_id}_cover'
     delete_coverstore_result = do_rest_action(
@@ -687,7 +687,7 @@ def publish_to_geoserver(
         master_geoserver_password = password_file.read()
     session = requests.Session()
     session.auth = (
-        current_app.config['GEOSERVER_USER'], master_geoserver_password)
+        GEOSERVER_USER, master_geoserver_password)
 
     # make workspace
     LOGGER.debug('create workspace if it does not exist')
@@ -1157,7 +1157,7 @@ def initalize_geoserver():
     session = requests.Session()
     # 'geoserver' is the default geoserver password, we'll need to be
     # authenticated to do the push
-    session.auth = (current_app.config['GEOSERVER_USER'], 'geoserver')
+    session.auth = (GEOSERVER_USER, 'geoserver')
     password_update_request = do_rest_action(
         session.put,
         f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
