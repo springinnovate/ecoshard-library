@@ -1,9 +1,0 @@
-version: '3.6'
-
-services:
-  stac_manager:
-    volumes:
-      - ./docker_contexts/stac-api-docker:/usr/local/stac_manager/
-    environment:
-      - FLASK_APP=stac_api
-      - MIGRATE=1
