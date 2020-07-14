@@ -1,0 +1,34 @@
+version: '3.6'
+
+services:
+  stac_manager_shell:
+    container_name: stac_manager_shell
+    build: docker_contexts/stac-api-docker
+    entrypoint: ["bash"]
+    working_dir: /usr/local/stac-api-docker
+    volumes:
+      - ./docker_contexts/stac-api-docker:/usr/local/stac-api-docker
+    image: stac_manager_shell
+    tty: true
+    stdin_open: true
+    depends_on:
+      - db
+    networks:
+      - api_stac_nw
+    environment:
+      - FLASK_APP=stac_api
+      - SQLALCHEMY_DATABASE_URI=postgresql://db_test_user:db_test_password@db
+
+  db:
+    image: postgres
+    container_name: ${DB_HOST}
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: db_test_password
+      POSTGRES_USER: db_test_user
+    networks:
+      - api_stac_nw
+
+networks:
+  api_stac_nw:
+    driver: bridge

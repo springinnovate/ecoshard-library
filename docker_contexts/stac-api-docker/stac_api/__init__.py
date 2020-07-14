@@ -46,7 +46,6 @@ def create_app():
             app.config['GEOSERVER_DATA_DIR'], 'secrets', 'password')
         with app.app_context():
             stac.initalize_geoserver()
-
     else:
         LOGGER.warning("config.py not found")
 
@@ -54,8 +53,6 @@ def create_app():
 
     db.init_app(app)
     migrate = Migrate(app, db)
-
-    print(app.config)
 
     app.register_blueprint(auth.auth_bp, url_prefix="/users")
     app.register_blueprint(stac.stac_bp, url_prefix="/api/v1")
