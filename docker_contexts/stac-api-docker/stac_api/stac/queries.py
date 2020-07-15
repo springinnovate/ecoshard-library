@@ -153,9 +153,9 @@ def get_expired_catalog_entries(current_time):
 
     Returns:
         List of CatalogEntry where
-            CatalogEntry.expiration_utc_time <= current time if the
-            CatalogEntry.expiration_utc_time is defined.
+            CatalogEntry.expiration_utc_datetime <= current time if the
+            CatalogEntry.expiration_utc_datetime is defined.
 
     """
     return CatalogEntry.query.filter(
-        CatalogEntry.expiration_utc_time <= current_time)
+        CatalogEntry.expiration_utc_datetime <= current_time)
