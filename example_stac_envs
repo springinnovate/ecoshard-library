@@ -1,5 +1,6 @@
 # Host environment
 GEOSERVER_DATA_DIR=/mnt/geoserver_data
+NGINX_HOST=publish.ecoshard.org
 
 # Geoserver environment
 GEOSERVER_MANAGER_HOST=localhost:8080
