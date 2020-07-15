@@ -1209,7 +1209,9 @@ def expiration_monitor():
         while True:
             current_time = utc_now()
             LOGGER.debug(f'checking for expired data at {current_time}')
-            expired_entries = queries.get_expired_catalog_entries(current_time)
+            with current_app.app_context():
+                expired_entries = queries.get_expired_catalog_entries(
+                    current_time)
 
             for expired_catalog_entry in expired_entries:
                 LOGGER.info(
