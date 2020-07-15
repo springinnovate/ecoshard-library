@@ -18,7 +18,8 @@ DB_HOST=db_test
 DB_USER=replace_with_real_db_user
 DB_PASSWORD=replace_with_real_db_password
 DATABASE_NAME=stac_api_db
-SQLALCHEMY_DATABASE_URI=postgresql://${DB_HOST}:${DB_USER}@${DB_PASSWORD}/${DATABASE_NAME}
+SQLALCHEMY_DATABASE_URI=postgresql://{DB_PASSWORD}:${DB_USER}@${DB_HOST}/
+POSTGRES_VOLUME=/mnt/postgres_volume
 
 # Disk Resize Environment
 DISK_RESIZE_SERVICE_DISK_NAME=geoserver-data-disk
