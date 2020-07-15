@@ -6,6 +6,9 @@
     },
     "auth": {
       "format": "%(asctime)s (%(relativeCreated)d) %(processName)s %(levelname)s %(name)s [%(funcName)s:%(lineno)d] [event: %(event)s, user_id: %(user_id)d] %(message)s"
+    },
+    "stac": {
+      "format": "%(asctime)s (%(relativeCreated)d) %(processName)s %(levelname)s %(name)s [%(funcName)s:%(lineno)d] [event: %(event)s, user_id: %(user_id)d] %(message)s"
     }
   },
   "handlers": {
@@ -20,12 +23,23 @@
       "level": "DEBUG",
       "formatter": "auth",
       "stream": "ext://sys.stdout"
+    },
+    "stac": {
+      "class": "logging.StreamHandler",
+      "level": "DEBUG",
+      "formatter": "stac",
+      "stream": "ext://sys.stdout"
     }
   },
   "loggers": {
     "auth": {
       "level": "DEBUG",
       "handlers": ["auth"],
+      "propagate": 0
+    },
+    "stac": {
+      "level": "DEBUG",
+      "handlers": ["stac"],
       "propagate": 0
     }
   },
