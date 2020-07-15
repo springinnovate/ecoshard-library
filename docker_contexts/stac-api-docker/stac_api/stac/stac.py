@@ -280,6 +280,7 @@ def render_list():
         }, _external=True)
     except Exception:
         LOGGER.exception('error on render list')
+        raise
 
 
 @stac_bp.route('/viewer')
