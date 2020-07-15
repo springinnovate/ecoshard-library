@@ -932,6 +932,10 @@ def add_raster_worker(
     """
     try:
         local_catalog_asset_path = os.path.join(catalog, f'{asset_id}.tif')
+        LOGGER.debug(
+            f'local_catalog_asset_path: {local_catalog_asset_path}\n'
+            f'inter_data_dir: {inter_data_dir}\n'
+            f'full_data_dir: {full_data_dir}')
         inter_geoserver_raster_path = os.path.join(
             inter_data_dir, local_catalog_asset_path)
         # local data dir is for path to copy to from working directory
