@@ -40,7 +40,8 @@ DOWNLOAD_HEADERS = {"Content-Disposition": "attachment"}
 
 LOGGER = logging.getLogger(__name__)
 
-stac_bp = Blueprint("stac", __name__)
+stac_bp = Blueprint(
+    "stac", __name__, template_folder='templates', static_folder='static')
 
 
 @stac_bp.route('/pixel_pick', methods=["POST"])
