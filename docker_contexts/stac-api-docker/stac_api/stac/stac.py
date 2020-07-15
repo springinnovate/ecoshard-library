@@ -13,6 +13,8 @@ import time
 import traceback
 import urllib.parse
 
+from sqlalchemy.orm import scoped_session
+from sqlalchemy.orm import sessionmaker
 from flask import Blueprint
 from flask import current_app
 from google.oauth2 import service_account
@@ -33,6 +35,8 @@ import retrying
 from . import models
 from . import queries
 from . import services
+
+from ..stac_api import app
 
 GEOSERVER_USER = 'admin'
 EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
@@ -544,8 +548,7 @@ def publish():
                   utc_datetime, default_style, job_id, attribute_dict,
                   expiration_utc_datetime,
                   current_app.config['INTER_GEOSERVER_DATA_DIR'],
-                  current_app.config['GEOSERVER_DATA_DIR'],
-                  current_app),
+                  current_app.config['GEOSERVER_DATA_DIR']),
             kwargs={'force': force})
         raster_worker_thread.start()
 
@@ -903,7 +906,7 @@ def get_lat_lng_bounding_box(raster_path):
 def add_raster_worker(
         uri_path, mediatype, catalog, asset_id, asset_description,
         utc_datetime, default_style, job_id, attribute_dict,
-        expiration_utc_datetime, inter_data_dir, full_data_dir, app,
+        expiration_utc_datetime, inter_data_dir, full_data_dir,
         force=False):
     """Copy and update a coverage set asynchronously.
 
@@ -925,7 +928,6 @@ def add_raster_worker(
             internal raster path relative to its own data directory.
         full_data_dir (str): directory in which to copy this raster.
             `inter_data_dir` must be a suffix of this string.
-        app (flask.App): the current flask app for contexts.
         force (bool): if True will overwrite existing local data, otherwise
             does not re-copy data.
 
