@@ -29,7 +29,7 @@ services:
     tty: true
     depends_on:
       - geoserver
-      - ${DB_HOST}
+      - db
     environment:
       - BUCKET_READ_SERVICE_ACCOUNT_KEYFILE=/run/secrets/bucket_read_service_account_key
       - SIGN_URL_PUBLIC_KEY_PATH=/run/secrets/sign_url_public_key
@@ -40,9 +40,9 @@ services:
       - bucket_read_service_account_key
       - sign_url_public_key
 
-  ${DB_HOST}:
+  db:
     image: postgres
-    container_name: ${DB_HOST}
+    container_name: db
     restart: always
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}

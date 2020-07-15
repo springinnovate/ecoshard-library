@@ -14,11 +14,10 @@ SIGN_URL_PUBLIC_KEYFILE=./cfo-public-auth.json
 BUCKET_READ_SERVICE_ACCOUNT_KEYFILE=./bucket-read-keyfile-project-name.json
 
 # Databse environment
-DB_HOST=db_test
 DB_USER=replace_with_real_db_user
 DB_PASSWORD=replace_with_real_db_password
 DATABASE_NAME=stac_api_db
-SQLALCHEMY_DATABASE_URI=postgresql://{DB_PASSWORD}:${DB_USER}@${DB_HOST}/
+SQLALCHEMY_DATABASE_URI=postgresql://{DB_PASSWORD}:${DB_USER}@$db/
 POSTGRES_VOLUME=/mnt/postgres_volume
 
 # Disk Resize Environment
