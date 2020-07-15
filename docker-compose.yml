@@ -77,8 +77,9 @@ services:
       - disk_resize_service_account_key
 
   nginx:
-    image: "nginx:1.13.5"
     container_name: "nginx"
+    build: docker_contexts/nginx
+    restart: always
     command: [nginx-debug, '-g', 'daemon off;']
     tty: true
     ports:
