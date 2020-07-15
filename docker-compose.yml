@@ -105,6 +105,8 @@ services:
       - api_stac_nw
     ports:
       - 8081:80
+    volumes:
+      - /var/lib/pgadmin:/var/lib/pgadmin
 
 networks:
   api_stac_nw:
