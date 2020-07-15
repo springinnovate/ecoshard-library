@@ -80,6 +80,7 @@ services:
     image: "nginx:1.13.5"
     container_name: "nginx"
     command: [nginx-debug, '-g', 'daemon off;']
+    tty: true
     ports:
       - 80:80
       - 443:443
