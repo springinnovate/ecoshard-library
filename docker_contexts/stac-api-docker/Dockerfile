@@ -33,4 +33,4 @@ RUN rm start_stac_api.sh
 RUN pip3 install -e .
 
 COPY start_stac_api.sh /usr/local/stac_manager/
-EXPOSE ${API_HOST_PORT}
+EXPOSE 8888

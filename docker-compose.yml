@@ -20,7 +20,7 @@ services:
     build: docker_contexts/stac-api-docker
     entrypoint: ["bash",  "-i", "/usr/local/stac_manager/start_stac_api.sh"]
     ports:
-      - ${API_HOST_PORT}:${API_HOST_PORT}
+      - 8888:8888
     volumes:
       - ${GEOSERVER_DATA_DIR}:${GEOSERVER_DATA_DIR}
     image: stac_manager

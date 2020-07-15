@@ -6,4 +6,4 @@ echo "upgrade db"
 flask db upgrade
 
 echo "launching app"
-waitress-serve --expose-tracebacks --listen=0.0.0.0:${API_HOST_PORT} --call stac_api:create_app 2>&1
+waitress-serve --expose-tracebacks --listen=0.0.0.0:8888 --call stac_api:create_app 2>&1
