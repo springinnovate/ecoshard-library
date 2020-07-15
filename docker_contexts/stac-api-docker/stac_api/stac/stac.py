@@ -543,7 +543,8 @@ def publish():
                   asset_args['description'],
                   utc_datetime, default_style, job_id, attribute_dict,
                   expiration_utc_datetime,
-                  current_app.config['INTERNAL_GEOSERVER_DATA_DIR']),
+                  current_app.config['INTER_GEOSERVER_DATA_DIR'],
+                  current_app.config['GEOSERVER_DATA_DIR']),
             kwargs={'force': force})
         raster_worker_thread.start()
 
@@ -901,7 +902,7 @@ def get_lat_lng_bounding_box(raster_path):
 def add_raster_worker(
         uri_path, mediatype, catalog, asset_id, asset_description,
         utc_datetime, default_style, job_id, attribute_dict,
-        expiration_utc_datetime, inter_data_dir, force=False):
+        expiration_utc_datetime, inter_data_dir, full_data_dir, force=False):
     """Copy and update a coverage set asynchronously.
 
     Args:
@@ -920,6 +921,8 @@ def add_raster_worker(
             database and local storage.
         inter_data_dir (str): directory path to prefix for the geoserver's
             internal raster path relative to its own data directory.
+        full_data_dir (str): directory in which to copy this raster.
+            `inter_data_dir` must be a suffix of this string.
         force (bool): if True will overwrite existing local data, otherwise
             does not re-copy data.
 
@@ -928,29 +931,26 @@ def add_raster_worker(
 
     """
     try:
-        local_raster_path = None
-        # geoserver raster path is for it's local data dir
-        geoserver_raster_path = os.path.join(
-            inter_data_dir, catalog, f'{asset_id}.tif')
+        local_catalog_asset_path = os.path.join(catalog, f'{asset_id}.tif')
+        inter_geoserver_raster_path = os.path.join(
+            inter_data_dir, local_catalog_asset_path)
         # local data dir is for path to copy to from working directory
-        catalog_data_dir = os.path.join(
-            current_app.config['FULL_DATA_DIR'], catalog)
+        target_raster_path = os.path.join(
+            full_data_dir, local_catalog_asset_path)
+
         try:
-            os.makedirs(catalog_data_dir)
+            os.makedirs(os.path.dirname(target_raster_path))
         except OSError:
             pass
-
-        local_raster_path = os.path.join(
-            catalog_data_dir, os.path.basename(geoserver_raster_path))
 
         services.update_job_status(job_id, 'copying local')
         models.db.session.commit()
 
-        LOGGER.debug('copy %s to %s', uri_path, local_raster_path)
-        if os.path.exists(local_raster_path):
+        LOGGER.debug('copy %s to %s', uri_path, target_raster_path)
+        if os.path.exists(target_raster_path):
             # check the size of any existing file first
             existing_ls_line_result = subprocess.run(
-               ['ls', '-l', local_raster_path], stdout=subprocess.PIPE,
+               ['ls', '-l', target_raster_path], stdout=subprocess.PIPE,
                check=True)
             existing_ls_line = existing_ls_line_result.stdout.decode(
                 'utf-8').rstrip().split('\n')[-1].split()
@@ -974,7 +974,7 @@ def add_raster_worker(
 
         # get the file system size
         df_result = subprocess.run(
-            ['df', os.path.dirname(local_raster_path)],
+            ['df', os.path.dirname(target_raster_path)],
             stdout=subprocess.PIPE, check=True)
         fs, blocks, used, available_k, use_p, mount = (
             df_result.stdout.decode('utf-8').rstrip().split('\n')[-1].split())
@@ -1006,18 +1006,18 @@ def add_raster_worker(
                     f'need {gs_object_size-existing_object_size} '
                     f'but have {available_b}.')
 
-        if os.path.exists(local_raster_path):
+        if os.path.exists(target_raster_path):
             # remove the file first
-            os.remove(local_raster_path)
+            os.remove(target_raster_path)
 
         subprocess.run([
-            f'gsutil cp "{uri_path}" "{local_raster_path}"'],
+            f'gsutil cp "{uri_path}" "{target_raster_path}"'],
             shell=True, check=True)
 
-        if not os.path.exists(local_raster_path):
-            raise RuntimeError(f"{local_raster_path} didn't copy")
+        if not os.path.exists(target_raster_path):
+            raise RuntimeError(f"{target_raster_path} didn't copy")
 
-        raster = gdal.OpenEx(local_raster_path, gdal.OF_RASTER)
+        raster = gdal.OpenEx(target_raster_path, gdal.OF_RASTER)
         compression_alg = raster.GetMetadata(
             'IMAGE_STRUCTURE').get('COMPRESSION', None)
         if compression_alg in [None, 'ZSTD']:
@@ -1027,11 +1027,11 @@ def add_raster_worker(
                 'this can take some time')
             models.db.session.commit()
             needs_compression_tmp_file = os.path.join(
-                os.path.dirname(catalog_data_dir),
+                os.path.dirname(target_raster_path),
                 f'NEEDS_COMPRESSION_{job_id}.tif')
-            os.rename(local_raster_path, needs_compression_tmp_file)
+            os.rename(target_raster_path, needs_compression_tmp_file)
             ecoshard.compress_raster(
-                needs_compression_tmp_file, local_raster_path,
+                needs_compression_tmp_file, target_raster_path,
                 compression_algorithm='LZW', compression_predictor=None)
             os.remove(needs_compression_tmp_file)
 
@@ -1040,14 +1040,14 @@ def add_raster_worker(
         models.db.session.commit()
 
         ecoshard.build_overviews(
-            local_raster_path, interpolation_method='average',
+            target_raster_path, interpolation_method='average',
             overview_type='internal', rebuild_if_exists=False)
 
         services.update_job_status(job_id, 'publishing to geoserver')
         models.db.session.commit()
 
         publish_to_geoserver(
-            geoserver_raster_path, local_raster_path, catalog, asset_id,
+            inter_geoserver_raster_path, target_raster_path, catalog, asset_id,
             mediatype)
 
         LOGGER.debug('update job_table with complete')
@@ -1055,7 +1055,7 @@ def add_raster_worker(
         services.update_job_status(job_id, 'update catlog database geoserver')
         models.db.session.commit()
         LOGGER.debug('update catalog_table with final values')
-        lat_lng_bounding_box = get_lat_lng_bounding_box(local_raster_path)
+        lat_lng_bounding_box = get_lat_lng_bounding_box(target_raster_path)
         band = raster.GetRasterBand(1)
         raster_min, raster_max, raster_mean, raster_stdev = \
             band.GetStatistics(0, 1)
@@ -1066,7 +1066,7 @@ def add_raster_worker(
             lat_lng_bounding_box[2],
             lat_lng_bounding_box[3],
             utc_datetime, mediatype, asset_description, uri_path,
-            local_raster_path, raster_min, raster_max, raster_mean,
+            target_raster_path, raster_min, raster_max, raster_mean,
             raster_stdev, default_style, expiration_utc_datetime)
 
         if attribute_dict:
@@ -1081,12 +1081,12 @@ def add_raster_worker(
         LOGGER.exception('something bad happened when doing raster worker')
         services.update_job_status(job_id, f'ERROR: {str(e)}')
         models.db.session.commit()
-        if local_raster_path:
+        if target_raster_path:
             # try to delete the local file in case it errored
             try:
-                os.remove(local_raster_path)
+                os.remove(target_raster_path)
             except OSError:
-                LOGGER.exception(f'unable to remove {local_raster_path}')
+                LOGGER.exception(f'unable to remove {target_raster_path}')
 
 
 def validate_api(api_key, permission):

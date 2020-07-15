@@ -44,6 +44,7 @@ def create_app():
         SECRET_KEY=os.environ.get('SECRET_KEY', None),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         PASSWORD_FILE_PATH=os.environ.get('PASSWORD_FILE_PATH', None),
+        INTER_GEOSERVER_DATA_DIR=os.environ.get('INTER_GEOSERVER_DATA_DIR', None),
         GEOSERVER_DATA_DIR=os.environ.get('GEOSERVER_DATA_DIR', None),
         GEOSERVER_MANAGER_HOST=os.environ.get('GEOSERVER_MANAGER_HOST', None),
         SQLALCHEMY_DATABASE_URI=os.environ.get(

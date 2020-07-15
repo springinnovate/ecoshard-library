@@ -1,11 +1,13 @@
 # Host environment
-GEOSERVER_DATA_DIR=/mnt/geoserver_data
+INTER_GEOSERVER_DATA_DIR=data
+GEOSERVER_DATA_DIR=/mnt/geoserver_data/${INTER_GEOSERVER_DATA_DIR}
 NGINX_HOST=publish.ecoshard.org
 
 # Geoserver environment
 GEOSERVER_MANAGER_HOST=localhost:8080
 GEOSERVER_MAX_RAM=5g
 GEOSERVER_USER=admin
+
 
 # API manager environment
 API_HOST_PORT=8888
