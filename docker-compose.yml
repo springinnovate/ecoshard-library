@@ -47,7 +47,8 @@ services:
     environment:
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_USER: ${DB_USER}
-    - ${POSTGRES_VOLUME}:/var/lib/postgresql
+    volumes:
+      - ${POSTGRES_VOLUME}:/var/lib/postgresql
     networks:
       - api_stac_nw
 
