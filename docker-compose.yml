@@ -104,7 +104,7 @@ services:
     networks:
       - api_stac_nw
     ports:
-      - 8080:80
+      - 8081:80
 
 networks:
   api_stac_nw:
