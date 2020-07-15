@@ -18,7 +18,7 @@ services:
   stac_manager:
     container_name: stac_manager
     build: docker_contexts/stac-api-docker
-    entrypoint: ["bash",  "-i", "/usr/local/bin/start_geoserver.sh"]
+    entrypoint: ["bash",  "-i", "/usr/local/stac_manager/start_stac_api.sh"]
     ports:
       - ${API_HOST_PORT}:${API_HOST_PORT}
     volumes:
