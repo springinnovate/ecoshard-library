@@ -55,6 +55,7 @@ def create_job(job_id, data_uri, job_status):
     """
     job = Job(
         job_id=job_id,
+        data_uri=data_uri,
         job_status=job_status,
         )
     db.session.add(job)
