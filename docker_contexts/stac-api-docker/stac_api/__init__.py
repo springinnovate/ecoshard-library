@@ -50,6 +50,8 @@ def create_app():
             'SQLALCHEMY_DATABASE_URI', None),
         SIGN_URL_PUBLIC_KEY_PATH=os.environ.get(
             'SIGN_URL_PUBLIC_KEY_PATH', None),
+        DEFAULT_STYLE=os.environ.get(
+            'DEFAULT_STYLE', 'greens')
     )
 
     flask_cors.CORS(app)
