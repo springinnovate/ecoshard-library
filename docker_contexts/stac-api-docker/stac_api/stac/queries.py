@@ -7,7 +7,7 @@ from .models import CatalogEntry
 from .models import Job
 from sqlalchemy import and_
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger('stac')
 
 
 def find_catalog_by_id(catalog, asset_id):
