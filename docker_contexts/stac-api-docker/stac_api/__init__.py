@@ -54,6 +54,7 @@ def create_app():
         DEFAULT_STYLE=os.environ.get(
             'DEFAULT_STYLE', 'greens')
     )
+    LOGGER.debug(os.environ.get('INTER_GEOSERVER_DATA_DIR'))
 
     flask_cors.CORS(app)
     db.init_app(app)
