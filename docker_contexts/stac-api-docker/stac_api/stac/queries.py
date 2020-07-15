@@ -1,9 +1,13 @@
 """Queries for SQLAlchamy STAC view."""
+import logging
+
 from .models import APIKey
 from .models import Attribute
 from .models import CatalogEntry
 from .models import Job
 from sqlalchemy import and_
+
+LOGGER = logging.getLogger(__name__)
 
 
 def find_catalog_by_id(catalog, asset_id):
@@ -37,15 +41,16 @@ def get_allowed_permissions_map(api_key):
     result = APIKey.query.filter(
         APIKey.api_key == api_key).one_or_none()
 
+    LOGGER.debug(f'got these permissions for {api_key} {result}')
     if result is None:
         return None
 
     allowed_permissions = {}
     for permission_type in ['READ', 'WRITE']:
         allowed_permissions[permission_type] = set([
-            permission.split(':')[1]
+            permission.split(':')[0]
             for permission in result.permissions.split(' ')
-            if permission.startswith(f'{permission_type}:')])
+            if permission.endswith(f'{permission_type}:')])
 
     return allowed_permissions
 
