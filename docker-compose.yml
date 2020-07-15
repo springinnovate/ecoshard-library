@@ -36,6 +36,7 @@ services:
       - SQLALCHEMY_DATABASE_URI=${SQLALCHEMY_DATABASE_URI}
       - GEOSERVER_DATA_DIR=${GEOSERVER_DATA_DIR}
       - API_HOST_PORT=${API_HOST_PORT}
+      - FLASK_APP=stac_api
     secrets:
       - bucket_read_service_account_key
       - sign_url_public_key
