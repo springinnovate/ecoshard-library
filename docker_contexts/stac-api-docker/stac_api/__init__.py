@@ -18,6 +18,7 @@ LOG_FILE_PATH = os.path.join(
 with open(LOG_FILE_PATH) as f:
     logging.config.dictConfig(json.load(f))
 LOGGER = logging.getLogger(__name__)
+PUBLIC_API_KEY = 'public'
 
 
 def create_app():
@@ -58,6 +59,14 @@ def create_app():
     app.register_blueprint(stac.stac_bp, url_prefix="/api/v1")
 
     # TODO: remove any old jobs
+
+    # register a public api key
+    public_access_map = stac.queries.get_allowed_permissions_map('public')
+    if public_access_map is None:
+        # create the key/permissions
+        stac.services.update_api_key(
+            'public', {'public:READ', 'public:WRITE'})
+        db.session.commit()
 
     # start up an expiration monitor
     expiration_monitor_thread = threading.Thread(

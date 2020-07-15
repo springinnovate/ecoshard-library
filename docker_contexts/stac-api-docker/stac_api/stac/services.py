@@ -1,8 +1,37 @@
 """Services for STAC API SQLAlchemy."""
 from .models import db
+from .models import APIKey
 from .models import Attribute
 from .models import CatalogEntry
 from .models import Job
+
+
+def update_api_key(api_key, permission_set):
+    """Update (and/or add) an API key and permissions.
+
+    Args:
+        api_key (str): any string representing an api key
+        permission_set (set): set of "catalog:READ/WRITE" permission strings
+            to add to the key.
+
+    Returns:
+        new/updated API key object (not committed)
+
+    """
+    api_key_entry = APIKey.query.filter(
+        APIKey.api_key == api_key).one_or_none()
+    if api_key_entry is None:
+        api_key_entry = APIKey(
+            api_key=api_key,
+            permissions=' '.join(permission_set))
+    else:
+        existing_permission_set = {
+            api_key_entry.permissions.split(' ')
+        }
+        new_permission_set = \
+            existing_permission_set.union(permission_set)
+        api_key_entry.permissions = ' '.join(new_permission_set)
+    return api_key_entry
 
 
 def create_job(job_id, data_uri, job_status):
