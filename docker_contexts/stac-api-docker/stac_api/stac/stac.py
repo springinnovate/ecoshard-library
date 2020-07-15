@@ -210,7 +210,7 @@ def fetch():
                 f"{fetch_data['catalog']}", 400)
     elif fetch_type == 'wms_preview':
         link = flask.url_for(
-            'viewer', catalog=fetch_data['catalog'],
+            'stac.viewer', catalog=fetch_data['catalog'],
             asset_id=fetch_data['asset_id'], api_key=api_key,
             _external=True)
     elif fetch_type == 'wms':
@@ -274,9 +274,9 @@ def render_list():
         api_key = flask.request.args['api_key']
         return flask.render_template('list.html', **{
             'search_url': flask.url_for(
-                'search', api_key=api_key, _external=True),
+                'stac.search', api_key=api_key, _external=True),
             'fetch_url': flask.url_for(
-                'fetch', api_key=api_key, _external=True),
+                'stac.fetch', api_key=api_key, _external=True),
         }, _external=True)
     except Exception:
         LOGGER.exception('error on render list')
@@ -310,14 +310,14 @@ def viewer():
         'original_style': catalog_entry.default_style,
         'p0': catalog_entry.raster_min,
         'p100': catalog_entry.raster_max,
-        'pixel_pick_url': flask.url_for('pixel_pick', _external=True),
+        'pixel_pick_url': flask.url_for('stac.pixel_pick', _external=True),
         'x_center': x_center,
         'y_center': y_center,
         'min_lat': catalog_entry.bb_ymin,
         'min_lng': catalog_entry.bb_xmin,
         'max_lat': catalog_entry.bb_ymax,
         'max_lng': catalog_entry.bb_xmax,
-        'geoserver_style_url': flask.url_for('styles', _external=True),
+        'geoserver_style_url': flask.url_for('stac.styles', _external=True),
         'nodata': nodata,
     }, _external=True)
 
@@ -518,7 +518,7 @@ def publish():
         # build job
         job_id = build_job_hash(asset_args)
         callback_url = flask.url_for(
-            'get_status', job_id=job_id, api_key=api_key, _external=True)
+            'stac.get_status', job_id=job_id, api_key=api_key, _external=True)
         callback_payload = json.dumps({'callback_url': callback_url})
 
         # see if job already running and hasn't previously errored
