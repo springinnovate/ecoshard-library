@@ -36,7 +36,7 @@ from . import models
 from . import queries
 from . import services
 
-from ..stac_api import app
+from .. import app
 
 GEOSERVER_USER = 'admin'
 EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
