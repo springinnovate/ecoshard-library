@@ -12,23 +12,35 @@ services:
     tty: true
     stdin_open: true
     depends_on:
-      - db
+      - test_db
+      - pgadmin
     networks:
-      - api_stac_nw
+      - stac_shell_nw
     environment:
       - FLASK_APP=stac_api
-      - SQLALCHEMY_DATABASE_URI=postgresql://db_test_user:db_test_password@db
+      - SQLALCHEMY_DATABASE_URI=postgresql://db_test_user:db_test_password@test_db
 
-  db:
+  test_db:
     image: postgres
-    container_name: ${DB_HOST}
-    restart: always
     environment:
       POSTGRES_PASSWORD: db_test_password
       POSTGRES_USER: db_test_user
     networks:
-      - api_stac_nw
+      - stac_shell_nw
+
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.localhost
+      PGADMIN_DEFAULT_PASSWORD: db_test_password
+      PGADMIN_LISTEN_PORT: 80
+    depends_on:
+      - test_db
+    networks:
+      - stac_shell_nw
+    ports:
+      - 8080:80
 
 networks:
-  api_stac_nw:
+  stac_shell_nw:
     driver: bridge
