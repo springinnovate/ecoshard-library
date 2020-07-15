@@ -1194,12 +1194,11 @@ def utc_now():
     return str(datetime.datetime.now(datetime.timezone.utc))
 
 
-def expiration_monitor():
+def expiration_monitor(base_app):
     """Monitor database for any entries that have expired and delete them.
 
     Args:
-        database_path (str): path to database that contains at least a
-            'expiration_utc_datetime' column.
+        base_app (flask.App): the base app so we can get context.
 
     Returns:
         None (never)
@@ -1209,7 +1208,7 @@ def expiration_monitor():
         while True:
             current_time = utc_now()
             LOGGER.debug(f'checking for expired data at {current_time}')
-            with current_app.app_context():
+            with base_app.app_context():
                 expired_entries = queries.get_expired_catalog_entries(
                     current_time)
 

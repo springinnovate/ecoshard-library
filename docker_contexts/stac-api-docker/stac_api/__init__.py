@@ -83,7 +83,8 @@ def create_app():
 
     # start up an expiration monitor
     expiration_monitor_thread = threading.Thread(
-        target=stac.expiration_monitor)
+        target=stac.expiration_monitor,
+        args=(app,))
     expiration_monitor_thread.daemon = True
     expiration_monitor_thread.start()
 
