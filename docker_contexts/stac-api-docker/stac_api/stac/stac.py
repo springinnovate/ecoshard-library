@@ -32,11 +32,10 @@ import requests
 import retrying
 
 # SQLAlchamy
+from ..db import db
 from . import models
 from . import queries
 from . import services
-
-from .. import app
 
 GEOSERVER_USER = 'admin'
 EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
@@ -952,7 +951,7 @@ def add_raster_worker(
         except OSError:
             pass
 
-        with app.app_context():
+        with db.app_context():
             services.update_job_status(job_id, 'copying local')
             models.db.session.commit()
 
