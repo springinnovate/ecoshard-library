@@ -88,8 +88,6 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt
     networks:
       - api_stac_nw
-    depends_on:
-      - stac_manager
 
 networks:
   api_stac_nw:
