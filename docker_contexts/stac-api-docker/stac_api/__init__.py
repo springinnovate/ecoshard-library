@@ -21,12 +21,25 @@ LOGGER = logging.getLogger(__name__)
 PUBLIC_API_KEY = 'public'
 
 
+class ReverseProxied(object):
+    """From https://stackoverflow.com/a/37842465/42897."""
+    def __init__(self, app):
+        self.app = app
+
+    def __call__(self, environ, start_response):
+        scheme = environ.get('HTTP_X_FORWARDED_PROTO')
+        if scheme:
+            environ['wsgi.url_scheme'] = scheme
+        return self.app(environ, start_response)
+
+
 def create_app():
     """Create the Geoserver STAC Flask app."""
     LOGGER.debug('starting up!')
     # wait for API calls
 
     app = Flask(__name__, instance_relative_config=False)
+    app.wsgi_app = ReverseProxied(app.wsgi_app)
     app.config.from_mapping(
         SECRET_KEY=os.environ.get('SECRET_KEY', None),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
@@ -39,19 +52,7 @@ def create_app():
             'SIGN_URL_PUBLIC_KEY_PATH', None),
     )
 
-    # config.py should contain a real secret key and
-    # a real IP address/hostname
-    if os.path.exists('config.py'):
-        app.config.from_pyfile('config.py', silent=False)
-        app.config['PASSWORD_FILE_PATH'] = os.path.join(
-            app.config['GEOSERVER_DATA_DIR'], 'secrets', 'password')
-        with app.app_context():
-            stac.initalize_geoserver()
-    else:
-        LOGGER.warning("config.py not found")
-
     flask_cors.CORS(app)
-
     db.init_app(app)
     migrate = Migrate(app, db)
 
