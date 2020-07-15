@@ -38,7 +38,7 @@ GEOSERVER_USER = 'admin'
 EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
 DOWNLOAD_HEADERS = {"Content-Disposition": "attachment"}
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger("stac")
 
 stac_bp = Blueprint(
     "stac", __name__, template_folder='templates', static_folder='static')
