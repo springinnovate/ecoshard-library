@@ -70,6 +70,10 @@ def create_app():
                 'public', {'public:READ', 'public:WRITE'})
             db.session.commit()
 
+    with app.app_context():
+        public_access_map = stac.queries.get_allowed_permissions_map('public')
+        LOGGER.debug(f'public access: {public_access_map}')
+
     # start up an expiration monitor
     expiration_monitor_thread = threading.Thread(
         target=stac.expiration_monitor)
