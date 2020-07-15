@@ -1212,19 +1212,20 @@ def expiration_monitor(base_app):
                 expired_entries = queries.get_expired_catalog_entries(
                     current_time)
 
-            for expired_catalog_entry in expired_entries:
-                LOGGER.info(
-                    f'{expired_catalog_entry.asset_id}:'
-                    f'{expired_catalog_entry.catalog} expired on '
-                    f'{expired_catalog_entry.expiration_utc_datetime} '
-                    f'current time is {current_time}. Deleting...')
-                delete_raster(
-                    expired_catalog_entry.local_path,
-                    expired_catalog_entry.asset_id,
-                    expired_catalog_entry.catalog)
+                for expired_catalog_entry in expired_entries:
+                    LOGGER.info(
+                        f'{expired_catalog_entry.asset_id}:'
+                        f'{expired_catalog_entry.catalog} expired on '
+                        f'{expired_catalog_entry.expiration_utc_datetime} '
+                        f'current time is {current_time}. Deleting...')
+                    delete_raster(
+                        expired_catalog_entry.local_path,
+                        expired_catalog_entry.asset_id,
+                        expired_catalog_entry.catalog)
 
-                models.db.session.delete(expired_catalog_entry)
-            models.db.session.commit()
+                    models.db.session.delete(expired_catalog_entry)
+                if expired_entries:
+                    models.db.session.commit()
             time.sleep(EXPIRATION_MONITOR_DELAY)
     except Exception:
         LOGGER.exception('something bad happened in expiration_monitor')
