@@ -38,6 +38,7 @@ services:
       - FLASK_APP=stac_api
       - FLASK_RUN_PORT=8888
       - FLASK_ENV=development
+      - FLASK_RUN_HOST=0.0.0.0
     secrets:
       - bucket_read_service_account_key
       - sign_url_public_key
