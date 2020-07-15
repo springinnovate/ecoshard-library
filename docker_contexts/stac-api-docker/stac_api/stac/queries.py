@@ -142,7 +142,7 @@ def get_job_status(job_id):
         a Job object describing given job or None if not in table.
 
     """
-    return Job.query(Job.job_id == job_id).one_or_none()
+    return Job.query.filter(Job.job_id == job_id).one_or_none()
 
 
 def get_expired_catalog_entries(current_time):
