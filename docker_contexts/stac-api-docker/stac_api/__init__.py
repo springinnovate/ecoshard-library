@@ -62,8 +62,6 @@ def create_app():
     app.register_blueprint(auth.auth_bp, url_prefix="/users")
     app.register_blueprint(stac.stac_bp, url_prefix="/api/v1")
 
-    # TODO: remove any old jobs
-
     # register a public api key
     with app.app_context():
         public_access_map = stac.queries.get_allowed_permissions_map('public')
@@ -73,7 +71,11 @@ def create_app():
             stac.services.update_api_key(
                 PUBLIC_API_KEY,
                 {f'{PUBLIC_API_KEY}:READ', f'{PUBLIC_API_KEY}:WRITE'})
-            db.session.commit()
+
+        # remove any old jobs
+        jobs_removed = stac.services.clear_all_jobs()
+        LOGGER.info(f'will remove {jobs_removed} previously running jobs')
+        db.session.commit()
 
     with app.app_context():
         public_access_map = stac.queries.get_allowed_permissions_map('public')

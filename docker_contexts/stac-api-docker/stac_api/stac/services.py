@@ -178,3 +178,13 @@ def update_attributes(asset_id, catalog, attribute_dict):
         else:
             attribute.value = value
     return attribute
+
+
+def clear_all_jobs():
+    """Used when starting up to clear the job queue.
+
+    Returns:
+        Number of rows that would be deleted.
+
+    """
+    return Job.query.delete()
