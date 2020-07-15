@@ -8,7 +8,7 @@
       "format": "%(asctime)s (%(relativeCreated)d) %(processName)s %(levelname)s %(name)s [%(funcName)s:%(lineno)d] [event: %(event)s, user_id: %(user_id)d] %(message)s"
     },
     "stac": {
-      "format": "%(asctime)s (%(relativeCreated)d) %(processName)s %(levelname)s %(name)s [%(funcName)s:%(lineno)d] [event: %(event)s, user_id: %(user_id)d] %(message)s"
+      "format": "%(asctime)s (%(relativeCreated)d) %(processName)s %(levelname)s %(name)s [%(funcName)s:%(lineno)d] %(message)s"
     }
   },
   "handlers": {
