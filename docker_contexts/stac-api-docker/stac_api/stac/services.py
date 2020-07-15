@@ -1,9 +1,13 @@
 """Services for STAC API SQLAlchemy."""
+import logging
+
 from .models import db
 from .models import APIKey
 from .models import Attribute
 from .models import CatalogEntry
 from .models import Job
+
+LOGGER = logging.getLogger(__name__)
 
 
 def update_api_key(api_key, permission_set):
@@ -20,10 +24,12 @@ def update_api_key(api_key, permission_set):
     """
     api_key_entry = APIKey.query.filter(
         APIKey.api_key == api_key).one_or_none()
+    LOGGER.debug(f'existing api_key_entry: {api_key_entry}')
     if api_key_entry is None:
         api_key_entry = APIKey(
             api_key=api_key,
             permissions=' '.join(permission_set))
+        LOGGER.debug(f'created new api_key_entry: {api_key_entry}')
     else:
         existing_permission_set = {
             api_key_entry.permissions.split(' ')
@@ -31,6 +37,7 @@ def update_api_key(api_key, permission_set):
         new_permission_set = \
             existing_permission_set.union(permission_set)
         api_key_entry.permissions = ' '.join(new_permission_set)
+    db.session.add(api_key_entry)
     return api_key_entry
 
 
@@ -153,7 +160,7 @@ def update_attributes(asset_id, catalog, attribute_dict):
         with catalog:asset_id
 
     Returns:
-        None.
+        Updated attribute
 
     """
     for key, value in attribute_dict.items():
@@ -169,3 +176,4 @@ def update_attributes(asset_id, catalog, attribute_dict):
             db.session.add(attribute)
         else:
             attribute.value = value
+    return attribute

@@ -64,10 +64,12 @@ def create_app():
     # register a public api key
     with app.app_context():
         public_access_map = stac.queries.get_allowed_permissions_map('public')
+        LOGGER.debug(f'public_access_map: {public_access_map}')
         if public_access_map is None:
             # create the key/permissions
             stac.services.update_api_key(
-                'public', {'public:READ', 'public:WRITE'})
+                PUBLIC_API_KEY,
+                {f'{PUBLIC_API_KEY}:READ', f'{PUBLIC_API_KEY}:WRITE'})
             db.session.commit()
 
     with app.app_context():
