@@ -93,6 +93,20 @@ services:
     networks:
       - api_stac_nw
 
+  pgadmin:
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.localhost
+      PGADMIN_DEFAULT_PASSWORD: ${DB_PASSWORD}
+      PGADMIN_LISTEN_PORT: 80
+    depends_on:
+      - test_db
+    networks:
+      - stac_shell_nw
+    ports:
+      - 8080:80
+
+
 networks:
   api_stac_nw:
     driver: bridge
