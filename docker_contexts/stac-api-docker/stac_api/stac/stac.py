@@ -544,7 +544,8 @@ def publish():
                   utc_datetime, default_style, job_id, attribute_dict,
                   expiration_utc_datetime,
                   current_app.config['INTER_GEOSERVER_DATA_DIR'],
-                  current_app.config['GEOSERVER_DATA_DIR']),
+                  current_app.config['GEOSERVER_DATA_DIR'],
+                  current_app),
             kwargs={'force': force})
         raster_worker_thread.start()
 
@@ -902,7 +903,8 @@ def get_lat_lng_bounding_box(raster_path):
 def add_raster_worker(
         uri_path, mediatype, catalog, asset_id, asset_description,
         utc_datetime, default_style, job_id, attribute_dict,
-        expiration_utc_datetime, inter_data_dir, full_data_dir, force=False):
+        expiration_utc_datetime, inter_data_dir, full_data_dir, app,
+        force=False):
     """Copy and update a coverage set asynchronously.
 
     Args:
@@ -923,6 +925,7 @@ def add_raster_worker(
             internal raster path relative to its own data directory.
         full_data_dir (str): directory in which to copy this raster.
             `inter_data_dir` must be a suffix of this string.
+        app (flask.App): the current flask app for contexts.
         force (bool): if True will overwrite existing local data, otherwise
             does not re-copy data.
 
@@ -947,7 +950,7 @@ def add_raster_worker(
         except OSError:
             pass
 
-        with current_app.app_context():
+        with app.app_context():
             services.update_job_status(job_id, 'copying local')
             models.db.session.commit()
 
@@ -1026,7 +1029,7 @@ def add_raster_worker(
         compression_alg = raster.GetMetadata(
             'IMAGE_STRUCTURE').get('COMPRESSION', None)
         if compression_alg in [None, 'ZSTD']:
-            with current_app.app_context():
+            with app.app_context():
                 services.update_job_status(
                     job_id,
                     f'(re)compressing image from {compression_alg}, '
@@ -1041,7 +1044,7 @@ def add_raster_worker(
                 compression_algorithm='LZW', compression_predictor=None)
             os.remove(needs_compression_tmp_file)
 
-        with current_app.app_context():
+        with app.app_context():
             services.update_job_status(
                 job_id, 'building overviews (can take some time)')
             models.db.session.commit()
@@ -1050,7 +1053,7 @@ def add_raster_worker(
             target_raster_path, interpolation_method='average',
             overview_type='internal', rebuild_if_exists=False)
 
-        with current_app.app_context():
+        with app.app_context():
             services.update_job_status(job_id, 'publishing to geoserver')
             models.db.session.commit()
 
@@ -1060,7 +1063,7 @@ def add_raster_worker(
 
         LOGGER.debug('update job_table with complete')
 
-        with current_app.app_context():
+        with app.app_context():
             services.update_job_status(job_id, 'update catlog database geoserver')
             models.db.session.commit()
         LOGGER.debug('update catalog_table with final values')
@@ -1068,7 +1071,7 @@ def add_raster_worker(
         band = raster.GetRasterBand(1)
         raster_min, raster_max, raster_mean, raster_stdev = \
             band.GetStatistics(0, 1)
-        with current_app.app_context():
+        with app.app_context():
             _ = services.create_or_update_catalog_entry(
                 asset_id, catalog,
                 lat_lng_bounding_box[0],
@@ -1089,7 +1092,7 @@ def add_raster_worker(
 
     except Exception as e:
         LOGGER.exception('something bad happened when doing raster worker')
-        with current_app.app_context():
+        with app.app_context():
             services.update_job_status(job_id, f'ERROR: {str(e)}')
             models.db.session.commit()
         if target_raster_path:
