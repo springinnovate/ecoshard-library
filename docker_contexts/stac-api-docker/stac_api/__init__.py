@@ -55,7 +55,9 @@ def create_app():
         SIGN_URL_PUBLIC_KEY_PATH=os.environ.get(
             'SIGN_URL_PUBLIC_KEY_PATH', None),
         DEFAULT_STYLE=os.environ.get(
-            'DEFAULT_STYLE', 'greens')
+            'DEFAULT_STYLE', 'greens'),
+        DISK_RESIZE_SERVICE_HOST=os.environ.get(
+            'DISK_RESIZE_SERVICE_HOST', None),
     )
     LOGGER.debug(os.environ.get('INTER_GEOSERVER_DATA_DIR'))
 

@@ -223,7 +223,7 @@ def fetch():
                 for percent_threshold in percent_thresholds]
 
             link = (
-                f"http://{current_app.config['GEOSERVER_MANAGER_HOST']}/geoserver/"
+                f"{flask.request.args['scheme']}://{current_app.config['GEOSERVER_MANAGER_HOST']}/geoserver/"
                 f"{fetch_data['catalog']}/wms"
                 f"?layers={fetch_data['catalog']}:{fetch_data['asset_id']}"
                 f'&format="image/png"'
