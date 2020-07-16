@@ -165,87 +165,91 @@ def fetch():
         None.
 
     """
-    if not isinstance(flask.request.json, dict):
-        fetch_data = json.loads(flask.request.json)
-    else:
-        fetch_data = flask.request.json
-    api_key = flask.request.args['api_key']
-    valid_check = validate_api(api_key, f'READ:{fetch_data["catalog"]}')
-    if valid_check != 'valid':
-        return valid_check
-    fetch_catalog = queries.find_catalog_by_id(
-        fetch_data['catalog'], fetch_data['asset_id'])
-
-    if not fetch_catalog:
-        return (
-            f'{fetch_data["asset_id"]}:{fetch_data["catalog"]} not found',
-            400)
-    LOGGER.debug(fetch_catalog)
-
-    fetch_type = fetch_data['type'].lower()
-    if fetch_type == 'uri':
-        link = fetch_catalog.uri
-    elif fetch_data['type'] == 'url':
-        # google storage links of the form gs://[VALUE] have https
-        # equivalents of https://storage.cloud.google.com/[VALUE]
-        link = os.path.join(
-            'https://storage.cloud.google.com',
-            fetch_catalog.uri.split('gs://')[1])
-    elif fetch_data['type'] == 'signed_url':
-        # split the bucket path into the bucket name and full object path
-        bucket_path = fetch_catalog.uri.split('gs://')[1]
-        bucket_end = bucket_path.find('/')
-        bucket_name = bucket_path[:bucket_end]
-        object_name = bucket_path[bucket_end+1:]
-
-        # handle catalog-specific authentication
-        if fetch_data['catalog'].lower() == 'cfo':
-            link = generate_signed_url(
-                bucket_name, object_name,
-                current_app.config['SIGN_URL_PUBLIC_KEY_PATH'])
+    try:
+        if not isinstance(flask.request.json, dict):
+            fetch_data = json.loads(flask.request.json)
         else:
+            fetch_data = flask.request.json
+        api_key = flask.request.args['api_key']
+        valid_check = validate_api(api_key, f'READ:{fetch_data["catalog"]}')
+        if valid_check != 'valid':
+            return valid_check
+        fetch_catalog = queries.find_catalog_by_id(
+            fetch_data['catalog'], fetch_data['asset_id'])
+
+        if not fetch_catalog:
             return (
-                f"Signed URLS only available for CFO catalog. Entered; "
-                f"{fetch_data['catalog']}", 400)
-    elif fetch_type == 'wms_preview':
-        link = flask.url_for(
-            'stac.viewer', catalog=fetch_data['catalog'],
-            asset_id=fetch_data['asset_id'], api_key=api_key,
-            _external=True)
-    elif fetch_type == 'wms':
-        percent_thresholds = [0, 2, 25, 30, 50, 60, 75, 90, 98, 100]
-        scaled_value_strings = [
-            f'''p{percent_threshold}={
-                fetch_catalog.raster_min + percent_threshold / 100.0 * (
-                    fetch_catalog.raster_max -
-                    fetch_catalog.raster_min)}'''
-            for percent_threshold in percent_thresholds]
+                f'{fetch_data["asset_id"]}:{fetch_data["catalog"]} not found',
+                400)
+        LOGGER.debug(fetch_catalog)
 
-        link = (
-            f"http://{current_app.config['GEOSERVER_HOST']}/geoserver/"
-            f"{fetch_data['catalog']}/wms"
-            f"?layers={fetch_data['catalog']}:{fetch_data['asset_id']}"
-            f'&format="image/png"'
-            f'&styles={fetch_catalog.default_style}&'
-            f'{"&".join(scaled_value_strings)}')
+        fetch_type = fetch_data['type'].lower()
+        if fetch_type == 'uri':
+            link = fetch_catalog.uri
+        elif fetch_data['type'] == 'url':
+            # google storage links of the form gs://[VALUE] have https
+            # equivalents of https://storage.cloud.google.com/[VALUE]
+            link = os.path.join(
+                'https://storage.cloud.google.com',
+                fetch_catalog.uri.split('gs://')[1])
+        elif fetch_data['type'] == 'signed_url':
+            # split the bucket path into the bucket name and full object path
+            bucket_path = fetch_catalog.uri.split('gs://')[1]
+            bucket_end = bucket_path.find('/')
+            bucket_name = bucket_path[:bucket_end]
+            object_name = bucket_path[bucket_end+1:]
 
-    response = flask.Response({
-         'type': fetch_data['type'],
-         'link': link,
-         'raster_min': fetch_catalog.raster_min,
-         'raster_max': fetch_catalog.raster_max,
-         'raster_mean': fetch_catalog.raster_mean,
-         'raster_stdev': fetch_catalog.raster_stdev,
-    })
+            # handle catalog-specific authentication
+            if fetch_data['catalog'].lower() == 'cfo':
+                link = generate_signed_url(
+                    bucket_name, object_name,
+                    current_app.config['SIGN_URL_PUBLIC_KEY_PATH'])
+            else:
+                return (
+                    f"Signed URLS only available for CFO catalog. Entered; "
+                    f"{fetch_data['catalog']}", 400)
+        elif fetch_type == 'wms_preview':
+            link = flask.url_for(
+                'stac.viewer', catalog=fetch_data['catalog'],
+                asset_id=fetch_data['asset_id'], api_key=api_key,
+                _external=True)
+        elif fetch_type == 'wms':
+            percent_thresholds = [0, 2, 25, 30, 50, 60, 75, 90, 98, 100]
+            scaled_value_strings = [
+                f'''p{percent_threshold}={
+                    fetch_catalog.raster_min + percent_threshold / 100.0 * (
+                        fetch_catalog.raster_max -
+                        fetch_catalog.raster_min)}'''
+                for percent_threshold in percent_thresholds]
 
-    # handle browser compatibility problem where safari default reads
-    # bucket links inline instead of downloading the file
-    if fetch_data['type'] in ['url', 'signed_url']:
-        keys = list(DOWNLOAD_HEADERS.keys())
-        for key in keys:
-            response.headers[key] = DOWNLOAD_HEADERS[key]
+            link = (
+                f"http://{current_app.config['GEOSERVER_HOST']}/geoserver/"
+                f"{fetch_data['catalog']}/wms"
+                f"?layers={fetch_data['catalog']}:{fetch_data['asset_id']}"
+                f'&format="image/png"'
+                f'&styles={fetch_catalog.default_style}&'
+                f'{"&".join(scaled_value_strings)}')
 
-    return response
+        LOGGER.debug(f'build response for {link}')
+        response = flask.Response({
+             'type': fetch_data['type'],
+             'link': link,
+             'raster_min': fetch_catalog.raster_min,
+             'raster_max': fetch_catalog.raster_max,
+             'raster_mean': fetch_catalog.raster_mean,
+             'raster_stdev': fetch_catalog.raster_stdev,
+        })
+        # handle browser compatibility problem where safari default reads
+        # bucket links inline instead of downloading the file
+        if fetch_data['type'] in ['url', 'signed_url']:
+            keys = list(DOWNLOAD_HEADERS.keys())
+            for key in keys:
+                response.headers[key] = DOWNLOAD_HEADERS[key]
+        LOGGER.debug(f'returning repsonse {response}')
+        return response
+    except Exception:
+        LOGGER.exception('somethg bad happened on fetch')
+        raise
 
 
 @stac_bp.route('/styles')
