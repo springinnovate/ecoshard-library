@@ -231,22 +231,31 @@ def fetch():
                 f'{"&".join(scaled_value_strings)}')
 
         LOGGER.debug(f'build response for {link}')
-        response = flask.Response({
+        # handle browser compatibility problem where safari default reads
+        # bucket links inline instead of downloading the file
+        if fetch_data['type'] in ['url', 'signed_url']:
+            LOGGER.debug('request is a signed url do somethign special')
+            response = flask.Response({
+                 'type': fetch_data['type'],
+                 'link': link,
+                 'raster_min': fetch_catalog.raster_min,
+                 'raster_max': fetch_catalog.raster_max,
+                 'raster_mean': fetch_catalog.raster_mean,
+                 'raster_stdev': fetch_catalog.raster_stdev,
+            })
+            keys = list(DOWNLOAD_HEADERS.keys())
+            for key in keys:
+                response.headers[key] = DOWNLOAD_HEADERS[key]
+            return response
+        LOGGER.debug(f'returning traditional response')
+        return {
              'type': fetch_data['type'],
              'link': link,
              'raster_min': fetch_catalog.raster_min,
              'raster_max': fetch_catalog.raster_max,
              'raster_mean': fetch_catalog.raster_mean,
              'raster_stdev': fetch_catalog.raster_stdev,
-        })
-        # handle browser compatibility problem where safari default reads
-        # bucket links inline instead of downloading the file
-        if fetch_data['type'] in ['url', 'signed_url']:
-            keys = list(DOWNLOAD_HEADERS.keys())
-            for key in keys:
-                response.headers[key] = DOWNLOAD_HEADERS[key]
-        LOGGER.debug(f'returning repsonse {response}')
-        return response
+        }
     except Exception:
         LOGGER.exception('somethg bad happened on fetch')
         raise
