@@ -71,7 +71,7 @@
                redirectPort="8443"
                proxyName="localhost"
                proxyPort="443"
-               sheme="https"
+               scheme="https"
                />
     <!-- A "Connector" using the shared thread pool-->
     <!--
