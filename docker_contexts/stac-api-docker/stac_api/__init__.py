@@ -43,7 +43,7 @@ def create_app():
     app.config.from_mapping(
         SECRET_KEY=os.environ.get('SECRET_KEY', None),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
-        PASSWORD_FILE_PATH=os.environ.get('PASSWORD_FILE_PATH', None),
+        GEOSERVER_PASSWORD_FILE=os.environ.get('GEOSERVER_PASSWORD_FILE', None),
         INTER_GEOSERVER_DATA_DIR=os.environ.get('INTER_GEOSERVER_DATA_DIR', None),
         GEOSERVER_DATA_DIR=os.environ.get('GEOSERVER_DATA_DIR', None),
         GEOSERVER_MANAGER_HOST=os.environ.get('GEOSERVER_MANAGER_HOST', None),

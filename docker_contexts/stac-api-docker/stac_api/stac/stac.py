@@ -253,13 +253,13 @@ def fetch():
 @stac_bp.route('/styles')
 def styles():
     """Return available styles."""
-    with open(current_app.config['PASSWORD_FILE_PATH'], 'r') as password_file:
+    with open(current_app.config['GEOSERVER_PASSWORD_FILE'], 'r') as password_file:
         master_geoserver_password = password_file.read()
     session = requests.Session()
     session.auth = (GEOSERVER_USER, master_geoserver_password)
     available_styles = do_rest_action(
         session.get,
-        f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+        f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
         f'geoserver/rest/styles.json').json()
 
     return {'styles': [
@@ -623,7 +623,7 @@ def delete_raster(catalog_entry):
         None.
 
     """
-    with open(current_app.config['PASSWORD_FILE_PATH'], 'r') as password_file:
+    with open(current_app.config['GEOSERVER_PASSWORD_FILE'], 'r') as password_file:
         master_geoserver_password = password_file.read()
     session = requests.Session()
     session.auth = (
@@ -632,7 +632,7 @@ def delete_raster(catalog_entry):
     cover_id = f'{catalog_entry.asset_id}_cover'
     delete_coverstore_result = do_rest_action(
         session.delete,
-        f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+        f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
         f'geoserver/rest/workspaces/{catalog_entry.catalog}/'
         f'coveragestores/{cover_id}/?purge=all&recurse=true')
     if not delete_coverstore_result:
@@ -688,7 +688,7 @@ def publish_to_geoserver(
 
     """
     with current_app.app_context():
-        with open(current_app.config['PASSWORD_FILE_PATH'], 'r') as password_file:
+        with open(current_app.config['GEOSERVER_PASSWORD_FILE'], 'r') as password_file:
             master_geoserver_password = password_file.read()
         session = requests.Session()
         session.auth = (
@@ -698,13 +698,13 @@ def publish_to_geoserver(
         LOGGER.debug('create workspace if it does not exist')
         workspace_exists_result = do_rest_action(
             session.get,
-            f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+            f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
             f'geoserver/rest/workspaces/{catalog}')
         if not workspace_exists_result:
             LOGGER.debug(f'{catalog} does not exist, creating it')
             create_workspace_result = do_rest_action(
                 session.post,
-                f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+                f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
                 'geoserver/rest/workspaces',
                 json={'workspace': {'name': catalog}})
             if not create_workspace_result:
@@ -715,7 +715,7 @@ def publish_to_geoserver(
         cover_id = f'{raster_id}_cover'
         coverstore_exists_result = do_rest_action(
             session.get,
-            f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+            f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
             f'geoserver/rest/workspaces/{catalog}/coveragestores/{cover_id}')
 
         LOGGER.debug(
@@ -726,7 +726,7 @@ def publish_to_geoserver(
             # coverstore exists, delete it
             delete_coverstore_result = do_rest_action(
                 session.delete,
-                f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+                f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
                 f'geoserver/rest/workspaces/{catalog}/'
                 f'coveragestores/{cover_id}/?purge=all&recurse=true')
             if not delete_coverstore_result:
@@ -748,7 +748,7 @@ def publish_to_geoserver(
 
         create_coverstore_result = do_rest_action(
             session.post,
-            f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+            f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
             f'geoserver/rest/workspaces/{catalog}/coveragestores',
             json=coveragestore_payload)
         if not create_coverstore_result:
@@ -781,7 +781,7 @@ def publish_to_geoserver(
                         {
                             "name": catalog,
                             "href": (
-                                f"""http://{current_app.config[
+                                f"""{current_app.config[
                                     'GEOSERVER_MANAGER_HOST']}/"""
                                 f"geoserver/rest/namespaces/{catalog}.json")
                         },
@@ -819,7 +819,7 @@ def publish_to_geoserver(
                         "@class": "coverageStore",
                         "name": f"{catalog}:{raster_id}",
                         "href": (
-                            f"""http://{
+                            f"""{
                                 current_app.config['GEOSERVER_MANAGER_HOST']}/"""
                             "geoserver/rest",
                             f"/workspaces/{catalog}/coveragestores/"
@@ -881,7 +881,7 @@ def publish_to_geoserver(
         LOGGER.debug('send cover request to GeoServer')
         create_cover_result = do_rest_action(
             session.post,
-            f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+            f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
             f'geoserver/rest/workspaces/{catalog}/'
             f'coveragestores/{urllib.parse.quote(cover_id)}/coverages/',
             json=cover_payload)
@@ -1148,24 +1148,24 @@ def build_job_hash(asset_args):
 def initalize_geoserver():
     """Ensure database exists, set security, and set server initial stores."""
     # make new random admin password
-    if current_app.config['PASSWORD_FILE_PATH'] is None:
+    if current_app.config['GEOSERVER_PASSWORD_FILE'] is None:
         LOGGER.warn(
             'no password file path defined, assuming unconfigured and'
             'not initalizing geoserver')
         return
 
-    if os.path.exists(current_app.config['PASSWORD_FILE_PATH']):
-        with open(current_app.config['PASSWORD_FILE_PATH'], 'r') as \
+    if os.path.exists(current_app.config['GEOSERVER_PASSWORD_FILE']):
+        with open(current_app.config['GEOSERVER_PASSWORD_FILE'], 'r') as \
                 password_file:
             geoserver_password = password_file.read()
         LOGGER.info(f'password already set {geoserver_password}')
         return
 
     try:
-        os.makedirs(os.path.dirname(current_app.config['PASSWORD_FILE_PATH']))
+        os.makedirs(os.path.dirname(current_app.config['GEOSERVER_PASSWORD_FILE']))
     except OSError:
         pass
-    with open(current_app.config['PASSWORD_FILE_PATH'], 'w') as password_file:
+    with open(current_app.config['GEOSERVER_PASSWORD_FILE'], 'w') as password_file:
         geoserver_password = secrets.token_urlsafe(16)
         password_file.write(geoserver_password)
 
@@ -1175,7 +1175,7 @@ def initalize_geoserver():
     session.auth = (GEOSERVER_USER, 'geoserver')
     password_update_request = do_rest_action(
         session.put,
-        f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+        f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
         'geoserver/rest/security/self/password',
         json={
             'newPassword': geoserver_password
@@ -1189,7 +1189,7 @@ def initalize_geoserver():
     # configuration before the new password is used
     password_update_request = do_rest_action(
         session.post,
-        f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+        f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
         'geoserver/rest/reload')
 
 
