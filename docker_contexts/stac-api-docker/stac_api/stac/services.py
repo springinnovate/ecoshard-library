@@ -75,6 +75,7 @@ def update_job_status(job_id, new_job_status):
     """
     job = Job.query.filter(Job.job_id == job_id).one()
     job.job_id = job_id
+    db.session.add(job)
     return job
 
 

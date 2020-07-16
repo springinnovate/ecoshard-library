@@ -687,206 +687,207 @@ def publish_to_geoserver(
         None
 
     """
-    with open(current_app.config['PASSWORD_FILE_PATH'], 'r') as password_file:
-        master_geoserver_password = password_file.read()
-    session = requests.Session()
-    session.auth = (
-        GEOSERVER_USER, master_geoserver_password)
+    with current_app.app_context():
+        with open(current_app.config['PASSWORD_FILE_PATH'], 'r') as password_file:
+            master_geoserver_password = password_file.read()
+        session = requests.Session()
+        session.auth = (
+            GEOSERVER_USER, master_geoserver_password)
 
-    # make workspace
-    LOGGER.debug('create workspace if it does not exist')
-    workspace_exists_result = do_rest_action(
-        session.get,
-        f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
-        f'geoserver/rest/workspaces/{catalog}')
-    if not workspace_exists_result:
-        LOGGER.debug(f'{catalog} does not exist, creating it')
-        create_workspace_result = do_rest_action(
-            session.post,
+        # make workspace
+        LOGGER.debug('create workspace if it does not exist')
+        workspace_exists_result = do_rest_action(
+            session.get,
             f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
-            'geoserver/rest/workspaces',
-            json={'workspace': {'name': catalog}})
-        if not create_workspace_result:
-            # must be an error
-            raise RuntimeError(create_workspace_result.text)
+            f'geoserver/rest/workspaces/{catalog}')
+        if not workspace_exists_result:
+            LOGGER.debug(f'{catalog} does not exist, creating it')
+            create_workspace_result = do_rest_action(
+                session.post,
+                f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+                'geoserver/rest/workspaces',
+                json={'workspace': {'name': catalog}})
+            if not create_workspace_result:
+                # must be an error
+                raise RuntimeError(create_workspace_result.text)
 
-    # check if coverstore exists, if so delete it
-    cover_id = f'{raster_id}_cover'
-    coverstore_exists_result = do_rest_action(
-        session.get,
-        f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
-        f'geoserver/rest/workspaces/{catalog}/coveragestores/{cover_id}')
-
-    LOGGER.debug(
-        f'coverstore_exists_result: {str(coverstore_exists_result)}')
-
-    if coverstore_exists_result:
-        LOGGER.warning(f'{catalog}:{cover_id}, so deleting it')
-        # coverstore exists, delete it
-        delete_coverstore_result = do_rest_action(
-            session.delete,
+        # check if coverstore exists, if so delete it
+        cover_id = f'{raster_id}_cover'
+        coverstore_exists_result = do_rest_action(
+            session.get,
             f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
-            f'geoserver/rest/workspaces/{catalog}/'
-            f'coveragestores/{cover_id}/?purge=all&recurse=true')
-        if not delete_coverstore_result:
-            LOGGER.error(delete_coverstore_result.text)
-            raise RuntimeError(delete_coverstore_result.text)
+            f'geoserver/rest/workspaces/{catalog}/coveragestores/{cover_id}')
 
-    # create coverstore
-    LOGGER.debug('create coverstore on geoserver')
-    coveragestore_payload = {
-      "coverageStore": {
-        "name": cover_id,
-        "type": mediatype,
-        "workspace": catalog,
-        "enabled": True,
-        # this one is relative to the data_dir
-        "url": f'file:{geoserver_raster_path}'
-      }
-    }
+        LOGGER.debug(
+            f'coverstore_exists_result: {str(coverstore_exists_result)}')
 
-    create_coverstore_result = do_rest_action(
-        session.post,
-        f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
-        f'geoserver/rest/workspaces/{catalog}/coveragestores',
-        json=coveragestore_payload)
-    if not create_coverstore_result:
-        LOGGER.error(create_coverstore_result.text)
-        raise RuntimeError(create_coverstore_result.text)
+        if coverstore_exists_result:
+            LOGGER.warning(f'{catalog}:{cover_id}, so deleting it')
+            # coverstore exists, delete it
+            delete_coverstore_result = do_rest_action(
+                session.delete,
+                f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+                f'geoserver/rest/workspaces/{catalog}/'
+                f'coveragestores/{cover_id}/?purge=all&recurse=true')
+            if not delete_coverstore_result:
+                LOGGER.error(delete_coverstore_result.text)
+                raise RuntimeError(delete_coverstore_result.text)
 
-    LOGGER.debug('get local raster info')
-    raster_info = pygeoprocessing.get_raster_info(local_raster_path)
-    raster = gdal.OpenEx(local_raster_path, gdal.OF_RASTER)
-    band = raster.GetRasterBand(1)
-    raster_min, raster_max, raster_mean, raster_stdev = \
-        band.GetStatistics(0, 1)
-    gt = raster_info['geotransform']
-
-    raster_srs = osr.SpatialReference()
-    raster_srs.ImportFromWkt(raster_info['projection_wkt'])
-    lat_lng_bounding_box = get_lat_lng_bounding_box(local_raster_path)
-
-    epsg_crs = ':'.join(
-        [raster_srs.GetAttrValue('AUTHORITY', i) for i in [0, 1]])
-
-    LOGGER.debug('construct the cover_payload')
-
-    cover_payload = {
-        "coverage":
-            {
-                "name": raster_id,
-                "nativeName": raster_id,
-                "namespace":
-                    {
-                        "name": catalog,
-                        "href": (
-                            f"""http://{current_app.config[
-                                'GEOSERVER_MANAGER_HOST']}/"""
-                            f"geoserver/rest/namespaces/{catalog}.json")
-                    },
-                "title": raster_id,
-                "description": "description here",
-                "abstract": "abstract here",
-                "keywords": {
-                    "string": [raster_id, "WCS", "GeoTIFF"]
-                    },
-                "nativeCRS": raster_info['projection_wkt'],
-                "srs": epsg_crs,
-                "nativeBoundingBox": {
-                    "minx": raster_info['bounding_box'][0],
-                    "maxx": raster_info['bounding_box'][2],
-                    "miny": raster_info['bounding_box'][1],
-                    "maxy": raster_info['bounding_box'][3],
-                    "crs": raster_info['projection_wkt'],
-                    },
-                "latLonBoundingBox": {
-                    "minx": lat_lng_bounding_box[0],
-                    "maxx": lat_lng_bounding_box[2],
-                    "miny": lat_lng_bounding_box[1],
-                    "maxy": lat_lng_bounding_box[3],
-                    "crs": "EPSG:4326"
-                    },
-                "projectionPolicy": "NONE",
-                "enabled": True,
-                "metadata": {
-                    "entry": {
-                        "@key": "dirName",
-                        "$": f"{cover_id}_{raster_id}"
-                        }
-                    },
-                "store": {
-                    "@class": "coverageStore",
-                    "name": f"{catalog}:{raster_id}",
-                    "href": (
-                        f"""http://{
-                            current_app.config['GEOSERVER_MANAGER_HOST']}/"""
-                        "geoserver/rest",
-                        f"/workspaces/{catalog}/coveragestores/"
-                        f"{urllib.parse.quote(raster_id)}.json")
-                    },
-                "serviceConfiguration": False,
-                "nativeFormat": "GeoTIFF",
-                "grid": {
-                    "@dimension": "2",
-                    "range": {
-                        "low": "0 0",
-                        "high": (
-                            f"{raster_info['raster_size'][0]} "
-                            f"{raster_info['raster_size'][1]}")
-                        },
-                    "transform": {
-                        "scaleX": gt[1],
-                        "scaleY": gt[5],
-                        "shearX": gt[2],
-                        "shearY": gt[4],
-                        "translateX": gt[0],
-                        "translateY": gt[3]
-                        },
-                    "crs": raster_info['projection_wkt']
-                    },
-                "supportedFormats": {
-                    "string": [
-                        "GEOTIFF", "ImageMosaic", "ArcGrid", "GIF", "PNG",
-                        "JPEG", "TIFF", "GeoPackage (mosaic)"]
-                    },
-                "interpolationMethods": {
-                    "string": ["nearest neighbor", "bilinear", "bicubic"]
-                    },
-                "defaultInterpolationMethod": "nearest neighbor",
-                "dimensions": {
-                    "coverageDimension": [{
-                        "name": "GRAY_INDEX",
-                        "description": (
-                            "GridSampleDimension[-Infinity,Infinity]"),
-                        "range": {"min": raster_min, "max": raster_max},
-                        "nullValues": {"double": [
-                            raster_info['nodata'][0]]},
-                        "dimensionType":{"name": "REAL_32BITS"}
-                        }]
-                    },
-                "parameters": {
-                    "entry": [
-                        {"string": "InputTransparentColor", "null": ""},
-                        {"string": ["SUGGESTED_TILE_SIZE", "512,512"]},
-                        {
-                            "string": "RescalePixels",
-                            "boolean": True
-                        }]
-                    },
-                "nativeCoverageName": raster_id
-            }
+        # create coverstore
+        LOGGER.debug('create coverstore on geoserver')
+        coveragestore_payload = {
+          "coverageStore": {
+            "name": cover_id,
+            "type": mediatype,
+            "workspace": catalog,
+            "enabled": True,
+            # this one is relative to the data_dir
+            "url": f'file:{geoserver_raster_path}'
+          }
         }
 
-    LOGGER.debug('send cover request to GeoServer')
-    create_cover_result = do_rest_action(
-        session.post,
-        f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
-        f'geoserver/rest/workspaces/{catalog}/'
-        f'coveragestores/{urllib.parse.quote(cover_id)}/coverages/',
-        json=cover_payload)
-    if not create_cover_result:
-        LOGGER.error(create_cover_result.text)
-        raise RuntimeError(create_cover_result.text)
+        create_coverstore_result = do_rest_action(
+            session.post,
+            f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+            f'geoserver/rest/workspaces/{catalog}/coveragestores',
+            json=coveragestore_payload)
+        if not create_coverstore_result:
+            LOGGER.error(create_coverstore_result.text)
+            raise RuntimeError(create_coverstore_result.text)
+
+        LOGGER.debug('get local raster info')
+        raster_info = pygeoprocessing.get_raster_info(local_raster_path)
+        raster = gdal.OpenEx(local_raster_path, gdal.OF_RASTER)
+        band = raster.GetRasterBand(1)
+        raster_min, raster_max, raster_mean, raster_stdev = \
+            band.GetStatistics(0, 1)
+        gt = raster_info['geotransform']
+
+        raster_srs = osr.SpatialReference()
+        raster_srs.ImportFromWkt(raster_info['projection_wkt'])
+        lat_lng_bounding_box = get_lat_lng_bounding_box(local_raster_path)
+
+        epsg_crs = ':'.join(
+            [raster_srs.GetAttrValue('AUTHORITY', i) for i in [0, 1]])
+
+        LOGGER.debug('construct the cover_payload')
+
+        cover_payload = {
+            "coverage":
+                {
+                    "name": raster_id,
+                    "nativeName": raster_id,
+                    "namespace":
+                        {
+                            "name": catalog,
+                            "href": (
+                                f"""http://{current_app.config[
+                                    'GEOSERVER_MANAGER_HOST']}/"""
+                                f"geoserver/rest/namespaces/{catalog}.json")
+                        },
+                    "title": raster_id,
+                    "description": "description here",
+                    "abstract": "abstract here",
+                    "keywords": {
+                        "string": [raster_id, "WCS", "GeoTIFF"]
+                        },
+                    "nativeCRS": raster_info['projection_wkt'],
+                    "srs": epsg_crs,
+                    "nativeBoundingBox": {
+                        "minx": raster_info['bounding_box'][0],
+                        "maxx": raster_info['bounding_box'][2],
+                        "miny": raster_info['bounding_box'][1],
+                        "maxy": raster_info['bounding_box'][3],
+                        "crs": raster_info['projection_wkt'],
+                        },
+                    "latLonBoundingBox": {
+                        "minx": lat_lng_bounding_box[0],
+                        "maxx": lat_lng_bounding_box[2],
+                        "miny": lat_lng_bounding_box[1],
+                        "maxy": lat_lng_bounding_box[3],
+                        "crs": "EPSG:4326"
+                        },
+                    "projectionPolicy": "NONE",
+                    "enabled": True,
+                    "metadata": {
+                        "entry": {
+                            "@key": "dirName",
+                            "$": f"{cover_id}_{raster_id}"
+                            }
+                        },
+                    "store": {
+                        "@class": "coverageStore",
+                        "name": f"{catalog}:{raster_id}",
+                        "href": (
+                            f"""http://{
+                                current_app.config['GEOSERVER_MANAGER_HOST']}/"""
+                            "geoserver/rest",
+                            f"/workspaces/{catalog}/coveragestores/"
+                            f"{urllib.parse.quote(raster_id)}.json")
+                        },
+                    "serviceConfiguration": False,
+                    "nativeFormat": "GeoTIFF",
+                    "grid": {
+                        "@dimension": "2",
+                        "range": {
+                            "low": "0 0",
+                            "high": (
+                                f"{raster_info['raster_size'][0]} "
+                                f"{raster_info['raster_size'][1]}")
+                            },
+                        "transform": {
+                            "scaleX": gt[1],
+                            "scaleY": gt[5],
+                            "shearX": gt[2],
+                            "shearY": gt[4],
+                            "translateX": gt[0],
+                            "translateY": gt[3]
+                            },
+                        "crs": raster_info['projection_wkt']
+                        },
+                    "supportedFormats": {
+                        "string": [
+                            "GEOTIFF", "ImageMosaic", "ArcGrid", "GIF", "PNG",
+                            "JPEG", "TIFF", "GeoPackage (mosaic)"]
+                        },
+                    "interpolationMethods": {
+                        "string": ["nearest neighbor", "bilinear", "bicubic"]
+                        },
+                    "defaultInterpolationMethod": "nearest neighbor",
+                    "dimensions": {
+                        "coverageDimension": [{
+                            "name": "GRAY_INDEX",
+                            "description": (
+                                "GridSampleDimension[-Infinity,Infinity]"),
+                            "range": {"min": raster_min, "max": raster_max},
+                            "nullValues": {"double": [
+                                raster_info['nodata'][0]]},
+                            "dimensionType":{"name": "REAL_32BITS"}
+                            }]
+                        },
+                    "parameters": {
+                        "entry": [
+                            {"string": "InputTransparentColor", "null": ""},
+                            {"string": ["SUGGESTED_TILE_SIZE", "512,512"]},
+                            {
+                                "string": "RescalePixels",
+                                "boolean": True
+                            }]
+                        },
+                    "nativeCoverageName": raster_id
+                }
+            }
+
+        LOGGER.debug('send cover request to GeoServer')
+        create_cover_result = do_rest_action(
+            session.post,
+            f'http://{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+            f'geoserver/rest/workspaces/{catalog}/'
+            f'coveragestores/{urllib.parse.quote(cover_id)}/coverages/',
+            json=cover_payload)
+        if not create_cover_result:
+            LOGGER.error(create_cover_result.text)
+            raise RuntimeError(create_cover_result.text)
 
 
 def get_lat_lng_bounding_box(raster_path):
@@ -904,7 +905,7 @@ def add_raster_worker(
         uri_path, mediatype, catalog, asset_id, asset_description,
         utc_datetime, default_style, job_id, attribute_dict,
         expiration_utc_datetime, inter_data_dir, full_data_dir,
-        force=False):
+        force=False, keep_existing=True):
     """Copy and update a coverage set asynchronously.
 
     Args:
@@ -950,7 +951,7 @@ def add_raster_worker(
             pass
 
         services.update_job_status(job_id, 'copying local')
-        models.db.session.commit()
+        db.session.commit()
 
         LOGGER.debug('copy %s to %s', uri_path, target_raster_path)
         if os.path.exists(target_raster_path):
@@ -1012,12 +1013,12 @@ def add_raster_worker(
                     f'need {gs_object_size-existing_object_size} '
                     f'but have {available_b}.')
 
-        if os.path.exists(target_raster_path):
+        if not keep_existing and os.path.exists(target_raster_path):
             # remove the file first
             os.remove(target_raster_path)
 
         subprocess.run([
-            f'gsutil cp "{uri_path}" "{target_raster_path}"'],
+            f'gsutil cp -n "{uri_path}" "{target_raster_path}"'],
             shell=True, check=True)
 
         if not os.path.exists(target_raster_path):
@@ -1031,7 +1032,7 @@ def add_raster_worker(
                 job_id,
                 f'(re)compressing image from {compression_alg}, '
                 'this can take some time')
-            models.db.session.commit()
+            db.session.commit()
             needs_compression_tmp_file = os.path.join(
                 os.path.dirname(target_raster_path),
                 f'NEEDS_COMPRESSION_{job_id}.tif')
@@ -1043,14 +1044,14 @@ def add_raster_worker(
 
         services.update_job_status(
             job_id, 'building overviews (can take some time)')
-        models.db.session.commit()
+        db.session.commit()
 
         ecoshard.build_overviews(
             target_raster_path, interpolation_method='average',
             overview_type='internal', rebuild_if_exists=False)
 
         services.update_job_status(job_id, 'publishing to geoserver')
-        models.db.session.commit()
+        db.session.commit()
 
         publish_to_geoserver(
             inter_geoserver_raster_path, target_raster_path, catalog, asset_id,
@@ -1059,7 +1060,7 @@ def add_raster_worker(
         LOGGER.debug('update job_table with complete')
 
         services.update_job_status(job_id, 'update catlog database geoserver')
-        models.db.session.commit()
+        db.session.commit()
         LOGGER.debug('update catalog_table with final values')
         lat_lng_bounding_box = get_lat_lng_bounding_box(target_raster_path)
         band = raster.GetRasterBand(1)
@@ -1080,13 +1081,13 @@ def add_raster_worker(
             services.update_attributes(asset_id, catalog, attribute_dict)
 
         services.update_job_status(job_id, 'complete')
-        models.db.session.commit()
+        db.session.commit()
         LOGGER.debug(f'successful publish of {catalog}:{asset_id}')
 
     except Exception as e:
         LOGGER.exception('something bad happened when doing raster worker')
         services.update_job_status(job_id, f'ERROR: {str(e)}')
-        models.db.session.commit()
+        db.session.commit()
         if target_raster_path:
             # try to delete the local file in case it errored
             try:
