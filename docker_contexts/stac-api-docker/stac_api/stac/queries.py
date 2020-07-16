@@ -134,7 +134,7 @@ def get_asset_attributes(catalog, asset_id):
     """
     return {
         attribute.key: attribute.value
-        for attribute in Attribute.query(and_(
+        for attribute in Attribute.query.filter(and_(
             Attribute.asset_id == asset_id,
             Attribute.catalog == catalog)).all()}
 
