@@ -394,7 +394,7 @@ def search():
         asset_id = search_data.get('asset_id', None)
         description = search_data.get('description', None)
 
-        asset_list = queries.get_assets.query(
+        asset_list = queries.get_assets_query.query(
             allowed_permissions['READ'], bounding_box_list=bounding_box_list,
             datetime_str=search_data['datetime'], asset_id=asset_id,
             description=description).all()
