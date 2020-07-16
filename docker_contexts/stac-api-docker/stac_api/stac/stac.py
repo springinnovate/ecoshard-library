@@ -1013,9 +1013,12 @@ def add_raster_worker(
                 additional_gb = int(math.ceil(additional_b_needed/2**30))
                 LOGGER.warning(f'need an additional {additional_gb}G')
                 session = requests.Session()
+                proxy_scheme = flask.request.headers.get(
+                    'X-Forwarded-Proto', 'http')
                 resize_disk_request = do_rest_action(
                     session.post,
-                    f'http://{current_app.config["DISK_RESIZE_SERVICE_HOST"]}',
+                    f'{proxy_scheme}://'
+                    f'{current_app.config["DISK_RESIZE_SERVICE_HOST"]}',
                     f'resize',
                     json={'gb_to_add': additional_gb})
 
