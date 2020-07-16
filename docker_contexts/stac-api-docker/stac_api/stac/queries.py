@@ -82,7 +82,9 @@ def get_assets_query(
     """
     query_parameter_list = []
     if bounding_box_list is not None:
+        LOGGER.debug(f'querying bounding: {bounding_box_list}')
         s_xmin, s_ymin, s_xmax, s_ymax = bounding_box_list
+
         query_parameter_list.extend(
             s_xmin <= CatalogEntry.bb_xmax,
             s_xmax >= CatalogEntry.bb_xmin,
@@ -90,6 +92,7 @@ def get_assets_query(
             s_ymax >= CatalogEntry.bb_ymin)
 
     if datetime_str is not None:
+        LOGGER.debug(f'querying datetime_str {datetime_str}')
         if '/' in datetime_str:
             min_time, max_time = datetime_str.split('/')
             if min_time != '..':
@@ -102,15 +105,19 @@ def get_assets_query(
             query_parameter_list.append(
                 CatalogEntry.utc_datetime == datetime_str)
 
+    LOGGER.debug(f'queryign catalog set {catalog_set}')
     query_parameter_list.append(CatalogEntry.catalog.in_(*catalog_set))
 
     if asset_id is not None:
+        LOGGER.debug('querying asset id{asset_id}')
         query_parameter_list.append(CatalogEntry.asset_id.ilike(asset_id))
 
     if description is not None:
+        LOGGER.debug(f'querying description {description}')
         query_parameter_list.append(CatalogEntry.description.ilike(
             description))
 
+    LOGGER.debug(f'whole query list: {query_parameter_list}')
     return CatalogEntry.query.filter(and_(*query_parameter_list))
 
 
