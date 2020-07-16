@@ -100,7 +100,7 @@ def create_app():
 
     db.app = app
 
-    stac.initalize_geoserver(app)
+    initalize_geoserver(app)
     return app
 
 
