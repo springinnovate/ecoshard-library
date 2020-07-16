@@ -902,7 +902,7 @@ def get_lat_lng_bounding_box(raster_path):
 def add_raster_worker(
         uri_path, mediatype, catalog, asset_id, asset_description,
         utc_datetime, default_style, job_id, attribute_dict,
-        expiration_utc_datetime, inter_data_dir, full_data_dir,
+        expiration_utc_datetime, inter_data_dir, root_data_dir,
         force=False, keep_existing=True):
     """Copy and update a coverage set asynchronously.
 
@@ -922,7 +922,7 @@ def add_raster_worker(
             database and local storage.
         inter_data_dir (str): directory path to prefix for the geoserver's
             internal raster path relative to its own data directory.
-        full_data_dir (str): directory in which to copy this raster.
+        root_data_dir (str): directory in which to copy this raster.
             `inter_data_dir` must be a suffix of this string.
         force (bool): if True will overwrite existing local data, otherwise
             does not re-copy data.
@@ -937,12 +937,12 @@ def add_raster_worker(
             LOGGER.debug(
                 f'local_catalog_asset_path: {local_catalog_asset_path}\n'
                 f'inter_data_dir: {inter_data_dir}\n'
-                f'full_data_dir: {full_data_dir}')
+                f'root_data_dir: {root_data_dir}')
             inter_geoserver_raster_path = os.path.join(
                 inter_data_dir, local_catalog_asset_path)
             # local data dir is for path to copy to from working directory
             target_raster_path = os.path.join(
-                full_data_dir, local_catalog_asset_path)
+                root_data_dir, inter_data_dir, local_catalog_asset_path)
 
             try:
                 os.makedirs(os.path.dirname(target_raster_path))
