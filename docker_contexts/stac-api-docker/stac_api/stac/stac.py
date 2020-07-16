@@ -317,7 +317,7 @@ def viewer():
         'catalog': catalog,
         'asset_id': asset_id,
         'geoserver_url': (
-            f"http://{current_app.config['GEOSERVER_MANAGER_HOST']}/"
+            f"{current_app.config['GEOSERVER_MANAGER_HOST']}/"
             f"geoserver/{catalog}/wms"),
         'original_style': catalog_entry.default_style,
         'p0': catalog_entry.raster_min,
