@@ -95,5 +95,7 @@ def create_app():
     except OSError:
         pass
 
+    stac.initalize_geoserver()
+
     db.app = app
     return app
