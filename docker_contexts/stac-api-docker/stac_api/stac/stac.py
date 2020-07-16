@@ -933,167 +933,168 @@ def add_raster_worker(
         None.
 
     """
-    try:
-        local_catalog_asset_path = os.path.join(catalog, f'{asset_id}.tif')
-        LOGGER.debug(
-            f'local_catalog_asset_path: {local_catalog_asset_path}\n'
-            f'inter_data_dir: {inter_data_dir}\n'
-            f'full_data_dir: {full_data_dir}')
-        inter_geoserver_raster_path = os.path.join(
-            inter_data_dir, local_catalog_asset_path)
-        # local data dir is for path to copy to from working directory
-        target_raster_path = os.path.join(
-            full_data_dir, local_catalog_asset_path)
-
+    with db.app.app_context():
         try:
-            os.makedirs(os.path.dirname(target_raster_path))
-        except OSError:
-            pass
+            local_catalog_asset_path = os.path.join(catalog, f'{asset_id}.tif')
+            LOGGER.debug(
+                f'local_catalog_asset_path: {local_catalog_asset_path}\n'
+                f'inter_data_dir: {inter_data_dir}\n'
+                f'full_data_dir: {full_data_dir}')
+            inter_geoserver_raster_path = os.path.join(
+                inter_data_dir, local_catalog_asset_path)
+            # local data dir is for path to copy to from working directory
+            target_raster_path = os.path.join(
+                full_data_dir, local_catalog_asset_path)
 
-        services.update_job_status(job_id, 'copying local')
-        db.session.commit()
-
-        LOGGER.debug('copy %s to %s', uri_path, target_raster_path)
-        if os.path.exists(target_raster_path):
-            # check the size of any existing file first
-            existing_ls_line_result = subprocess.run(
-               ['ls', '-l', target_raster_path], stdout=subprocess.PIPE,
-               check=True)
-            existing_ls_line = existing_ls_line_result.stdout.decode(
-                'utf-8').rstrip().split('\n')[-1].split()
-            existing_object_size = int(existing_ls_line[4])
-        else:
-            existing_object_size = 0
-
-        # get the object size
-        gsutil_ls_result = subprocess.run(
-           [f'gsutil ls -l "{uri_path}"'], stdout=subprocess.PIPE,
-           check=True, shell=True)
-        LOGGER.debug(f"raw output: {gsutil_ls_result.stdout}")
-        last_gsutil_ls_line = gsutil_ls_result.stdout.decode(
-            'utf-8').rstrip().split('\n')[-1].split()
-        LOGGER.debug(f"last line: {last_gsutil_ls_line}")
-        # say we need four times that because we might need to duplicate the
-        # file and also build overviews for it. That shoud be ~3 times,
-        # so might as well be safe and make it 4.
-        gs_object_size = 4*int(last_gsutil_ls_line[
-            last_gsutil_ls_line.index('bytes')-1])
-
-        # get the file system size
-        df_result = subprocess.run(
-            ['df', os.path.dirname(target_raster_path)],
-            stdout=subprocess.PIPE, check=True)
-        fs, blocks, used, available_k, use_p, mount = (
-            df_result.stdout.decode('utf-8').rstrip().split('\n')[-1].split())
-
-        # turn kb to b
-        available_b = int(available_k) * 2**10
-
-        additional_b_needed = (
-            (gs_object_size-existing_object_size) - available_b)
-        LOGGER.debug(
-            f'gs_object_size: {gs_object_size}, '
-            f'existing_object_size: {existing_object_size} '
-            f'available_b: {available_b}f'
-            f'additional_b needed: {additional_b_needed}')
-        if additional_b_needed > 0:
-            # calculate additional GB needed
-            additional_gb = int(math.ceil(additional_b_needed/2**30))
-            LOGGER.warning(f'need an additional {additional_gb}G')
-            session = requests.Session()
-            resize_disk_request = do_rest_action(
-                session.post,
-                f'http://{current_app.config["DISK_RESIZE_SERVICE_HOST"]}',
-                f'resize',
-                json={'gb_to_add': additional_gb})
-
-            if not resize_disk_request:
-                raise RuntimeError(
-                    f'not enough space left on drive and unable to resize '
-                    f'need {gs_object_size-existing_object_size} '
-                    f'but have {available_b}.')
-
-        if not keep_existing and os.path.exists(target_raster_path):
-            # remove the file first
-            os.remove(target_raster_path)
-
-        subprocess.run([
-            f'gsutil cp -n "{uri_path}" "{target_raster_path}"'],
-            shell=True, check=True)
-
-        if not os.path.exists(target_raster_path):
-            raise RuntimeError(f"{target_raster_path} didn't copy")
-
-        raster = gdal.OpenEx(target_raster_path, gdal.OF_RASTER)
-        compression_alg = raster.GetMetadata(
-            'IMAGE_STRUCTURE').get('COMPRESSION', None)
-        if compression_alg in [None, 'ZSTD']:
-            services.update_job_status(
-                job_id,
-                f'(re)compressing image from {compression_alg}, '
-                'this can take some time')
-            db.session.commit()
-            needs_compression_tmp_file = os.path.join(
-                os.path.dirname(target_raster_path),
-                f'NEEDS_COMPRESSION_{job_id}.tif')
-            os.rename(target_raster_path, needs_compression_tmp_file)
-            ecoshard.compress_raster(
-                needs_compression_tmp_file, target_raster_path,
-                compression_algorithm='LZW', compression_predictor=None)
-            os.remove(needs_compression_tmp_file)
-
-        services.update_job_status(
-            job_id, 'building overviews (can take some time)')
-        db.session.commit()
-
-        ecoshard.build_overviews(
-            target_raster_path, interpolation_method='average',
-            overview_type='internal', rebuild_if_exists=False)
-
-        services.update_job_status(job_id, 'publishing to geoserver')
-        db.session.commit()
-
-        publish_to_geoserver(
-            inter_geoserver_raster_path, target_raster_path, catalog, asset_id,
-            mediatype)
-
-        LOGGER.debug('update job_table with complete')
-
-        services.update_job_status(job_id, 'update catlog database geoserver')
-        db.session.commit()
-        LOGGER.debug('update catalog_table with final values')
-        lat_lng_bounding_box = get_lat_lng_bounding_box(target_raster_path)
-        band = raster.GetRasterBand(1)
-        raster_min, raster_max, raster_mean, raster_stdev = \
-            band.GetStatistics(0, 1)
-        _ = services.create_or_update_catalog_entry(
-            asset_id, catalog,
-            lat_lng_bounding_box[0],
-            lat_lng_bounding_box[1],
-            lat_lng_bounding_box[2],
-            lat_lng_bounding_box[3],
-            utc_datetime, mediatype, asset_description, uri_path,
-            target_raster_path, raster_min, raster_max, raster_mean,
-            raster_stdev, default_style, expiration_utc_datetime)
-
-        if attribute_dict:
-            LOGGER.debug('updating additional attributes')
-            services.update_attributes(asset_id, catalog, attribute_dict)
-
-        services.update_job_status(job_id, 'complete')
-        db.session.commit()
-        LOGGER.debug(f'successful publish of {catalog}:{asset_id}')
-
-    except Exception as e:
-        LOGGER.exception('something bad happened when doing raster worker')
-        services.update_job_status(job_id, f'ERROR: {str(e)}')
-        db.session.commit()
-        if target_raster_path:
-            # try to delete the local file in case it errored
             try:
-                os.remove(target_raster_path)
+                os.makedirs(os.path.dirname(target_raster_path))
             except OSError:
-                LOGGER.exception(f'unable to remove {target_raster_path}')
+                pass
+
+            services.update_job_status(job_id, 'copying local')
+            db.session.commit()
+
+            LOGGER.debug('copy %s to %s', uri_path, target_raster_path)
+            if os.path.exists(target_raster_path):
+                # check the size of any existing file first
+                existing_ls_line_result = subprocess.run(
+                   ['ls', '-l', target_raster_path], stdout=subprocess.PIPE,
+                   check=True)
+                existing_ls_line = existing_ls_line_result.stdout.decode(
+                    'utf-8').rstrip().split('\n')[-1].split()
+                existing_object_size = int(existing_ls_line[4])
+            else:
+                existing_object_size = 0
+
+            # get the object size
+            gsutil_ls_result = subprocess.run(
+               [f'gsutil ls -l "{uri_path}"'], stdout=subprocess.PIPE,
+               check=True, shell=True)
+            LOGGER.debug(f"raw output: {gsutil_ls_result.stdout}")
+            last_gsutil_ls_line = gsutil_ls_result.stdout.decode(
+                'utf-8').rstrip().split('\n')[-1].split()
+            LOGGER.debug(f"last line: {last_gsutil_ls_line}")
+            # say we need four times that because we might need to duplicate the
+            # file and also build overviews for it. That shoud be ~3 times,
+            # so might as well be safe and make it 4.
+            gs_object_size = 4*int(last_gsutil_ls_line[
+                last_gsutil_ls_line.index('bytes')-1])
+
+            # get the file system size
+            df_result = subprocess.run(
+                ['df', os.path.dirname(target_raster_path)],
+                stdout=subprocess.PIPE, check=True)
+            fs, blocks, used, available_k, use_p, mount = (
+                df_result.stdout.decode('utf-8').rstrip().split('\n')[-1].split())
+
+            # turn kb to b
+            available_b = int(available_k) * 2**10
+
+            additional_b_needed = (
+                (gs_object_size-existing_object_size) - available_b)
+            LOGGER.debug(
+                f'gs_object_size: {gs_object_size}, '
+                f'existing_object_size: {existing_object_size} '
+                f'available_b: {available_b}f'
+                f'additional_b needed: {additional_b_needed}')
+            if additional_b_needed > 0:
+                # calculate additional GB needed
+                additional_gb = int(math.ceil(additional_b_needed/2**30))
+                LOGGER.warning(f'need an additional {additional_gb}G')
+                session = requests.Session()
+                resize_disk_request = do_rest_action(
+                    session.post,
+                    f'http://{current_app.config["DISK_RESIZE_SERVICE_HOST"]}',
+                    f'resize',
+                    json={'gb_to_add': additional_gb})
+
+                if not resize_disk_request:
+                    raise RuntimeError(
+                        f'not enough space left on drive and unable to resize '
+                        f'need {gs_object_size-existing_object_size} '
+                        f'but have {available_b}.')
+
+            if not keep_existing and os.path.exists(target_raster_path):
+                # remove the file first
+                os.remove(target_raster_path)
+
+            subprocess.run([
+                f'gsutil cp -n "{uri_path}" "{target_raster_path}"'],
+                shell=True, check=True)
+
+            if not os.path.exists(target_raster_path):
+                raise RuntimeError(f"{target_raster_path} didn't copy")
+
+            raster = gdal.OpenEx(target_raster_path, gdal.OF_RASTER)
+            compression_alg = raster.GetMetadata(
+                'IMAGE_STRUCTURE').get('COMPRESSION', None)
+            if compression_alg in [None, 'ZSTD']:
+                services.update_job_status(
+                    job_id,
+                    f'(re)compressing image from {compression_alg}, '
+                    'this can take some time')
+                db.session.commit()
+                needs_compression_tmp_file = os.path.join(
+                    os.path.dirname(target_raster_path),
+                    f'NEEDS_COMPRESSION_{job_id}.tif')
+                os.rename(target_raster_path, needs_compression_tmp_file)
+                ecoshard.compress_raster(
+                    needs_compression_tmp_file, target_raster_path,
+                    compression_algorithm='LZW', compression_predictor=None)
+                os.remove(needs_compression_tmp_file)
+
+            services.update_job_status(
+                job_id, 'building overviews (can take some time)')
+            db.session.commit()
+
+            ecoshard.build_overviews(
+                target_raster_path, interpolation_method='average',
+                overview_type='internal', rebuild_if_exists=False)
+
+            services.update_job_status(job_id, 'publishing to geoserver')
+            db.session.commit()
+
+            publish_to_geoserver(
+                inter_geoserver_raster_path, target_raster_path, catalog, asset_id,
+                mediatype)
+
+            LOGGER.debug('update job_table with complete')
+
+            services.update_job_status(job_id, 'update catlog database geoserver')
+            db.session.commit()
+            LOGGER.debug('update catalog_table with final values')
+            lat_lng_bounding_box = get_lat_lng_bounding_box(target_raster_path)
+            band = raster.GetRasterBand(1)
+            raster_min, raster_max, raster_mean, raster_stdev = \
+                band.GetStatistics(0, 1)
+            _ = services.create_or_update_catalog_entry(
+                asset_id, catalog,
+                lat_lng_bounding_box[0],
+                lat_lng_bounding_box[1],
+                lat_lng_bounding_box[2],
+                lat_lng_bounding_box[3],
+                utc_datetime, mediatype, asset_description, uri_path,
+                target_raster_path, raster_min, raster_max, raster_mean,
+                raster_stdev, default_style, expiration_utc_datetime)
+
+            if attribute_dict:
+                LOGGER.debug('updating additional attributes')
+                services.update_attributes(asset_id, catalog, attribute_dict)
+
+            services.update_job_status(job_id, 'complete')
+            db.session.commit()
+            LOGGER.debug(f'successful publish of {catalog}:{asset_id}')
+
+        except Exception as e:
+            LOGGER.exception('something bad happened when doing raster worker')
+            services.update_job_status(job_id, f'ERROR: {str(e)}')
+            db.session.commit()
+            if target_raster_path:
+                # try to delete the local file in case it errored
+                try:
+                    os.remove(target_raster_path)
+                except OSError:
+                    LOGGER.exception(f'unable to remove {target_raster_path}')
 
 
 def validate_api(api_key, permission):
