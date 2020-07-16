@@ -1015,6 +1015,7 @@ def add_raster_worker(
                 session = requests.Session()
                 proxy_scheme = flask.request.headers.get(
                     'X-Forwarded-Proto', 'http')
+                LOGGER.debug(f'here are the headers {flask.request.headers}')
                 resize_disk_request = do_rest_action(
                     session.post,
                     f'{proxy_scheme}://'
