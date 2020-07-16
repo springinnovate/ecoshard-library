@@ -95,4 +95,5 @@ def create_app():
     except OSError:
         pass
 
+    db.app = app
     return app
