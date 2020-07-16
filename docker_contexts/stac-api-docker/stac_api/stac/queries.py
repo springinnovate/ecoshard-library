@@ -106,7 +106,7 @@ def get_assets_query(
                 CatalogEntry.utc_datetime == datetime_str)
 
     LOGGER.debug(f'queryign catalog set {catalog_set}')
-    query_parameter_list.append(CatalogEntry.catalog.in_(*catalog_set))
+    query_parameter_list.append(CatalogEntry.catalog.in_(catalog_set))
 
     if asset_id:
         LOGGER.debug(f'querying asset id{asset_id}')
