@@ -13,8 +13,6 @@ import time
 import traceback
 import urllib.parse
 
-from sqlalchemy.orm import scoped_session
-from sqlalchemy.orm import sessionmaker
 from flask import Blueprint
 from flask import current_app
 from google.oauth2 import service_account
