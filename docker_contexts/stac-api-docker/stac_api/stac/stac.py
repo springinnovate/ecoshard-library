@@ -223,7 +223,7 @@ def fetch():
                 for percent_threshold in percent_thresholds]
 
             link = (
-                f"http://{current_app.config['GEOSERVER_HOST']}/geoserver/"
+                f"http://{current_app.config['GEOSERVER_MANAGER_HOST']}/geoserver/"
                 f"{fetch_data['catalog']}/wms"
                 f"?layers={fetch_data['catalog']}:{fetch_data['asset_id']}"
                 f'&format="image/png"'
@@ -317,7 +317,7 @@ def viewer():
         'catalog': catalog,
         'asset_id': asset_id,
         'geoserver_url': (
-            f"http://{current_app.config['GEOSERVER_HOST']}/"
+            f"http://{current_app.config['GEOSERVER_MANAGER_HOST']}/"
             f"geoserver/{catalog}/wms"),
         'original_style': catalog_entry.default_style,
         'p0': catalog_entry.raster_min,
