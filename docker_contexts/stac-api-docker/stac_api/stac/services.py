@@ -7,7 +7,7 @@ from .models import Attribute
 from .models import CatalogEntry
 from .models import Job
 
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger('stac')
 
 
 def update_api_key(api_key, permission_set):
@@ -113,6 +113,7 @@ def create_or_update_catalog_entry(
         CatalogEntry.catalog == catalog).one_or_none()
 
     if catalog_entry is None:
+        LOGGER.debug('catalog entry is none, creating a new one')
         catalog_entry = CatalogEntry(
             asset_id=asset_id,
             catalog=catalog,
@@ -133,6 +134,7 @@ def create_or_update_catalog_entry(
             expiration_utc_datetime=expiration_utc_datetime)
         db.session.add(catalog_entry)
     else:
+        LOGGER.debug('catalog entry exists and updating, creating a new one')
         catalog_entry.bb_xmin = xmin
         catalog_entry.bb_xmin = ymin
         catalog_entry.bb_xmin = xmax
@@ -148,6 +150,7 @@ def create_or_update_catalog_entry(
         catalog_entry.raster_stdev = raster_stdev
         catalog_entry.default_style = default_style
         catalog_entry.expiration_utc_datetime = expiration_utc_datetime
+    LOGGER.debug(f"this is the catalog we made: {catalog_entry}")
     return catalog_entry
 
 
