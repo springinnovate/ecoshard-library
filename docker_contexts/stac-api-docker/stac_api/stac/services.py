@@ -116,10 +116,10 @@ def create_or_update_catalog_entry(
         catalog_entry = CatalogEntry(
             asset_id=asset_id,
             catalog=catalog,
-            xmin=xmin,
-            ymin=ymin,
-            xmax=xmax,
-            ymax=ymax,
+            bb_xmin=xmin,
+            bb_ymin=ymin,
+            bb_xmax=xmax,
+            bb_ymax=ymax,
             utc_datetime=utc_datetime,
             mediatype=mediatype,
             description=description,
@@ -133,10 +133,10 @@ def create_or_update_catalog_entry(
             expiration_utc_datetime=expiration_utc_datetime)
         db.session.add(catalog_entry)
     else:
-        catalog_entry.xmin = xmin
-        catalog_entry.ymin = ymin
-        catalog_entry.xmax = xmax
-        catalog_entry.ymax = ymax
+        catalog_entry.bb_xmin = xmin
+        catalog_entry.bb_xmin = ymin
+        catalog_entry.bb_xmin = xmax
+        catalog_entry.bb_xmin = ymax
         catalog_entry.utc_datetime = utc_datetime
         catalog_entry.mediatype = mediatype
         catalog_entry.description = description
