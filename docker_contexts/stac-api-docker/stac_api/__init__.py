@@ -3,6 +3,7 @@ import json
 import logging
 import logging.config
 import os
+import secrets
 import threading
 
 from .auth import auth
@@ -11,6 +12,7 @@ from .db import db
 from flask import Flask
 import flask_cors
 from flask_migrate import Migrate
+import requests
 
 LOG_FILE_PATH = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), 'logging.json')
@@ -44,6 +46,7 @@ def create_app():
         SECRET_KEY=os.environ.get('SECRET_KEY', None),
         SQLALCHEMY_TRACK_MODIFICATIONS=False,
         GEOSERVER_PASSWORD_FILE=os.environ.get('GEOSERVER_PASSWORD_FILE', None),
+        GEOSERVER_USER=os.environ.get('GEOSERVER_USER', None),
         INTER_GEOSERVER_DATA_DIR=os.environ.get('INTER_GEOSERVER_DATA_DIR', None),
         GEOSERVER_DATA_DIR=os.environ.get('GEOSERVER_DATA_DIR', None),
         GEOSERVER_MANAGER_HOST=os.environ.get('GEOSERVER_MANAGER_HOST', None),
@@ -95,7 +98,56 @@ def create_app():
     except OSError:
         pass
 
-    stac.initalize_geoserver()
-
     db.app = app
+
+    stac.initalize_geoserver(app)
     return app
+
+
+def initalize_geoserver(app):
+    """Ensure database exists, set security, and set server initial stores."""
+    # make new random admin password
+    with db.app.app_context():
+        if app.config['GEOSERVER_PASSWORD_FILE'] is None:
+            LOGGER.warn(
+                'no password file path defined, assuming unconfigured and'
+                'not initalizing geoserver')
+            return
+
+        if os.path.exists(app.config['GEOSERVER_PASSWORD_FILE']):
+            with open(app.config['GEOSERVER_PASSWORD_FILE'], 'r') as \
+                    password_file:
+                geoserver_password = password_file.read()
+            LOGGER.info(f'password already set {geoserver_password}')
+            return
+
+        try:
+            os.makedirs(os.path.dirname(app.config['GEOSERVER_PASSWORD_FILE']))
+        except OSError:
+            pass
+        with open(app.config['GEOSERVER_PASSWORD_FILE'], 'w') as password_file:
+            geoserver_password = secrets.token_urlsafe(16)
+            password_file.write(geoserver_password)
+
+        session = requests.Session()
+        # 'geoserver' is the default geoserver password, we'll need to be
+        # authenticated to do the push
+        session.auth = (app.config['GEOSERVER_USER'], 'geoserver')
+        password_update_request = stac.do_rest_action(
+            session.put,
+            f'{app.config["GEOSERVER_MANAGER_HOST"]}',
+            'geoserver/rest/security/self/password',
+            json={
+                'newPassword': geoserver_password
+            })
+        if not password_update_request:
+            raise RuntimeError(
+                'could not reset admin password: ' +
+                password_update_request.text)
+
+        # there's a bug in GeoServer 2.17 that requires a reload of the
+        # configuration before the new password is used
+        password_update_request = stac.do_rest_action(
+            session.post,
+            f'{app.config["GEOSERVER_MANAGER_HOST"]}',
+            'geoserver/rest/reload')

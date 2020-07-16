@@ -6,7 +6,6 @@ import logging
 import math
 import os
 import re
-import secrets
 import subprocess
 import threading
 import time
@@ -35,7 +34,6 @@ from . import models
 from . import queries
 from . import services
 
-GEOSERVER_USER = 'admin'
 EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
 DOWNLOAD_HEADERS = {"Content-Disposition": "attachment"}
 
@@ -256,7 +254,7 @@ def styles():
     with open(current_app.config['GEOSERVER_PASSWORD_FILE'], 'r') as password_file:
         master_geoserver_password = password_file.read()
     session = requests.Session()
-    session.auth = (GEOSERVER_USER, master_geoserver_password)
+    session.auth = (current_app.config['GEOSERVER_USER'], master_geoserver_password)
     available_styles = do_rest_action(
         session.get,
         f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
@@ -627,7 +625,7 @@ def delete_raster(catalog_entry):
         master_geoserver_password = password_file.read()
     session = requests.Session()
     session.auth = (
-        GEOSERVER_USER, master_geoserver_password)
+        current_app.config['GEOSERVER_USER'], master_geoserver_password)
 
     cover_id = f'{catalog_entry.asset_id}_cover'
     delete_coverstore_result = do_rest_action(
@@ -692,7 +690,7 @@ def publish_to_geoserver(
             master_geoserver_password = password_file.read()
         session = requests.Session()
         session.auth = (
-            GEOSERVER_USER, master_geoserver_password)
+            current_app.config['GEOSERVER_USER'], master_geoserver_password)
 
         # make workspace
         LOGGER.debug('create workspace if it does not exist')
@@ -1143,55 +1141,6 @@ def build_job_hash(asset_args):
     job_id_hash.update(data['catalog'].encode('utf-8'))
     job_id_hash.update(data['asset_id'].encode('utf-8'))
     return job_id_hash.hexdigest()
-
-
-def initalize_geoserver():
-    """Ensure database exists, set security, and set server initial stores."""
-    # make new random admin password
-    with db.app:
-        if current_app.config['GEOSERVER_PASSWORD_FILE'] is None:
-            LOGGER.warn(
-                'no password file path defined, assuming unconfigured and'
-                'not initalizing geoserver')
-            return
-
-        if os.path.exists(current_app.config['GEOSERVER_PASSWORD_FILE']):
-            with open(current_app.config['GEOSERVER_PASSWORD_FILE'], 'r') as \
-                    password_file:
-                geoserver_password = password_file.read()
-            LOGGER.info(f'password already set {geoserver_password}')
-            return
-
-        try:
-            os.makedirs(os.path.dirname(current_app.config['GEOSERVER_PASSWORD_FILE']))
-        except OSError:
-            pass
-        with open(current_app.config['GEOSERVER_PASSWORD_FILE'], 'w') as password_file:
-            geoserver_password = secrets.token_urlsafe(16)
-            password_file.write(geoserver_password)
-
-        session = requests.Session()
-        # 'geoserver' is the default geoserver password, we'll need to be
-        # authenticated to do the push
-        session.auth = (GEOSERVER_USER, 'geoserver')
-        password_update_request = do_rest_action(
-            session.put,
-            f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
-            'geoserver/rest/security/self/password',
-            json={
-                'newPassword': geoserver_password
-            })
-        if not password_update_request:
-            raise RuntimeError(
-                'could not reset admin password: ' +
-                password_update_request.text)
-
-        # there's a bug in GeoServer 2.17 that requires a reload of the
-        # configuration before the new password is used
-        password_update_request = do_rest_action(
-            session.post,
-            f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
-            'geoserver/rest/reload')
 
 
 def utc_now():
