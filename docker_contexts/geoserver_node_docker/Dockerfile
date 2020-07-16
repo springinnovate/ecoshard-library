@@ -23,8 +23,6 @@ RUN chgrp -R tomcat /opt/tomcat && \
     chmod g+x /opt/tomcat/conf && \
     chown -R tomcat /opt/tomcat/webapps/ /opt/tomcat/work/ /opt/tomcat/temp/ /opt/tomcat/logs/
 
-COPY server.xml /opt/tomcat/conf
-
 COPY geoserver-2.17.1-war.zip .
 RUN unzip geoserver-2.17.1-war.zip geoserver.war -d /opt/tomcat/webapps/ && rm geoserver-2.17.1-war.zip
 RUN /opt/tomcat/bin/catalina.sh start && sleep 15 && /opt/tomcat/bin/catalina.sh stop
