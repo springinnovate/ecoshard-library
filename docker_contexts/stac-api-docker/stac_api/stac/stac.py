@@ -1065,7 +1065,7 @@ def add_raster_worker(
             band = raster.GetRasterBand(1)
             raster_min, raster_max, raster_mean, raster_stdev = \
                 band.GetStatistics(0, 1)
-            _ = services.create_or_update_catalog_entry(
+            catalog_entry = services.create_or_update_catalog_entry(
                 asset_id, catalog,
                 lat_lng_bounding_box[0],
                 lat_lng_bounding_box[1],
@@ -1074,10 +1074,12 @@ def add_raster_worker(
                 utc_datetime, mediatype, asset_description, uri_path,
                 target_raster_path, raster_min, raster_max, raster_mean,
                 raster_stdev, default_style, expiration_utc_datetime)
+            db.session.commit()
 
             if attribute_dict:
                 LOGGER.debug('updating additional attributes')
                 services.update_attributes(asset_id, catalog, attribute_dict)
+                db.session.commit()
 
             services.update_job_status(job_id, 'complete')
             db.session.commit()
