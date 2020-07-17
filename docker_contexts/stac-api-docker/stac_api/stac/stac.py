@@ -283,7 +283,7 @@ def styles():
 def render_list():
     """Render a listing webpage."""
     try:
-        api_key = flask.request.args['api_key']
+        api_key = flask.request.args.get('api_key', 'public')
         return flask.render_template('list.html', **{
             'search_url': flask.url_for(
                 'stac.search', api_key=api_key, _external=True),
@@ -393,11 +393,15 @@ def search():
                 'features': [],
                 'utc_now': utc_now()}
 
+
         if not isinstance(flask.request.json, dict):
             search_data = json.loads(flask.request.json)
         else:
             search_data = flask.request.json
         LOGGER.debug(f'incoming search data: {search_data}')
+
+        search_catalogs = allowed_permissions['READ'].intersection(
+            {search_data['catalog_list']})
 
         bounding_box_list = None
         if search_data['bounding_box']:
@@ -408,7 +412,7 @@ def search():
         description = search_data.get('description', None)
 
         asset_list = queries.get_assets_query(
-            allowed_permissions['READ'], bounding_box_list=bounding_box_list,
+            search_catalogs, bounding_box_list=bounding_box_list,
             datetime_str=search_data['datetime'], asset_id=asset_id,
             description=description).all()
 
