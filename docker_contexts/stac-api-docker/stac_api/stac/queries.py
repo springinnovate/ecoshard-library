@@ -86,10 +86,10 @@ def get_assets_query(
         s_xmin, s_ymin, s_xmax, s_ymax = bounding_box_list
 
         query_parameter_list.extend(
-            s_xmin <= CatalogEntry.bb_xmax,
-            s_xmax >= CatalogEntry.bb_xmin,
-            s_ymin <= CatalogEntry.bb_ymax,
-            s_ymax >= CatalogEntry.bb_ymin)
+            [s_xmin <= CatalogEntry.bb_xmax,
+             s_xmax >= CatalogEntry.bb_xmin,
+             s_ymin <= CatalogEntry.bb_ymax,
+             s_ymax >= CatalogEntry.bb_ymin])
 
     if datetime_str:
         LOGGER.debug(f'querying datetime_str {datetime_str}')
