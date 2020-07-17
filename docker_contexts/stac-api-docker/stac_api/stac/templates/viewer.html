@@ -55,11 +55,23 @@
   <div id="mapid"></div>
 
   <script>
+
     var edit_timeout = null;
 
     $("#min").val({{ p0 }});
     $("#max").val({{ p100 }});
     $("#style").val("{{ original_style }}");
+
+    var urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has("min")) {
+      $("#min").val(urlParams.has("min"));
+    }
+    if (urlParams.has("max")) {
+      $("#max").val(urlParams.has("max"));
+    }
+    if (urlParams.has("style")) {
+      $("#style").val(urlParams.has("style"));
+    }
 
     function style_changed() {
       if (edit_timeout != null) {
