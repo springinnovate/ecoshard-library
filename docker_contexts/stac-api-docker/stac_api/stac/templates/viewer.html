@@ -239,10 +239,11 @@
                 style_name));
           });
           $("#style").val("{{ original_style }}");
+          parse_query_params();
         });
     })();
 
-    (function parse_query_params(){
+    function parse_query_params(){
       var urlParams = new URLSearchParams(window.location.search);
       var needToUpdateStyle = false;
       if (urlParams.has("min")) {
@@ -261,7 +262,7 @@
       if (needToUpdateStyle) {
         update_style();
       }
-    })();
+    };
   </script>
 </body>
 </html>
