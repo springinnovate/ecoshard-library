@@ -242,24 +242,26 @@
         });
     })();
 
-    var urlParams = new URLSearchParams(window.location.search);
-    var needToUpdateStyle = false;
-    if (urlParams.has("min")) {
-      $("#min").val(urlParams.get("min"));
-      needToUpdateStyle = true;
-    }
-    if (urlParams.has("max")) {
-      $("#max").val(urlParams.get("max"));
-      needToUpdateStyle = true;
-    }
-    if (urlParams.has("style")) {
-      $("#style").val(urlParams.get("style"));
-      needToUpdateStyle = true;
-    }
+    (function parse_query_params(){
+      var urlParams = new URLSearchParams(window.location.search);
+      var needToUpdateStyle = false;
+      if (urlParams.has("min")) {
+        $("#min").val(urlParams.get("min"));
+        needToUpdateStyle = true;
+      }
+      if (urlParams.has("max")) {
+        $("#max").val(urlParams.get("max"));
+        needToUpdateStyle = true;
+      }
+      if (urlParams.has("style")) {
+        $("#style").val(urlParams.get("style"));
+        needToUpdateStyle = true;
+      }
 
-    if (needToUpdateStyle) {
-      update_style();
-    }
+      if (needToUpdateStyle) {
+        update_style();
+      }
+    })();
   </script>
 </body>
 </html>
