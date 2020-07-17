@@ -64,13 +64,13 @@
 
     var urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has("min")) {
-      $("#min").val(urlParams.has("min"));
+      $("#min").val(urlParams.get("min"));
     }
     if (urlParams.has("max")) {
-      $("#max").val(urlParams.has("max"));
+      $("#max").val(urlParams.get("max"));
     }
     if (urlParams.has("style")) {
-      $("#style").val(urlParams.has("style"));
+      $("#style").val(urlParams.get("style"));
     }
 
     function style_changed() {
