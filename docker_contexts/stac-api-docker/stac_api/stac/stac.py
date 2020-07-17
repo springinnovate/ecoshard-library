@@ -212,9 +212,9 @@ def fetch():
             link = flask.url_for(
                 'stac.viewer', catalog=fetch_data['catalog'],
                 asset_id=fetch_data['asset_id'], api_key=api_key,
-                min=fetch_catalog['raster_min'],
-                max=fetch_catalog['raster_max'],
-                style=fetch_catalog['default_style'],
+                min=fetch_catalog.raster_min,
+                max=fetch_catalog.raster_max,
+                style=fetch_catalog.default_style,
                 _external=True)
         elif fetch_type == 'wms':
             percent_thresholds = [0, 2, 25, 30, 50, 60, 75, 90, 98, 100]
