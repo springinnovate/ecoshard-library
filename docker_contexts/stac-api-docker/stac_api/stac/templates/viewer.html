@@ -62,17 +62,6 @@
     $("#max").val({{ p100 }});
     $("#style").val("{{ original_style }}");
 
-    var urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.has("min")) {
-      $("#min").val(urlParams.get("min"));
-    }
-    if (urlParams.has("max")) {
-      $("#max").val(urlParams.get("max"));
-    }
-    if (urlParams.has("style")) {
-      $("#style").val(urlParams.get("style"));
-    }
-
     function style_changed() {
       if (edit_timeout != null) {
         clearTimeout(edit_timeout);
@@ -252,6 +241,25 @@
           $("#style").val("{{ original_style }}");
         });
     })();
+
+    var urlParams = new URLSearchParams(window.location.search);
+    var needToUpdateStyle = false;
+    if (urlParams.has("min")) {
+      $("#min").val(urlParams.get("min"));
+      needToUpdateStyle = true;
+    }
+    if (urlParams.has("max")) {
+      $("#max").val(urlParams.get("max"));
+      needToUpdateStyle = true;
+    }
+    if (urlParams.has("style")) {
+      $("#style").val(urlParams.get("style"));
+      needToUpdateStyle = true;
+    }
+
+    if (needToUpdateStyle) {
+      update_style();
+    }
   </script>
 </body>
 </html>
