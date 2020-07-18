@@ -1,4 +1,5 @@
 """Top level STAC api app."""
+import argparse
 import json
 import logging
 import logging.config
@@ -58,6 +59,10 @@ def create_app():
             'DEFAULT_STYLE', 'greens'),
         DISK_RESIZE_SERVICE_HOST=os.environ.get(
             'DISK_RESIZE_SERVICE_HOST', None),
+        FLASK_INITALIZE_ONLY=os.environ.get(
+            'FLASK_INITALIZE_ONLY', 0),
+        ALLOW_PUBLIC_API=os.environ.get(
+            'ALLOW_PUBLIC_API', 0),
     )
     LOGGER.debug(os.environ.get('INTER_GEOSERVER_DATA_DIR'))
 
@@ -68,24 +73,25 @@ def create_app():
     app.register_blueprint(auth.auth_bp, url_prefix="/users")
     app.register_blueprint(stac.stac_bp, url_prefix="/api/v1")
 
-    # register a public api key
+    if app.config['FLASK_INITALIZE_ONLY']:
+        LOGGER.debug('initalize only! returning now')
+        return app
+
     with app.app_context():
-        public_access_map = stac.queries.get_allowed_permissions_map('public')
-        LOGGER.debug(f'public_access_map: {public_access_map}')
-        if public_access_map is None:
-            # create the key/permissions
-            stac.services.update_api_key(
-                PUBLIC_API_KEY,
-                {f'{PUBLIC_API_KEY}:READ', f'{PUBLIC_API_KEY}:WRITE'})
+        if app.config['ALLOW_PUBLIC_API']:
+            public_access_map = stac.queries.get_allowed_permissions_map(
+                'public')
+            LOGGER.debug(f'public_access_map: {public_access_map}')
+            if public_access_map is None:
+                # create the key/permissions
+                stac.services.update_api_key(
+                    PUBLIC_API_KEY,
+                    {f'{PUBLIC_API_KEY}:READ', f'{PUBLIC_API_KEY}:WRITE'})
 
         # remove any old jobs
         jobs_removed = stac.services.clear_all_jobs()
         LOGGER.info(f'will remove {jobs_removed} previously running jobs')
         db.session.commit()
-
-    with app.app_context():
-        public_access_map = stac.queries.get_allowed_permissions_map('public')
-        LOGGER.debug(f'public access: {public_access_map}')
 
     # start up an expiration monitor
     expiration_monitor_thread = threading.Thread(
