@@ -44,7 +44,7 @@ services:
       - FLASK_ENV=development
       - FLASK_RUN_HOST=0.0.0.0
       - DISK_RESIZE_SERVICE_HOST=expand_drive_service:${DISK_RESIZE_SERVICE_PORT}
-      - ALLOW_PUBLIC_API=${ALLOW_PUBLIC_API}
+      - ROOT_API_KEY=${ROOT_API_KEY}
     secrets:
       - bucket_read_service_account_key
       - sign_url_public_key
