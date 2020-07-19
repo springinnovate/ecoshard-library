@@ -402,8 +402,11 @@ def search():
             search_data = flask.request.json
         LOGGER.debug(f'incoming search data: {search_data}')
 
-        search_catalogs = allowed_permissions['READ'].intersection(
-            {search_data['catalog_list']})
+        if '*' in allowed_permissions['READ']:
+            search_catalogs = search_data['catalog_list']
+        else:
+            search_catalogs = allowed_permissions['READ'].intersection(
+                {search_data['catalog_list']})
 
         bounding_box_list = None
         if search_data['bounding_box']:
