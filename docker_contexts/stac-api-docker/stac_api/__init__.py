@@ -73,6 +73,8 @@ def create_app():
     app.register_blueprint(auth.auth_bp, url_prefix="/users")
     app.register_blueprint(stac.stac_bp, url_prefix="/api/v1")
 
+    LOGGER.debug(f'value of {app.config['FLASK_INITALIZE_ONLY']}')
+
     if app.config['FLASK_INITALIZE_ONLY']:
         LOGGER.debug('initalize only! returning now')
         return app

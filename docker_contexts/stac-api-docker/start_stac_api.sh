@@ -4,6 +4,7 @@
 
 echo "upgrade db"
 export FLASK_INITALIZE_ONLY=1
+echo "value of flask $FLASK_INITALIZE_ONLY"
 flask db upgrade
 
 echo "launching app"
