@@ -74,7 +74,7 @@ def create_app():
 
     LOGGER.debug(f'value of {app.config["FLASK_INITALIZE_ONLY"]}')
 
-    if app.config['FLASK_INITALIZE_ONLY']:
+    if int(app.config['FLASK_INITALIZE_ONLY']) == 1:
         LOGGER.debug('initalize only! returning now')
         return app
 
