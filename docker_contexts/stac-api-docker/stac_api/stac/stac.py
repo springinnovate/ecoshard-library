@@ -1143,7 +1143,7 @@ def validate_api(api_key, permission):
 
     permission_type, catalog_id = permission.split(':')
 
-    if catalog_id in allowed_permissions[permission_type]:
+    if catalog_id in allowed_permissions[permission_type] or catalog_id == '*':
         return 'valid'
 
     return 'api key does not not have permission', 401
