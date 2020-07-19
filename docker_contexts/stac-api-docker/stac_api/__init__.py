@@ -20,7 +20,7 @@ LOG_FILE_PATH = os.path.join(
 
 with open(LOG_FILE_PATH) as f:
     logging.config.dictConfig(json.load(f))
-LOGGER = logging.getLogger(__name__)
+LOGGER = logging.getLogger("stac")
 
 
 class ReverseProxied(object):
