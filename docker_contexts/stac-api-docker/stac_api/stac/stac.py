@@ -1137,13 +1137,14 @@ def validate_api(api_key, permission):
         return f'invalid permission: "{permission}"', 401
 
     allowed_permissions = queries.get_allowed_permissions_map(api_key)
-
+    LOGGER.debug(f'these are the allowed permissions: {allowed_permissions}')
     if not allowed_permissions:
         return 'invalid api key', 400
 
     permission_type, catalog_id = permission.split(':')
 
-    if catalog_id in allowed_permissions[permission_type] or catalog_id == '*':
+    if (catalog_id in allowed_permissions[permission_type] or
+            '*' in allowed_permissions[permission_type]):
         return 'valid'
 
     return 'api key does not not have permission', 401
