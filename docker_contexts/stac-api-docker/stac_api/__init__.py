@@ -88,8 +88,7 @@ def create_app():
                 # create the key/permissions
                 stac.services.update_api_key(
                     app.config["ROOT_API_KEY"],
-                    {f'*:{app.config["ROOT_API_KEY"]}',
-                     f'*:{app.config["ROOT_API_KEY"]}'})
+                    {f'*:READ', f'*:WRITE'})
 
         # remove any old jobs
         jobs_removed = stac.services.clear_all_jobs()

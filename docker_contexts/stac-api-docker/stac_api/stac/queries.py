@@ -42,7 +42,6 @@ def get_allowed_permissions_map(api_key):
         APIKey.api_key == api_key).one_or_none()
 
     LOGGER.debug(f'got these permissions for {api_key} {result}')
-    print(f'got these permissions for {api_key} {result}')
     if result is None:
         return None
 
