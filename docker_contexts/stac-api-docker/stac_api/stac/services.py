@@ -31,9 +31,7 @@ def update_api_key(api_key, permission_set):
             permissions=' '.join(permission_set))
         LOGGER.debug(f'created new api_key_entry: {api_key_entry}')
     else:
-        existing_permission_set = {
-            api_key_entry.permissions.split(' ')
-        }
+        existing_permission_set = set(api_key_entry.permissions.split(' '))
         new_permission_set = \
             existing_permission_set.union(permission_set)
         api_key_entry.permissions = ' '.join(new_permission_set)
