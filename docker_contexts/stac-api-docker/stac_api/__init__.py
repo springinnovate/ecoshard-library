@@ -83,12 +83,11 @@ def create_app():
         if app.config['ROOT_API_KEY'] is not None:
             root_access_map = stac.queries.get_allowed_permissions_map(
                 app.config['ROOT_API_KEY'])
-            LOGGER.debug(f'root_access_map: {root_access_map}')
-            if root_access_map is None:
-                # create the key/permissions
-                stac.services.update_api_key(
-                    app.config["ROOT_API_KEY"],
-                    {f'READ:*', f'WRITE:*'})
+            LOGGER.debug(f'current root_access_map: {root_access_map}')
+            # create the key/permissions
+            stac.services.update_api_key(
+                app.config["ROOT_API_KEY"],
+                {f'*:READ', f'*:WRITE'})
 
         # remove any old jobs
         jobs_removed = stac.services.clear_all_jobs()
