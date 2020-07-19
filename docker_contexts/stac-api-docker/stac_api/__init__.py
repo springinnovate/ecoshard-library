@@ -79,6 +79,7 @@ def create_app():
         return app
 
     with app.app_context():
+        LOGGER.debug(f"here's the value of root: {app.config['ROOT_API_KEY']}")
         if app.config['ROOT_API_KEY'] is not None:
             root_access_map = stac.queries.get_allowed_permissions_map(
                 app.config['ROOT_API_KEY'])
