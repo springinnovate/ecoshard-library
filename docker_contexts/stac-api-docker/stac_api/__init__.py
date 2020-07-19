@@ -21,7 +21,6 @@ LOG_FILE_PATH = os.path.join(
 with open(LOG_FILE_PATH) as f:
     logging.config.dictConfig(json.load(f))
 LOGGER = logging.getLogger(__name__)
-PUBLIC_API_KEY = 'public'
 
 
 class ReverseProxied(object):
@@ -61,8 +60,8 @@ def create_app():
             'DISK_RESIZE_SERVICE_HOST', None),
         FLASK_INITALIZE_ONLY=os.environ.get(
             'FLASK_INITALIZE_ONLY', 0),
-        ALLOW_PUBLIC_API=os.environ.get(
-            'ALLOW_PUBLIC_API', 0),
+        ROOT_API_KEY=os.environ.get(
+            'ROOT_API_KEY', None),
     )
     LOGGER.debug(os.environ.get('INTER_GEOSERVER_DATA_DIR'))
 
@@ -80,15 +79,16 @@ def create_app():
         return app
 
     with app.app_context():
-        if app.config['ALLOW_PUBLIC_API']:
-            public_access_map = stac.queries.get_allowed_permissions_map(
-                'public')
-            LOGGER.debug(f'public_access_map: {public_access_map}')
-            if public_access_map is None:
+        if app.config['ROOT_API_KEY'] is not None:
+            root_access_map = stac.queries.get_allowed_permissions_map(
+                app.config['ROOT_API_KEY'])
+            LOGGER.debug(f'root_access_map: {root_access_map}')
+            if root_access_map is None:
                 # create the key/permissions
                 stac.services.update_api_key(
-                    PUBLIC_API_KEY,
-                    {f'{PUBLIC_API_KEY}:READ', f'{PUBLIC_API_KEY}:WRITE'})
+                    app.config["ROOT_API_KEY"],
+                    {f'{app.config["ROOT_API_KEY"]}:*',
+                     f'{app.config["ROOT_API_KEY"]}:*'})
 
         # remove any old jobs
         jobs_removed = stac.services.clear_all_jobs()
