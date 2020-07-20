@@ -194,8 +194,8 @@ def new_disk_monitor_docker_manager(
                 STATUS_STRING = f'starting docker container'
                 LOGGER.info(STATUS_STRING)
                 subprocess.run([
-                    "docker-compose", "up", "-d", "--remove-orphans",
-                    "--build", service_name], shell=True, check=True)
+                    "./launch_stac_compose.sh -d {service_name}"], shell=True,
+                    check=True)
                 container_running = True
                 HEALTHY = True
             except Exception:
