@@ -273,7 +273,7 @@ if __name__ == '__main__':
     main_thread = threading.Thread(
         target=new_disk_monitor_docker_manager,
         args=(args.snapshot_pattern, args.mount_point, args.check_time,
-              args.service_name, args.mem_size))
+              args.geoserver_service_name, args.mem_size))
     main_thread.start()
 
     APP.run(
