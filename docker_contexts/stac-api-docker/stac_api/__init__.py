@@ -146,7 +146,7 @@ def initalize_geoserver(app):
         session.auth = (app.config['GEOSERVER_USER'], 'geoserver')
         password_update_request = stac.do_rest_action(
             session.put,
-            f'{app.config["API_SERVER_HOST"]}',
+            f'https://{app.config["API_SERVER_HOST"]}',
             'geoserver/rest/security/self/password',
             json={
                 'newPassword': geoserver_password
@@ -160,5 +160,6 @@ def initalize_geoserver(app):
         # configuration before the new password is used
         password_update_request = stac.do_rest_action(
             session.post,
+            f'https://'
             f'{app.config["API_SERVER_HOST"]}',
             'geoserver/rest/reload')
