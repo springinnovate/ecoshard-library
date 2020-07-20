@@ -9,9 +9,9 @@ services:
     networks:
       - api_stac_nw
     volumes:
-      - ${GEOSERVER_DATA_DIR}:${GEOSERVER_DATA_DIR}
+      - ${GEOSERVER_DATA_DISK_VOLUME}:${GEOSERVER_DATA_DISK_VOLUME}
     environment:
-      - GEOSERVER_DATA_DIR=${GEOSERVER_DATA_DIR}
+      - GEOSERVER_DATA_DIR=${GEOSERVER_DATA_DISK_VOLUME}
       - GEOSERVER_MAX_RAM=${GEOSERVER_MAX_RAM}
     tty: true
 
