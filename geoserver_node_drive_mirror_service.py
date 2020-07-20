@@ -195,15 +195,14 @@ def new_disk_monitor_docker_manager(
                     STATUS_STRING = f'stopping docker container'
                     LOGGER.info(STATUS_STRING)
                     subprocess.run(
-                        "./down.sh",
-                        shell=True, check=True)
+                        "./down.sh", shell=True)
                     container_running = False
 
                 STATUS_STRING = f'starting docker container'
                 LOGGER.info(STATUS_STRING)
                 subprocess.run(
                     "docker-compose -f docker-compose-geoserver-node.yml up -d",
-                    shell=True, check=True)
+                    shell=True)
                 container_running = True
                 HEALTHY = True
             except Exception:
