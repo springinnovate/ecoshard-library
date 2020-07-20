@@ -226,8 +226,11 @@ def fetch():
                 for percent_threshold in percent_thresholds]
 
             LOGGER.debug(list(flask.request.headers.items()))
+            proxy_scheme = flask.request.headers.get(
+                'X-Forwarded-Proto', 'http')
             link = (
-                f"{flask.request.headers.get('X-Forwarded-Proto', 'http')}://{current_app.config['GEOSERVER_MANAGER_HOST']}/geoserver/"
+                f"{proxy_scheme}://"
+                f"{current_app.config['GEOSERVER_MANAGER_HOST']}/geoserver/"
                 f"{fetch_data['catalog']}/wms"
                 f"?layers={fetch_data['catalog']}:{fetch_data['asset_id']}"
                 f'&format="image/png"'
@@ -272,8 +275,10 @@ def styles():
         master_geoserver_password = password_file.read()
     session = requests.Session()
     session.auth = (current_app.config['GEOSERVER_USER'], master_geoserver_password)
+    proxy_scheme = flask.request.headers.get('X-Forwarded-Proto', 'http')
     available_styles = do_rest_action(
         session.get,
+        f'{proxy_scheme}://'
         f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
         f'geoserver/rest/styles.json').json()
 
@@ -317,10 +322,13 @@ def viewer():
     x_center = (catalog_entry.bb_xmax+catalog_entry.bb_xmin)/2
     y_center = (catalog_entry.bb_ymax+catalog_entry.bb_ymin)/2
 
+    proxy_scheme = flask.request.headers.get('X-Forwarded-Proto', 'http')
+
     return flask.render_template('viewer.html', **{
         'catalog': catalog,
         'asset_id': asset_id,
         'geoserver_url': (
+            f'{proxy_scheme}://'
             f"{current_app.config['GEOSERVER_MANAGER_HOST']}/"
             f"geoserver/{catalog}/wms"),
         'original_style': catalog_entry.default_style,
