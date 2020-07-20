@@ -78,7 +78,13 @@ def new_disk_monitor_docker_manager(
     global LAST_DISK_NAME
     disk_iteration = 0
     container_running = False
+    first_time = True
     while True:
+        if not first_time:
+            # this way we can use 'continue' without looping
+            LOGGER.debug(f'sleeping {check_time} seconds')
+            time.sleep(check_time)
+        first_time = False
         try:
             # get existing devices
             lsblk_result = subprocess.run(
@@ -226,8 +232,6 @@ def new_disk_monitor_docker_manager(
         except Exception as e:
             STATUS_STRING = f'error: {str(e)}'
             LOGGER.exception(STATUS_STRING)
-        LOGGER.debug(f'sleeping {check_time} seconds')
-        time.sleep(check_time)
 
 
 @APP.route('/', methods=['GET'])
