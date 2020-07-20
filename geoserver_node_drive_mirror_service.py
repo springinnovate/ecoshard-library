@@ -195,8 +195,7 @@ def new_disk_monitor_docker_manager(
                     STATUS_STRING = f'stopping docker container'
                     LOGGER.info(STATUS_STRING)
                     subprocess.run(
-                        "docker-compose down -f "
-                        "docker-compose-geoserver-node.yml",
+                        "./down.sh",
                         shell=True, check=True)
                     container_running = False
 
