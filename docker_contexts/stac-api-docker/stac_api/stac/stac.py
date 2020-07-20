@@ -225,8 +225,9 @@ def fetch():
                         fetch_catalog.raster_min)}'''
                 for percent_threshold in percent_thresholds]
 
+            LOGGER.debug(list(flask.request.headers.items()))
             link = (
-                f"{flask.request.args['scheme']}://{current_app.config['GEOSERVER_MANAGER_HOST']}/geoserver/"
+                f"{flask.request.headers.get('X-Forwarded-Proto', 'http')}://{current_app.config['GEOSERVER_MANAGER_HOST']}/geoserver/"
                 f"{fetch_data['catalog']}/wms"
                 f"?layers={fetch_data['catalog']}:{fetch_data['asset_id']}"
                 f'&format="image/png"'
