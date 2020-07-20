@@ -571,6 +571,7 @@ def publish():
             attribute_dict = asset_args['attribute_dict']
         else:
             attribute_dict = None
+        proxy_scheme = flask.request.headers.get('X-Forwarded-Proto', 'http')
         raster_worker_thread = threading.Thread(
             target=add_raster_worker,
             args=(asset_args['uri'], asset_args['mediatype'],
@@ -579,7 +580,8 @@ def publish():
                   utc_datetime, default_style, job_id, attribute_dict,
                   expiration_utc_datetime,
                   current_app.config['INTER_GEOSERVER_DATA_DIR'],
-                  current_app.config['GEOSERVER_DATA_DIR']),
+                  current_app.config['GEOSERVER_DATA_DIR'],
+                  proxy_scheme),
             kwargs={'force': force})
         raster_worker_thread.start()
 
@@ -664,10 +666,9 @@ def delete_raster(catalog_entry):
         current_app.config['GEOSERVER_USER'], master_geoserver_password)
 
     cover_id = f'{catalog_entry.asset_id}_cover'
-    proxy_scheme = flask.request.headers.get('X-Forwarded-Proto', 'http')
     delete_coverstore_result = do_rest_action(
         session.delete,
-        f'{proxy_scheme}://'
+        f'https://'
         f'{current_app.config["API_SERVER_HOST"]}',
         f'geoserver/rest/workspaces/{catalog_entry.catalog}/'
         f'coveragestores/{cover_id}/?purge=all&recurse=true')
@@ -708,7 +709,7 @@ def do_rest_action(
 
 def publish_to_geoserver(
         geoserver_raster_path, local_raster_path, catalog, raster_id,
-        mediatype):
+        mediatype, proxy_scheme):
     """Publish the layer to the geoserver.
 
     Args:
@@ -718,6 +719,7 @@ def publish_to_geoserver(
         catalog (str): STAC catalog to publish to
         raster_id (str): unique raster id to publish to.
         medatype (str): STAC mediatype for this raster.
+        proxy_scheme (str): either http or https
 
     Returns:
         None
@@ -732,7 +734,6 @@ def publish_to_geoserver(
 
         # make workspace
         LOGGER.debug('create workspace if it does not exist')
-        proxy_scheme = flask.request.headers.get('X-Forwarded-Proto', 'http')
         workspace_exists_result = do_rest_action(
             session.get,
             f'{proxy_scheme}://'
@@ -948,7 +949,7 @@ def add_raster_worker(
         uri_path, mediatype, catalog, asset_id, asset_description,
         utc_datetime, default_style, job_id, attribute_dict,
         expiration_utc_datetime, inter_data_dir, root_data_dir,
-        force=False, keep_existing=True):
+        proxy_scheme, force=False, keep_existing=True):
     """Copy and update a coverage set asynchronously.
 
     Args:
@@ -967,6 +968,7 @@ def add_raster_worker(
             database and local storage.
         inter_data_dir (str): directory path to prefix for the geoserver's
             internal raster path relative to its own data directory.
+        proxy_sheme (str): either http or https
         root_data_dir (str): directory in which to copy this raster.
             `inter_data_dir` must be a suffix of this string.
         force (bool): if True will overwrite existing local data, otherwise
@@ -1045,8 +1047,6 @@ def add_raster_worker(
                 additional_gb = int(math.ceil(additional_b_needed/2**30))
                 LOGGER.warning(f'need an additional {additional_gb}G')
                 session = requests.Session()
-                proxy_scheme = flask.request.headers.get(
-                    'X-Forwarded-Proto', 'http')
                 LOGGER.debug(f'here are the headers {flask.request.headers}')
                 resize_disk_request = do_rest_action(
                     session.post,
@@ -1102,8 +1102,8 @@ def add_raster_worker(
             db.session.commit()
 
             publish_to_geoserver(
-                inter_geoserver_raster_path, target_raster_path, catalog, asset_id,
-                mediatype)
+                inter_geoserver_raster_path, target_raster_path, catalog,
+                asset_id, mediatype, proxy_scheme)
 
             LOGGER.debug('update job_table with complete')
 
