@@ -86,7 +86,6 @@ services:
     container_name: "nginx"
     build: docker_contexts/nginx
     restart: always
-    command: [nginx-debug, '-g', 'daemon off;']
     tty: true
     ports:
       - 80:80
