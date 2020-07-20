@@ -403,11 +403,11 @@ def search():
         LOGGER.debug(f'incoming search data: {search_data}')
 
         if '*' in allowed_permissions['READ']:
-            search_catalogs = {
-                '.'.split(search_data['catalog_list'])}
+            search_catalogs = set(
+                search_data['catalog_list'].split(','))
         else:
             search_catalogs = allowed_permissions['READ'].intersection(
-                {'.'.split(search_data['catalog_list'])})
+                set(search_data['catalog_list'].split(',')))
 
         LOGGER.debug(f'searching catalogs: {search_catalogs}')
 
