@@ -95,7 +95,7 @@ services:
       - ./nginx_configurations/stac_manager_conf.d:/etc/nginx/conf.d
       - /etc/letsencrypt:/etc/letsencrypt
     environment:
-      - NGINX_HOST=${NGINX_HOST}
+      - NGINX_HOST=${API_SERVER_HOST}
     networks:
       - api_stac_nw
 
