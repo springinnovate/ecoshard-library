@@ -16,8 +16,10 @@ Services
 
 
     * ``db`` (port 5432), PostgreSQL database. Used by ``stac_manager`` for authentication and STAC catalog storage.
+        * username and password given by ``DB_PASSWORD``, ``DB_USER``.
+        * host volume mount at ``POSTGRES_VOLUME``
 
-    * ``expand_drive_service`` (port 8082), used to inrease the size of the disk used by the Geoserver node.
+    * ``expand_drive_service`` (port ``DISK_RESIZE_SERVICE_PORT``), used to inrease the size of the disk used by the Geoserver node.
          * ``/resize``, ``POST``, ``{'gb_to_add': '12'}``
 
 Configuration
@@ -33,4 +35,3 @@ When deploying the platform you must create a file call ``stac_envs``. This file
         * ``compute.disks.create`` on the project to be able to create a new disk
         * ``compute.instances.attachDisk`` on the VM instance
         * ``compute.disks.use`` permission on the disk to attach
-
