@@ -269,11 +269,12 @@ if __name__ == '__main__':
     STATUS_STRING = "startup"
     PASSWORD_FILE_PATH = os.path.join(
         args.mount_point, 'data', 'secrets', 'adminpass')
-    swap_thread = threading.Thread(
+
+    main_thread = threading.Thread(
         target=new_disk_monitor_docker_manager,
         args=(args.snapshot_pattern, args.mount_point, args.check_time,
               args.service_name, args.mem_size))
-    swap_thread.start()
+    main_thread.start()
 
     APP.run(
         host='0.0.0.0',
