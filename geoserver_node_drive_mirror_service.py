@@ -239,7 +239,7 @@ def processing_status():
         return (
             f'last snapshot: {LAST_SNAPSHOT_NAME}\n'
             f'last disk: {LAST_DISK_NAME}\nstatus: {STATUS_STRING}', 200)
-    return STATUS_STRING, 500
+    return f'{STATUS_STRING}  -- 500', 500
 
 
 if __name__ == '__main__':
