@@ -230,7 +230,7 @@ def fetch():
                 'X-Forwarded-Proto', 'http')
             link = (
                 f"{proxy_scheme}://"
-                f"{current_app.config['API_SERVER_HOST']}/geoserver/"
+                f"{current_app.config['MAP_SERVER_HOST']}/geoserver/"
                 f"{fetch_data['catalog']}/wms"
                 f"?layers={fetch_data['catalog']}:{fetch_data['asset_id']}"
                 f'&format="image/png"'
