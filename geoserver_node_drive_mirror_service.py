@@ -188,15 +188,15 @@ def new_disk_monitor_docker_manager(
                     STATUS_STRING = f'stopping docker container'
                     LOGGER.info(STATUS_STRING)
                     subprocess.run(
-                        ["docker-compose down -f "
-                         "docker-compose-geoserver-node.yml"],
+                        "docker-compose down -f "
+                        "docker-compose-geoserver-node.yml",
                         shell=True, check=True)
                     container_running = False
 
                 STATUS_STRING = f'starting docker container'
                 LOGGER.info(STATUS_STRING)
-                subprocess.run([
-                    "docker-compose -f docker-compose-geoserver-node.yml -d"],
+                subprocess.run(
+                    "docker-compose -f docker-compose-geoserver-node.yml up -d",
                     shell=True, check=True)
                 container_running = True
                 HEALTHY = True
