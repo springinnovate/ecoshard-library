@@ -49,7 +49,7 @@ def create_app():
         GEOSERVER_USER=os.environ.get('GEOSERVER_USER', None),
         INTER_GEOSERVER_DATA_DIR=os.environ.get('INTER_GEOSERVER_DATA_DIR', None),
         GEOSERVER_DATA_DIR=os.environ.get('GEOSERVER_DATA_DIR', None),
-        GEOSERVER_MANAGER_HOST=os.environ.get('GEOSERVER_MANAGER_HOST', None),
+        API_SERVER_HOST=os.environ.get('API_SERVER_HOST', None),
         SQLALCHEMY_DATABASE_URI=os.environ.get(
             'SQLALCHEMY_DATABASE_URI', None),
         SIGN_URL_PUBLIC_KEY_PATH=os.environ.get(
@@ -62,6 +62,8 @@ def create_app():
             'FLASK_INITALIZE_ONLY', 0),
         ROOT_API_KEY=os.environ.get(
             'ROOT_API_KEY', None),
+        MAP_SERVER_HOST=os.environ.get(
+            'MAP_SERVER_HOST', None)
     )
     LOGGER.debug(os.environ.get('INTER_GEOSERVER_DATA_DIR'))
 
@@ -144,7 +146,7 @@ def initalize_geoserver(app):
         session.auth = (app.config['GEOSERVER_USER'], 'geoserver')
         password_update_request = stac.do_rest_action(
             session.put,
-            f'{app.config["GEOSERVER_MANAGER_HOST"]}',
+            f'{app.config["API_SERVER_HOST"]}',
             'geoserver/rest/security/self/password',
             json={
                 'newPassword': geoserver_password
@@ -158,5 +160,5 @@ def initalize_geoserver(app):
         # configuration before the new password is used
         password_update_request = stac.do_rest_action(
             session.post,
-            f'{app.config["GEOSERVER_MANAGER_HOST"]}',
+            f'{app.config["API_SERVER_HOST"]}',
             'geoserver/rest/reload')

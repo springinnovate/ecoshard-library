@@ -230,7 +230,7 @@ def fetch():
                 'X-Forwarded-Proto', 'http')
             link = (
                 f"{proxy_scheme}://"
-                f"{current_app.config['GEOSERVER_MANAGER_HOST']}/geoserver/"
+                f"{current_app.config['API_SERVER_HOST']}/geoserver/"
                 f"{fetch_data['catalog']}/wms"
                 f"?layers={fetch_data['catalog']}:{fetch_data['asset_id']}"
                 f'&format="image/png"'
@@ -279,7 +279,7 @@ def styles():
     available_styles = do_rest_action(
         session.get,
         f'{proxy_scheme}://'
-        f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+        f'{current_app.config["API_SERVER_HOST"]}',
         f'geoserver/rest/styles.json').json()
 
     return {'styles': [
@@ -329,7 +329,7 @@ def viewer():
         'asset_id': asset_id,
         'geoserver_url': (
             f'{proxy_scheme}://'
-            f"{current_app.config['GEOSERVER_MANAGER_HOST']}/"
+            f"{current_app.config['API_SERVER_HOST']}/"
             f"geoserver/{catalog}/wms"),
         'original_style': catalog_entry.default_style,
         'p0': catalog_entry.raster_min,
@@ -666,7 +666,7 @@ def delete_raster(catalog_entry):
     cover_id = f'{catalog_entry.asset_id}_cover'
     delete_coverstore_result = do_rest_action(
         session.delete,
-        f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+        f'{current_app.config["API_SERVER_HOST"]}',
         f'geoserver/rest/workspaces/{catalog_entry.catalog}/'
         f'coveragestores/{cover_id}/?purge=all&recurse=true')
     if not delete_coverstore_result:
@@ -732,13 +732,13 @@ def publish_to_geoserver(
         LOGGER.debug('create workspace if it does not exist')
         workspace_exists_result = do_rest_action(
             session.get,
-            f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+            f'{current_app.config["API_SERVER_HOST"]}',
             f'geoserver/rest/workspaces/{catalog}')
         if not workspace_exists_result:
             LOGGER.debug(f'{catalog} does not exist, creating it')
             create_workspace_result = do_rest_action(
                 session.post,
-                f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+                f'{current_app.config["API_SERVER_HOST"]}',
                 'geoserver/rest/workspaces',
                 json={'workspace': {'name': catalog}})
             if not create_workspace_result:
@@ -749,7 +749,7 @@ def publish_to_geoserver(
         cover_id = f'{raster_id}_cover'
         coverstore_exists_result = do_rest_action(
             session.get,
-            f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+            f'{current_app.config["API_SERVER_HOST"]}',
             f'geoserver/rest/workspaces/{catalog}/coveragestores/{cover_id}')
 
         LOGGER.debug(
@@ -760,7 +760,7 @@ def publish_to_geoserver(
             # coverstore exists, delete it
             delete_coverstore_result = do_rest_action(
                 session.delete,
-                f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+                f'{current_app.config["API_SERVER_HOST"]}',
                 f'geoserver/rest/workspaces/{catalog}/'
                 f'coveragestores/{cover_id}/?purge=all&recurse=true')
             if not delete_coverstore_result:
@@ -782,7 +782,7 @@ def publish_to_geoserver(
 
         create_coverstore_result = do_rest_action(
             session.post,
-            f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+            f'{current_app.config["API_SERVER_HOST"]}',
             f'geoserver/rest/workspaces/{catalog}/coveragestores',
             json=coveragestore_payload)
         if not create_coverstore_result:
@@ -816,7 +816,7 @@ def publish_to_geoserver(
                             "name": catalog,
                             "href": (
                                 f"""{current_app.config[
-                                    'GEOSERVER_MANAGER_HOST']}/"""
+                                    'API_SERVER_HOST']}/"""
                                 f"geoserver/rest/namespaces/{catalog}.json")
                         },
                     "title": raster_id,
@@ -854,7 +854,7 @@ def publish_to_geoserver(
                         "name": f"{catalog}:{raster_id}",
                         "href": (
                             f"""{
-                                current_app.config['GEOSERVER_MANAGER_HOST']}/"""
+                                current_app.config['API_SERVER_HOST']}/"""
                             "geoserver/rest",
                             f"/workspaces/{catalog}/coveragestores/"
                             f"{urllib.parse.quote(raster_id)}.json")
@@ -915,7 +915,7 @@ def publish_to_geoserver(
         LOGGER.debug('send cover request to GeoServer')
         create_cover_result = do_rest_action(
             session.post,
-            f'{current_app.config["GEOSERVER_MANAGER_HOST"]}',
+            f'{current_app.config["API_SERVER_HOST"]}',
             f'geoserver/rest/workspaces/{catalog}/'
             f'coveragestores/{urllib.parse.quote(cover_id)}/coverages/',
             json=cover_payload)
