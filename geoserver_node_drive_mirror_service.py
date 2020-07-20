@@ -57,7 +57,7 @@ def do_rest_action(
 
 def new_disk_monitor_docker_manager(
         snapshot_pattern, mount_point, check_time, service_name,
-        mem_size):
+        mem_size, google_cloud_zone):
     """Monitor for new snapshots matching pattern. Create copy if one appears.
 
     Args:
@@ -66,6 +66,7 @@ def new_disk_monitor_docker_manager(
         check_time (float): how many seconds to wait between snapshot checks
         service_name (str): name to use for docker-compose restart
         mem_size (str): Java formatted max memory string i.e. "12G"
+        google_cloud_zone (str): zone for google cloud disks.
 
     Returns:
         None
@@ -275,7 +276,8 @@ if __name__ == '__main__':
     main_thread = threading.Thread(
         target=new_disk_monitor_docker_manager,
         args=(args.snapshot_pattern, args.mount_point, args.check_time,
-              args.geoserver_service_name, args.mem_size))
+              args.geoserver_service_name, args.mem_size,
+              args.google_cloud_zone))
     main_thread.start()
 
     APP.run(
