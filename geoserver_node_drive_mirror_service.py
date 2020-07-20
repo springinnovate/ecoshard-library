@@ -256,6 +256,9 @@ if __name__ == '__main__':
         '--mem_size', type=str, required=True, help=(
             'java formatted max mem size string eg "12G"'))
     parser.add_argument(
+        '--geoserver_service_name', required=True, help=(
+            'name of geoserver service'))
+    parser.add_argument(
         '--google_cloud_zone', type=str, required=True, help=(
             'google cloud zone that holds the disk "eg us-west1-b"'))
 
