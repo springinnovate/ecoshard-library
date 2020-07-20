@@ -253,12 +253,6 @@ if __name__ == '__main__':
         '--check_time', type=float, default=5*60, help=(
             'how many seconds to wait between checking for a new disk'))
     parser.add_argument(
-        '--container_name', type=str, required=True, help=(
-            'desired name of docker container running the geoserver node'))
-    parser.add_argument(
-        '--image_name', type=str, required=True, help=(
-            'docker image name to run'))
-    parser.add_argument(
         '--mem_size', type=str, required=True, help=(
             'java formatted max mem size string eg "12G"'))
     parser.add_argument(
