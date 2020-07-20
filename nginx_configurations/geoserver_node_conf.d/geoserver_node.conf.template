@@ -3,7 +3,7 @@ server {
     listen 80;
 
     location /geoserver {
-        proxy_pass http://geoserver-node:8080/geoserver;
+        proxy_pass http://geoserver:8080/geoserver;
     }
 }
 
@@ -16,6 +16,6 @@ server {
     include /etc/letsencrypt/options-ssl-nginx.conf;
 
     location /geoserver {
-        proxy_pass http://geoserver-node:8080/geoserver;
+        proxy_pass http://geoserver:8080/geoserver;
     }
 }
