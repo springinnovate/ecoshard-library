@@ -452,6 +452,7 @@ def search():
                     'description': asset.description,
                     'attribute_dict': attribute_dict,
                 })
+        LOGGER.debug('sending feature list now')
         return {
             'features': feature_list,
             'utc_now': utc_now()}
