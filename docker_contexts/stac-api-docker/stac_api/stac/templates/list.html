@@ -82,7 +82,7 @@
         data: json_data,
         contentType: 'application/json',
         dataType: 'json',
-        timeout: 5000
+        timeout: 100000
       }).fail(function(e) {
           console.log("search failed " + e);
           $("#search-results").addClass('ui-state-error').append(
