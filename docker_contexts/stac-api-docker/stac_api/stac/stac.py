@@ -395,6 +395,8 @@ def search():
     try:
         api_key = flask.request.args['api_key']
         allowed_permissions = queries.get_allowed_permissions_map(api_key)
+        LOGGER.debug(
+            f'got these allowed permissions on a search {allowed_permissions}')
 
         if not allowed_permissions:
             return 'invalid api key', 400
