@@ -434,12 +434,11 @@ def search():
             search_catalogs, bounding_box_list=bounding_box_list,
             datetime_str=search_data['datetime'], asset_id=asset_id,
             description=description).all()
-        LOGGER.debug(f'ressult of query {asset_list}')
+        LOGGER.debug(f'got this many resutls from query: {len(asset_list)}')
 
         feature_list = []
         for asset in asset_list:
             # search for additional attributes
-            LOGGER.debug(f'processing {asset.catalog} {asset.asset_id}')
             attribute_dict = queries.get_asset_attributes(
                 asset.asset_id, asset.catalog)
             feature_list.append(
