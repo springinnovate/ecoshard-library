@@ -163,5 +163,7 @@ def get_expired_catalog_entries(current_time):
             CatalogEntry.expiration_utc_datetime is defined.
 
     """
-    return CatalogEntry.query.filter(
-        CatalogEntry.expiration_utc_datetime <= current_time)
+    return CatalogEntry.query.filter(and_(
+            CatalogEntry.expiration_utc_datetime <= current_time,
+            CatalogEntry.expiration_utc_datetime != '',
+            CatalogEntry.expiration_utc_datetime.isnot(None)))
