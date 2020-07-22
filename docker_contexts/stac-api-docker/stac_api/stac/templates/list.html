@@ -109,7 +109,7 @@
             data: search_json,
             contentType: 'application/json',
             dataType: 'json',
-            timeout: 5000,
+            timeout: 100000,
           }).fail(function(e) {
             $("#search-results").append(
               "<div>"+"no link found for: "+ search_result["id"]+"</div>"+
