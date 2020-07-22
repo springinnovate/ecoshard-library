@@ -35,7 +35,7 @@ def get_allowed_permissions_map(api_key):
     Returns:
         dictionary with 'READ' and 'WRITE' keys mapping to a set of catalog
         names and/or '*' to indicate full permissions allowed or None if
-        the api key is not found.
+        the api key is not found. Form is [READ|WRITE]:{catalog_id}
 
     """
     result = APIKey.query.filter(
@@ -50,7 +50,7 @@ def get_allowed_permissions_map(api_key):
         allowed_permissions[permission_type] = set([
             permission.split(':')[0]
             for permission in result.permissions.split(' ')
-            if permission.endswith(f':{permission_type}')])
+            if permission.startswith(f':{permission_type}')])
 
     return allowed_permissions
 
