@@ -22,7 +22,7 @@ services:
     ports:
       - 8888:8888
     volumes:
-      - ${GEOSERVER_DATA_DIR}:${GEOSERVER_DATA_DIR}
+      - ${GEOSERVER_DATA_DIR}:/usr/local/geoserver/data_dir
     image: stac_manager
     networks:
       - api_stac_nw
