@@ -37,7 +37,7 @@ services:
       - GEOSERVER_DATA_DIR=${GEOSERVER_DATA_DIR}
       - INTER_GEOSERVER_DATA_DIR=${INTER_GEOSERVER_DATA_DIR}
       - GEOSERVER_USER=admin
-      - GEOSERVER_PASSWORD_FILE=/usr/local/geoserver/data_dir/secrets/passwd
+      - GEOSERVER_PASSWORD_FILE=/usr/local/geoserver/data_dir/data/secrets/adminpass
       - API_SERVER_HOST=${API_SERVER_HOST}
       - MAP_SERVER_HOST=${MAP_SERVER_HOST}
       - FLASK_APP=stac_api
