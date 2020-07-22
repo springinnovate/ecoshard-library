@@ -50,7 +50,7 @@ def get_allowed_permissions_map(api_key):
         allowed_permissions[permission_type] = set([
             permission.split(':')[1]
             for permission in result.permissions.split(' ')
-            if permission.startswith(f':{permission_type}')])
+            if permission.startswith(f'{permission_type}:')])
 
     return allowed_permissions
 
