@@ -33,6 +33,7 @@ from ..db import db
 from . import models
 from . import queries
 from . import services
+from .auth import jwt_required
 
 EXPIRATION_MONITOR_DELAY = 300  # check for expiration every 300s
 DOWNLOAD_HEADERS = {"Content-Disposition": "attachment"}
@@ -128,6 +129,7 @@ def pixel_pick():
 
 
 @stac_bp.route('/fetch', methods=["POST"])
+@jwt_required('api_key')
 def fetch():
     """Search the catalog using STAC format.
 
@@ -347,6 +349,7 @@ def viewer():
 
 
 @stac_bp.route('/search', methods=["POST"])
+@jwt_required('api_key')
 def search():
     """Search the catalog using STAC format.
 
@@ -393,24 +396,28 @@ def search():
 
     """
     try:
-        api_key = flask.request.args['api_key']
-        allowed_permissions = queries.get_allowed_permissions_map(api_key)
-        LOGGER.debug(
-            f'got these allowed permissions on a search {allowed_permissions}')
-
-        if not allowed_permissions:
-            return 'invalid api key', 400
-
-        if not allowed_permissions['READ']:
-            # No allowed catalogs so no results.
-            return {
-                'features': [],
-                'utc_now': utc_now()}
-
         if not isinstance(flask.request.json, dict):
             search_data = json.loads(flask.request.json)
         else:
             search_data = flask.request.json
+
+        if 'jwt' not in flask.g:
+            if 'api_key' not in flask.request.args:
+                return {}, 401
+            api_key = flask.request.args['api_key']
+            allowed_permissions = queries.get_allowed_permissions_map(api_key)
+            LOGGER.debug(
+                f'got these allowed permissions on a search {allowed_permissions}')
+
+            if not allowed_permissions:
+                return {'_error': 'invalid api key'}, 400
+
+            if not allowed_permissions['READ']:
+                # No allowed catalogs so no results.
+                return {
+                    'features': [],
+                    'utc_now': utc_now()}
+
         LOGGER.debug(f'incoming search data: {search_data}')
 
         if '*' in allowed_permissions['READ']:
@@ -1116,7 +1123,7 @@ def add_raster_worker(
             band = raster.GetRasterBand(1)
             raster_min, raster_max, raster_mean, raster_stdev = \
                 band.GetStatistics(0, 1)
-            catalog_entry = services.create_or_update_catalog_entry(
+            _ = services.create_or_update_catalog_entry(
                 asset_id, catalog,
                 lat_lng_bounding_box[0],
                 lat_lng_bounding_box[1],
