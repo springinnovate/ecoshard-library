@@ -40,6 +40,12 @@ def create_app():
     LOGGER.debug('starting up!')
     # wait for API calls
 
+    public_catalog_string = os.environ.get('PUBLIC_CATALOGS', None)
+    if public_catalog_string not in ['', None]:
+        public_catalog_list = public_catalog_string.split(',')
+    else:
+        public_catalog_list = []
+
     app = Flask(__name__, instance_relative_config=False)
     app.wsgi_app = ReverseProxied(app.wsgi_app)
     app.config.from_mapping(
@@ -63,7 +69,8 @@ def create_app():
         ROOT_API_KEY=os.environ.get(
             'ROOT_API_KEY', None),
         MAP_SERVER_HOST=os.environ.get(
-            'MAP_SERVER_HOST', None)
+            'MAP_SERVER_HOST', None),
+        PUBLIC_CATALOGS=public_catalog_list
     )
     LOGGER.debug(os.environ.get('INTER_GEOSERVER_DATA_DIR'))
 
