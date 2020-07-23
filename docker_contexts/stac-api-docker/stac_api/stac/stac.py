@@ -172,17 +172,26 @@ def fetch():
             fetch_data = json.loads(flask.request.json)
         else:
             fetch_data = flask.request.json
-        api_key = flask.request.args['api_key']
-        valid_check = validate_api(api_key, f'READ:{fetch_data["catalog"]}')
-        if valid_check != 'valid':
-            return valid_check
+
+        if 'jwt' not in flask.g:
+            if 'api_key' not in flask.request.args:
+                return {'_error': 'no api key provided'}, 401
+
+            api_key = flask.request.args['api_key']
+            valid_check = validate_api(
+                api_key, f'READ:{fetch_data["catalog"]}')
+            if valid_check != 'valid':
+                return valid_check
+
         fetch_catalog = queries.find_catalog_by_id(
             fetch_data['catalog'], fetch_data['asset_id'])
 
         if not fetch_catalog:
-            return (
-                f'{fetch_data["asset_id"]}:{fetch_data["catalog"]} not found',
-                400)
+            return {
+                '_error': (
+                    f'{fetch_data["asset_id"]}:'
+                    f'{fetch_data["catalog"]} not found')}, 401
+
         LOGGER.debug(fetch_catalog)
 
         fetch_type = fetch_data['type'].lower()
@@ -273,10 +282,12 @@ def fetch():
 @stac_bp.route('/styles')
 def styles():
     """Return available styles."""
-    with open(current_app.config['GEOSERVER_PASSWORD_FILE'], 'r') as password_file:
+    with open(current_app.config[
+            'GEOSERVER_PASSWORD_FILE'], 'r') as password_file:
         master_geoserver_password = password_file.read()
     session = requests.Session()
-    session.auth = (current_app.config['GEOSERVER_USER'], master_geoserver_password)
+    session.auth = (
+        current_app.config['GEOSERVER_USER'], master_geoserver_password)
     proxy_scheme = flask.request.headers.get('X-Forwarded-Proto', 'http')
     available_styles = do_rest_action(
         session.get,
@@ -407,7 +418,8 @@ def search():
             api_key = flask.request.args['api_key']
             allowed_permissions = queries.get_allowed_permissions_map(api_key)
             LOGGER.debug(
-                f'got these allowed permissions on a search {allowed_permissions}')
+                f'got these allowed permissions on a search '
+                f'{allowed_permissions}')
 
             if not allowed_permissions:
                 return {'_error': 'invalid api key'}, 400
@@ -417,9 +429,14 @@ def search():
                 return {
                     'features': [],
                     'utc_now': utc_now()}
+        # only allow jwt access to specific catalogs
+        else:
+            for catalog in search_data["catalog_list"]:
+                if catalog.lower() not in current_app.config[
+                        'PUBLIC_CATALOGS']:
+                    return {'_error': 'invalid catalog request'}, 401
 
         LOGGER.debug(f'incoming search data: {search_data}')
-
         if '*' in allowed_permissions['READ']:
             search_catalogs = set(
                 search_data['catalog_list'].split(','))
@@ -668,7 +685,8 @@ def delete_raster(catalog_entry):
         None.
 
     """
-    with open(current_app.config['GEOSERVER_PASSWORD_FILE'], 'r') as password_file:
+    with open(current_app.config[
+            'GEOSERVER_PASSWORD_FILE'], 'r') as password_file:
         master_geoserver_password = password_file.read()
     session = requests.Session()
     session.auth = (
@@ -735,7 +753,8 @@ def publish_to_geoserver(
 
     """
     with current_app.app_context():
-        with open(current_app.config['GEOSERVER_PASSWORD_FILE'], 'r') as password_file:
+        with open(current_app.config[
+                'GEOSERVER_PASSWORD_FILE'], 'r') as password_file:
             master_geoserver_password = password_file.read()
         session = requests.Session()
         session.auth = (
@@ -1028,9 +1047,9 @@ def add_raster_worker(
             last_gsutil_ls_line = gsutil_ls_result.stdout.decode(
                 'utf-8').rstrip().split('\n')[-1].split()
             LOGGER.debug(f"last line: {last_gsutil_ls_line}")
-            # say we need four times that because we might need to duplicate the
-            # file and also build overviews for it. That shoud be ~3 times,
-            # so might as well be safe and make it 4.
+            # say we need four times that because we might need to duplicate
+            # the file and also build overviews for it. That shoud be ~3
+            # times, so might as well be safe and make it 4.
             gs_object_size = 4*int(last_gsutil_ls_line[
                 last_gsutil_ls_line.index('bytes')-1])
 
@@ -1039,7 +1058,8 @@ def add_raster_worker(
                 ['df', os.path.dirname(target_raster_path)],
                 stdout=subprocess.PIPE, check=True)
             fs, blocks, used, available_k, use_p, mount = (
-                df_result.stdout.decode('utf-8').rstrip().split('\n')[-1].split())
+                df_result.stdout.decode(
+                    'utf-8').rstrip().split('\n')[-1].split())
 
             # turn kb to b
             available_b = int(available_k) * 2**10
@@ -1116,7 +1136,8 @@ def add_raster_worker(
 
             LOGGER.debug('update job_table with complete')
 
-            services.update_job_status(job_id, 'update catlog database geoserver')
+            services.update_job_status(
+                job_id, 'update catlog database geoserver')
             db.session.commit()
             LOGGER.debug('update catalog_table with final values')
             lat_lng_bounding_box = get_lat_lng_bounding_box(target_raster_path)
