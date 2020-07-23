@@ -18,6 +18,7 @@ API_FLASK_SECRET_KEY=replace_with_real_secret
 SIGN_URL_PUBLIC_KEYFILE=./cfo-public-auth.json
 BUCKET_READ_SERVICE_ACCOUNT_KEYFILE=./bucket-read-keyfile-project-name.json
 ROOT_API_KEY=sample_root_api_key
+PUBLIC_CATALOGS=cfo
 
 # Databse environment
 DB_USER=replace_with_real_db_user
