@@ -1,0 +1,38 @@
+version: '3.6'
+
+services:
+  geoserver:
+    container_name: geoserver
+    build: docker_contexts/geoserver_node_docker
+    ports:
+      - 8080:8080
+    networks:
+      - api_stac_nw
+    volumes:
+      - ${GEOSERVER_DATA_DISK_VOLUME}:${GEOSERVER_DATA_DISK_VOLUME}
+    environment:
+      - GEOSERVER_DATA_DIR=${GEOSERVER_DATA_DISK_VOLUME}
+      - GEOSERVER_MAX_RAM=${GEOSERVER_MAX_RAM}
+    tty: true
+
+  nginx:
+    container_name: "nginx"
+    build: docker_contexts/nginx
+    restart: always
+    tty: true
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx_configurations/geoserver_node_conf.d:/etc/nginx/conf.d
+      - /etc/letsencrypt:/etc/letsencrypt
+    environment:
+      - NGINX_HOST=${MAP_SERVER_HOST}
+    networks:
+      - api_stac_nw
+    depends_on:
+      - geoserver
+
+networks:
+  api_stac_nw:
+    driver: bridge

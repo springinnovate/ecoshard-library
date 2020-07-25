@@ -1,0 +1,268 @@
+</!DOCTYPE html>
+<html>
+<head>
+  <title>STAC API Viewer</title>
+  <link rel="stylesheet" href="static/pepper-grinder/jquery-ui.min.css">
+
+  <script src="static/jquery-3.5.1.min.js"></script>
+  <script src="static/pepper-grinder/jquery-ui.min.js"></script>
+
+  <link rel="stylesheet" href="static/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+   integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+   crossorigin=""/>
+   <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+   integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+   crossorigin=""></script>
+   <style type="text/css">
+    #mapid {
+      z-index: 0;
+    }
+    #picker {
+      position: absolute;
+      z-index: 2;
+      padding: 5px;
+    }
+    #style-control {
+      position: absolute;
+      height: auto;
+      right: 0;
+      top: 0;
+      z-index: 1;
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: auto auto;
+      padding: 5px;
+      grid-gap: 5px;
+    }
+
+   </style>
+</head>
+<body>
+  <div id="picker"  class="ui-widget ui-widget-content ui-state-default ui-corner-all ui-priority-primary"></div>
+  <div id="style-control">
+    <div class="grid-container ui-widget ui-state-default ui-widget-content ui-corner-all ui-priority-secondary">
+      <div><input id="min" oninput="style_changed()"></div>
+      <div><label for="min">style min (original {{ p0 }})</label></div>
+      <div><input id="max" oninput="style_changed()"></div>
+      <div><label for="max">style max (original {{ p100 }})</label></div>
+      <div><select id="style" oninput="style_changed()"></select></div>
+      <div><label for="style">style id (original {{ original_style }})</label></div>
+    </div>
+  </div>
+  <div id="mapid"></div>
+
+  <script>
+
+    var edit_timeout = null;
+
+    $("#min").val({{ p0 }});
+    $("#max").val({{ p100 }});
+    $("#style").val("{{ original_style }}");
+
+    function style_changed() {
+      if (edit_timeout != null) {
+        clearTimeout(edit_timeout);
+      }
+      edit_timeout = setTimeout(
+        function () {
+          update_style();
+          edit_timeout = null;
+        }, 1000);
+      $("#style-control").addClass("ui-state-disabled");
+    }
+
+    function update_style() {
+      let parsed_min = parseFloat($("#min").val());
+      let parsed_max = parseFloat($("#max").val());
+
+      if(isNaN(parsed_min) || isNaN(parsed_max)) {
+          return;
+      }
+      if (parsed_min > parsed_max) {
+        return;
+      }
+
+      p0 = parsed_min;
+      p100 = parsed_max;
+      p2 = p0 + (p100-p0)*0.02;
+      p25 = p0 + (p100-p0)*0.25;
+      p30 = p0 + (p100-p0)*0.30;
+      p50 = p0 + (p100-p0)*0.5;
+      p60 = p0 + (p100-p0)*0.60;
+      p75 = p0 + (p100-p0)*0.75;
+      p90 = p0 + (p100-p0)*0.90;
+      p98 = p0 + (p100-p0)*0.98;
+
+      let raster_style = $("#style").val();
+      wms_layer.setParams({
+        ENV: "p0:"+p0+";p2:"+p2+";p25:"+p25+";p30:"+p30+";p50:"+p50+";p60:"+p60+";p75:"+p75+";p90:"+p90+";p98:"+p98+";p100:"+p100,
+        styles: raster_style
+      });
+      $("#style-control").removeClass("ui-state-disabled");
+    }
+
+    let p0 = {{ p0 }};
+    let p100 = {{ p100 }};
+    let p2 = p0 + (p100-p0)*0.02;
+    let p25 = p0 + (p100-p0)*0.25;
+    let p30 = p0 + (p100-p0)*0.30;
+    let p50 = p0 + (p100-p0)*0.5;
+    let p60 = p0 + (p100-p0)*0.60;
+    let p75 = p0 + (p100-p0)*0.75;
+    let p90 = p0 + (p100-p0)*0.90;
+    let p98 = p0 + (p100-p0)*0.98;
+
+    var map = L.map("mapid", {
+      crs: L.CRS.EPSG3857
+    }).setView(
+        [{{ y_center }}, {{ x_center }}], 2);
+
+    map.fitBounds([
+      [{{ min_lat }}, {{ min_lng }}],
+      [{{ max_lat }}, {{ max_lng }}]]);
+
+    // use the salo topo map
+    var topomap = L.tileLayer('https://api.mapbox.com/styles/v1/salo-cba/ck9wzygix02os1io34hlll17l/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1Ijoic2Fsby1jYmEiLCJhIjoiY2pwMjcwcHZrMDQ2MTN1bnY4b2RrbjllMSJ9.nv4JZUvZNTvnAEw3KdmXzA', {
+      attribution: '&copy; Salo Sciences'
+    });
+    topomap.addTo(map);
+
+    var wms_layer = L.tileLayer.wms(
+      "{{ geoserver_url }}", {
+      layers: "{{ catalog }}:{{ asset_id }}",
+      format: "image/png",
+      styles: "{{ original_style }}",
+      transparent: true,
+      ENV: "p0:"+p0+";p2:"+p2+";p25:"+p25+";p50:"+p50+";p75:"+p75+";p98:"+p98+";p100:"+p100+";nodata:{{ nodata }}",
+    });
+    wms_layer.addTo(map);
+
+    // and add the salo roads and labels map on top
+    var labels = L.tileLayer('https://api.mapbox.com/styles/v1/salo-cba/ck7l3r84h07xd1intnedvwd0i/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1Ijoic2Fsby1jYmEiLCJhIjoiY2pwMjcwcHZrMDQ2MTN1bnY4b2RrbjllMSJ9.nv4JZUvZNTvnAEw3KdmXzA', {
+      transparent: true
+    });
+    labels.addTo(map);
+
+    var mousestop_timeout = null;
+    var previous_latlng = null;
+
+    // set a timeout to see if the pointer stopped moving, if so, pick the
+    // point at the cursor
+    function pick_point(lng, lat) {
+      $.ajax({
+        type: "POST",
+        url: "{{ pixel_pick_url }}",
+        data: JSON.stringify({
+          "catalog": "{{ catalog }}",
+          "asset_id": "{{ asset_id }}",
+          "lng": lng,
+          "lat": lat
+        }),
+        contentType: 'application/json',
+        timeout: 5000
+      }).fail(function(e) {
+          console.log("picker failed " + e);
+          $("#picker").append("...failed" + e).addClass('ui-state-error');
+
+      }).done(function (response) {
+          let val = response.val;
+          let x_coord = response.x;
+          let y_coord = response.y;
+          $("#picker").empty().append(
+            "val: " + val + "<br/>" +
+            "raster coord: (" + x_coord + ", " + y_coord + ")<br/>" +
+            "lat/lng: (" + lat + ", " + lng + ")");
+          $("#picker").removeClass("ui-state-disabled").removeClass("ui-state-error");
+        })};
+
+    map.on("mousemove", function(e) {
+      let cur_latlng = e.latlng;
+      if (previous_latlng == cur_latlng) {
+        // the timeout will trigger it
+        return;
+      }
+      previous_latlng = cur_latlng;
+      $("#picker").addClass("ui-state-disabled");
+      $("#picker").empty().append("querying...");
+
+      if (mousestop_timeout != null) {
+        clearTimeout(mousestop_timeout);
+      }
+
+      // pick the point in 100ms, this can get disrupted if the mouse moves
+      // otherwise we know it was sampled there
+      mousestop_timeout = setTimeout(
+        function () {
+          pick_point(cur_latlng.lng, cur_latlng.lat);
+          mousestop_timeout = null;
+        }, 200);
+    });
+
+    // move the picker window around with the mouse
+    document.addEventListener("mousemove", function(e) {
+      $("#picker").css({
+        left: e.clientX+"px",
+        top: 20+e.clientY+"px"});
+    });
+
+    // This code fixes the lines seen between tiles on some browsers
+    // taken from colbyfayock in https://github.com/Leaflet/Leaflet/issues/3575
+    (function(){
+      var originalInitTile = L.GridLayer.prototype._initTile;
+      L.GridLayer.include({
+          _initTile: function (tile) {
+              originalInitTile.call(this, tile);
+              var tileSize = this.getTileSize();
+              tile.style.width = tileSize.x + 1 + 'px';
+              tile.style.height = tileSize.y + 1 + 'px';
+          }
+      });
+    })();
+
+    // query geoserver for styles
+    (function (){
+      $.ajax({
+        type: "GET",
+        url: "{{ geoserver_style_url }}",
+        dataType: "json",
+        timeout: 5000
+      }).fail(function(e) {
+          console.log("style fetch failed " + e);
+          $("#style-control").addClass('ui-state-error');
+      }).done(function (json_payload) {
+          var $dropdown = $("#style");
+          $.each(json_payload.styles, function(idx, style_name){
+              $dropdown.append($("<option />").val(style_name).text(
+                style_name));
+          });
+          $("#style").val("{{ original_style }}");
+          parse_query_params();
+        });
+    })();
+
+    function parse_query_params(){
+      var urlParams = new URLSearchParams(window.location.search);
+      var needToUpdateStyle = false;
+      if (urlParams.has("min")) {
+        $("#min").val(urlParams.get("min"));
+        needToUpdateStyle = true;
+      }
+      if (urlParams.has("max")) {
+        $("#max").val(urlParams.get("max"));
+        needToUpdateStyle = true;
+      }
+      if (urlParams.has("style")) {
+        $("#style").val(urlParams.get("style"));
+        needToUpdateStyle = true;
+      }
+
+      if (needToUpdateStyle) {
+        update_style();
+      }
+    };
+  </script>
+</body>
+</html>

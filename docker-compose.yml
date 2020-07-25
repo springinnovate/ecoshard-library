@@ -1,0 +1,132 @@
+version: '3.6'
+
+services:
+  geoserver:
+    container_name: geoserver
+    build: docker_contexts/geoserver_node_docker
+    ports:
+      - 8080:8080
+    networks:
+      - api_stac_nw
+    volumes:
+      - ${GEOSERVER_DATA_DIR}:${GEOSERVER_DATA_DIR}
+    environment:
+      - GEOSERVER_DATA_DIR=${GEOSERVER_DATA_DIR}
+      - GEOSERVER_MAX_RAM=${GEOSERVER_MAX_RAM}
+    tty: true
+
+  stac_manager:
+    container_name: stac_manager
+    build: docker_contexts/stac-api-docker
+    entrypoint: ["bash",  "-i", "/usr/local/stac_manager/start_stac_api.sh"]
+    ports:
+      - 8888:8888
+    volumes:
+      - ${GEOSERVER_DATA_DIR}:/usr/local/geoserver/data_dir
+    image: stac_manager
+    networks:
+      - api_stac_nw
+    tty: true
+    depends_on:
+      - geoserver
+      - db
+    environment:
+      - BUCKET_READ_SERVICE_ACCOUNT_KEYFILE=/run/secrets/bucket_read_service_account_key
+      - SIGN_URL_PUBLIC_KEY_PATH=/run/secrets/sign_url_public_key
+      - SQLALCHEMY_DATABASE_URI=${SQLALCHEMY_DATABASE_URI}
+      - GEOSERVER_DATA_DIR=${GEOSERVER_DATA_DIR}
+      - INTER_GEOSERVER_DATA_DIR=${INTER_GEOSERVER_DATA_DIR}
+      - GEOSERVER_USER=admin
+      - GEOSERVER_PASSWORD_FILE=/usr/local/geoserver/data_dir/data/secrets/adminpass
+      - API_SERVER_HOST=${API_SERVER_HOST}
+      - MAP_SERVER_HOST=${MAP_SERVER_HOST}
+      - FLASK_APP=stac_api
+      - FLASK_RUN_PORT=8888
+      - FLASK_ENV=development
+      - FLASK_RUN_HOST=0.0.0.0
+      - DISK_RESIZE_SERVICE_HOST=expand_drive_service:${DISK_RESIZE_SERVICE_PORT}
+      - ROOT_API_KEY=${ROOT_API_KEY}
+      - PUBLIC_CATALOGS=${PUBLIC_CATALOGS}
+
+    secrets:
+      - bucket_read_service_account_key
+      - sign_url_public_key
+
+  db:
+    image: postgres
+    container_name: db
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USER}
+    volumes:
+      - ${POSTGRES_VOLUME}:/var/lib/postgresql/data
+    networks:
+      - api_stac_nw
+
+  expand_drive_service:
+    container_name: expand_drive_service
+    build: docker_contexts/expand_drive_service
+    restart: always
+    networks:
+      - api_stac_nw
+    devices:
+      - ${DISK_RESIZE_SERVICE_DEVICE_NAME}:${DISK_RESIZE_SERVICE_DEVICE_NAME}
+    command: [
+      '--app_port', '${DISK_RESIZE_SERVICE_PORT}',
+      '--disk_name', '${DISK_RESIZE_SERVICE_DISK_NAME}',
+      '--device_name', '${DISK_RESIZE_SERVICE_DEVICE_NAME}',
+      '--zone', '${DISK_RESIZE_SERVICE_ZONE}',
+      '--max_size_gb', '${DISK_RESIZE_SERVICE_MAX_SIZE_GB}',
+      ]
+    environment:
+      - DISK_RESIZE_SERVICE_ACCOUNT_KEYFILE=/run/secrets/disk_resize_service_account_key
+    secrets:
+      - disk_resize_service_account_key
+
+  nginx:
+    container_name: "nginx"
+    build: docker_contexts/nginx
+    restart: always
+    tty: true
+    ports:
+      - 80:80
+      - 443:443
+    volumes:
+      - ./nginx_configurations/stac_manager_conf.d:/etc/nginx/conf.d
+      - /etc/letsencrypt:/etc/letsencrypt
+    environment:
+      - NGINX_HOST=${API_SERVER_HOST}
+    networks:
+      - api_stac_nw
+    depends_on:
+      - stac_manager
+      - geoserver
+
+  pgadmin:
+    container_name: pgadmin
+    image: dpage/pgadmin4
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.localhost
+      PGADMIN_DEFAULT_PASSWORD: ${DB_PASSWORD}
+      PGADMIN_LISTEN_PORT: 80
+    depends_on:
+      - db
+    networks:
+      - api_stac_nw
+    ports:
+      - 8081:80
+    volumes:
+      - /var/lib/pgadmin:/var/lib/pgadmin
+
+networks:
+  api_stac_nw:
+    driver: bridge
+
+secrets:
+  disk_resize_service_account_key:
+    file: ${DISK_RESIZE_SERVICE_ACCOUNT_KEYFILE}
+  bucket_read_service_account_key:
+    file: ${BUCKET_READ_SERVICE_ACCOUNT_KEYFILE}
+  sign_url_public_key:
+    file: ${SIGN_URL_PUBLIC_KEYFILE}

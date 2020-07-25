@@ -1,0 +1,145 @@
+</!DOCTYPE html>
+<html>
+<head>
+  <title>Listing</title>
+  <link rel="shortcut icon" href="static/favicon.ico" type="image/x-icon">
+  <link rel="icon" href="static/favicon.ico" type="image/x-icon">
+  <link rel="stylesheet" href="static/pepper-grinder/jquery-ui.min.css">
+
+  <script src="static/jquery-3.5.1.min.js"></script>
+  <script src="static/pepper-grinder/jquery-ui.min.js"></script>
+
+  <link rel="stylesheet" href="static/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+   integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+   crossorigin=""/>
+   <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+   integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+   crossorigin=""></script>
+   <style type="text/css">
+    .grid-container-2 {
+      display: grid;
+      grid-template-columns: auto auto;
+      padding: 5px;
+      grid-gap: 5px;
+    }
+
+    .grid-container-3 {
+      display: grid;
+      grid-template-columns: auto auto auto auto auto;
+      padding: 5px;
+      grid-gap: 5px;
+    }
+
+    a {
+
+    }
+
+   </style>
+</head>
+<body>
+  <div id="search-control" class="grid-container-2 ui-widget ui-state-default ui-widget-content ui-corner-all ui-priority-secondary">
+      <div><input id="bbox" oninput="search_changed()"></div>
+      <div><label for="bbox">bounding box xmin, ymin, xmax, ymax</label></div>
+      <div><input id="asset_id" oninput="search_changed()"></div>
+      <div><label for="asset_id">asset id (use % as wildcard)</label></div>
+      <div><input id="catalog_list" oninput="search_changed()"></div>
+      <div><label for="catalog_list">list of catalogs (comma separated)</label></div>
+      <div><input id="datetime" oninput="search_changed()"></div>
+      <div><label for="datetime">UTC datetime range</label></div>
+      <div><input id="description" oninput="search_changed()"></div>
+      <div><label for="description">description (use % as wildcard)</label></div>
+  </div>
+  <div id="utc_time"></div>
+  <div id="search-results" class="grid-container-3 ui-widget ui-state-default ui-widget-content ui-corner-all ui-priority-primary"></div>
+  <script>
+    /* do list based on API key */
+    var search_type_timeout = null;
+    function search_changed() {
+      if (search_type_timeout != null) {
+        clearTimeout(search_type_timeout);
+      }
+      search_type_timeout = setTimeout(
+        function () {
+          search();
+          search_type_timeout = null;
+        }, 2000);
+      $("#search-control").addClass("ui-state-disabled");
+      $("#search-results").addClass("ui-state-disabled");
+    }
+
+    function search() {
+      let json_data = JSON.stringify({
+        "bounding_box": $("#bbox").val(),
+        "catalog_list": $("#catalog_list").val(),
+        "asset_id": $("#asset_id").val(),
+        "datetime": $("#datetime").val(),
+        "description": $("#description").val(),
+      });
+      $.ajax({
+        type: "POST"  ,
+        url: "{{ search_url }}",
+        data: json_data,
+        contentType: 'application/json',
+        dataType: 'json',
+        timeout: 100000
+      }).fail(function(e) {
+          console.log("search failed " + e);
+          $("#search-results").addClass('ui-state-error').append(
+            "...failed" + e.responseText);
+      }).done(function (response) {
+        $("#utc_time").empty().append(
+          "UTC time on server: " + response.utc_now);
+        $("#search-results").empty().append(
+          "<div>Link to Viewer</div>"+
+          "<div>Description</div>"+
+          "<div>UTC datetime</div>"+
+          "<div>UTC expiration</div>"+
+          "<div>additional attributes</div>");
+        $.each(response.features, function(idx, search_result){
+          var id_catalog_list = search_result["id"].split(":");
+          search_json = JSON.stringify({
+            "catalog": id_catalog_list[0],
+            "asset_id": id_catalog_list[1],
+            "type": "wms_preview",
+          });
+          $.ajax({
+            type: "POST",
+            url: "{{ fetch_url }}",
+            data: search_json,
+            contentType: 'application/json',
+            dataType: 'json',
+            timeout: 100000,
+          }).fail(function(e) {
+            $("#search-results").append(
+              "<div>"+"no link found for: "+ search_result["id"]+"</div>"+
+              "<div>"+search_result["description"]+"</div>"+
+              "<div>"+search_result["datetime"]+"</div>"+
+              "<div>"+search_result["bbox"]+"</div>");
+          }).done(function (response) {
+            $("#search-results").append(
+              "<div>"+"<a class=\"ui-button ui-widget ui-corner-all\" href=\""+response["link"]+ "\">"+
+              search_result["id"]+"</a></div>"+
+              "<div>"+search_result["description"]+"</div>"+
+              "<div>"+search_result["utc_datetime"]+"</div>"+
+              "<div>"+search_result["expiration_utc_datetime"]+"</div>");
+            if ("attribute_dict" in search_result) {
+              let attribute_string = "";
+              $.each(search_result["attribute_dict"], function(key, value) {
+                attribute_string += "<p>"+key+":"+value+"</p>";
+              });
+              $("#search-results").append("<div>"+attribute_string+"</div>");
+            } else {
+              $("#search-results").append("<div></div>");
+            }
+          });
+        });
+        $("#search-results").removeClass("ui-state-error").removeClass(
+          "ui-state-disabled");;
+        $("#search-control").removeClass("ui-state-disabled");
+      });
+    }
+
+  </script>
+</body>
+</html>
