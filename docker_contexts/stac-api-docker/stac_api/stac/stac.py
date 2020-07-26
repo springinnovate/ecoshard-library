@@ -592,6 +592,7 @@ def publish():
 
         # new job
         _ = services.create_job(job_id, asset_args['uri'], 'scheduled')
+        models.db.session.commit()
 
         if 'attribute_dict' in asset_args:
             attribute_dict = asset_args['attribute_dict']
@@ -611,7 +612,6 @@ def publish():
             kwargs={'force': force})
         raster_worker_thread.start()
 
-        models.db.session.commit()
         return callback_payload
     except Exception:
         LOGGER.exception('something bad happened on publish')
