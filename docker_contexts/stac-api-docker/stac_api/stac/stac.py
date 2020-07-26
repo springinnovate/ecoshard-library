@@ -1177,6 +1177,7 @@ def add_raster_worker(
             services.update_job_status(job_id, f'ERROR: {str(e)}')
             db.session.commit()
             if target_raster_path:
+                LOGGER.debug(f'deleting {target_raster_path}')
                 # try to delete the local file in case it errored
                 try:
                     os.remove(target_raster_path)
