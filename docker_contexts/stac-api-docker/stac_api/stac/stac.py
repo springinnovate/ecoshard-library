@@ -1142,7 +1142,7 @@ def add_raster_worker(
                 f"this is the intergeosrever_raster_dir: "
                 f"{inter_geoserver_raster_path}")
             publish_to_geoserver(
-                local_catalog_asset_path, target_raster_path, catalog,
+                inter_geoserver_raster_path, target_raster_path, catalog,
                 asset_id, mediatype, proxy_scheme)
 
             LOGGER.debug('update job_table with complete')
