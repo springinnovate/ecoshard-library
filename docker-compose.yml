@@ -34,7 +34,7 @@ services:
       - BUCKET_READ_SERVICE_ACCOUNT_KEYFILE=/run/secrets/bucket_read_service_account_key
       - SIGN_URL_PUBLIC_KEY_PATH=/run/secrets/sign_url_public_key
       - SQLALCHEMY_DATABASE_URI=${SQLALCHEMY_DATABASE_URI}
-      - GEOSERVER_DATA_DIR=${GEOSERVER_DATA_DIR}
+      - GEOSERVER_DATA_DIR=/usr/local/geoserver/data_dir
       - INTER_GEOSERVER_DATA_DIR=${INTER_GEOSERVER_DATA_DIR}
       - GEOSERVER_USER=admin
       - GEOSERVER_PASSWORD_FILE=/usr/local/geoserver/data_dir/data/secrets/adminpass

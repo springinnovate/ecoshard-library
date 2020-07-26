@@ -1179,12 +1179,8 @@ def add_raster_worker(
             LOGGER.exception('something bad happened when doing raster worker')
             services.update_job_status(job_id, f'ERROR: {str(e)}')
             db.session.commit()
-            LOGGER.debug(
-                f'temporarily returning instead of deleting so we can deubg '
-                f'{target_raster_path} is {os.path.exists(target_raster_path)}')
             return
             if target_raster_path:
-                LOGGER.debug(f'deleting {target_raster_path}')
                 # try to delete the local file in case it errored
                 try:
                     os.remove(target_raster_path)
