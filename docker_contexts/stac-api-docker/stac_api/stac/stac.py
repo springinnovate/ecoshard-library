@@ -1138,6 +1138,9 @@ def add_raster_worker(
             LOGGER.debug(
                 f'{target_raster_path} exists? '
                 f'{os.path.exists(target_raster_path)}')
+            LOGGER.debug(
+                f"this is the intergeosrever_raster_dir: "
+                f"{inter_geoserver_raster_path}")
             publish_to_geoserver(
                 inter_geoserver_raster_path, target_raster_path, catalog,
                 asset_id, mediatype, proxy_scheme)
