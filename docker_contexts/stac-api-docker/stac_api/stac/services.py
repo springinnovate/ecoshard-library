@@ -51,6 +51,16 @@ def create_job(job_id, data_uri, job_status):
         new Job object (not committed)
 
     """
+    existing_job = Job.query.filter(Job.job_id == job_id).one_or_none()
+    if existing_job is not None:
+        LOGGER.debug(
+            f'{job_id} exists with status {existing_job.job_status} '
+            f'replacing to {job_status}')
+        existing_job.data_uri = data_uri
+        existing_job.job_status = job_status
+        return existing_job
+
+    LOGGER.debug(f'creating new new job {job_id}')
     job = Job(
         job_id=job_id,
         data_uri=data_uri,
