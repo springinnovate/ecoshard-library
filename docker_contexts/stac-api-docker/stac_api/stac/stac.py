@@ -788,7 +788,7 @@ def publish_to_geoserver(
             f'geoserver/rest/workspaces/{catalog}/coveragestores/{cover_id}')
 
         LOGGER.debug(
-            f'coverstore_exists_result: {str(coverstore_exists_result)}')
+            f'coverstore_exists_result: {str(coverstore_exists_result.text)}')
 
         if coverstore_exists_result:
             LOGGER.warning(f'{catalog}:{cover_id}, so deleting it')
@@ -799,6 +799,7 @@ def publish_to_geoserver(
                 f'{current_app.config["API_SERVER_HOST"]}',
                 f'geoserver/rest/workspaces/{catalog}/'
                 f'coveragestores/{cover_id}/?purge=all&recurse=true')
+            LOGGER.debug(f'result of delete {delete_coverstore_result}')
             if not delete_coverstore_result:
                 LOGGER.error(delete_coverstore_result.text)
                 raise RuntimeError(delete_coverstore_result.text)
@@ -1094,12 +1095,15 @@ def add_raster_worker(
                 # remove the file first
                 os.remove(target_raster_path)
 
+            LOGGER.debug(f'copying {uri_path} to {target_raster_path}')
             subprocess.run([
                 f'gsutil cp -n "{uri_path}" "{target_raster_path}"'],
                 shell=True, check=True)
 
             if not os.path.exists(target_raster_path):
                 raise RuntimeError(f"{target_raster_path} didn't copy")
+            LOGGER.debug(
+                f'successful copy of {uri_path} to {target_raster_path}')
 
             raster = gdal.OpenEx(target_raster_path, gdal.OF_RASTER)
             compression_alg = raster.GetMetadata(
@@ -1123,6 +1127,7 @@ def add_raster_worker(
                 job_id, 'building overviews (can take some time)')
             db.session.commit()
 
+            LOGGER.debug(f'building overviews for {target_raster_path}')
             ecoshard.build_overviews(
                 target_raster_path, interpolation_method='average',
                 overview_type='internal', rebuild_if_exists=False)
@@ -1130,6 +1135,9 @@ def add_raster_worker(
             services.update_job_status(job_id, 'publishing to geoserver')
             db.session.commit()
 
+            LOGGER.debug(
+                f'{target_raster_path} exists? '
+                f'{os.path.exists(target_raster_path)}')
             publish_to_geoserver(
                 inter_geoserver_raster_path, target_raster_path, catalog,
                 asset_id, mediatype, proxy_scheme)
