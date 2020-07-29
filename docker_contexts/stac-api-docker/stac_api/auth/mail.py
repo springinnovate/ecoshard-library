@@ -38,7 +38,7 @@ class SendGridDriver(MailDriver):
             sendgrid_client.send(message)
             return True
         except HTTPError as request_error:
-            log(request_error, logging.ERROR)
+            log(request_error.body, logging.ERROR)
 
         return False
 
