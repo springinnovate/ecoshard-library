@@ -35,7 +35,7 @@ class ReverseProxied(object):
         return self.app(environ, start_response)
 
 
-def create_app():
+def create_app(config=None):
     """Create the Geoserver STAC Flask app."""
     LOGGER.debug('starting up!')
     # wait for API calls
@@ -73,6 +73,9 @@ def create_app():
         PUBLIC_CATALOGS=public_catalog_list
     )
     LOGGER.debug(os.environ.get('INTER_GEOSERVER_DATA_DIR'))
+
+    if config is not None:
+        app.config.from_mapping(config)
 
     flask_cors.CORS(app)
     db.init_app(app)
