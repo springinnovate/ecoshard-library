@@ -76,6 +76,10 @@ def create_app(config=None):
         SENDGRID_RESET_TEMPLATE_ID=os.environ.get('SENDGRID_RESET_TEMPLATE_ID', None),
     )
     LOGGER.debug(os.environ.get('INTER_GEOSERVER_DATA_DIR'))
+    
+    # add custom config options (typically for testing)
+    if config is not None:
+        app.config.update(config)
 
     if config is not None:
         app.config.from_mapping(config)

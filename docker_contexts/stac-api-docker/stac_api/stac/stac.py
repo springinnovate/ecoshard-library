@@ -932,9 +932,7 @@ def publish_to_geoserver(
                             "description": (
                                 "GridSampleDimension[-Infinity,Infinity]"),
                             "range": {"min": raster_min, "max": raster_max},
-                            "nullValues": {"double": [
-                                raster_info['nodata'][0]]},
-                            "dimensionType":{"name": "REAL_32BITS"}
+                            "dimensionType": {"name": "REAL_32BITS"}
                             }]
                         },
                     "parameters": {
@@ -949,6 +947,12 @@ def publish_to_geoserver(
                     "nativeCoverageName": raster_id
                 }
             }
+
+        if raster_info['nodata'][0] is not None:
+            cover_payload['coverage']['dimensions'][
+                'coverageDimension'][0]['nullValues'] = {
+                    "double": [raster_info['nodata'][0]]
+                    }
 
         LOGGER.debug('send cover request to GeoServer')
         create_cover_result = do_rest_action(
@@ -1179,10 +1183,11 @@ def add_raster_worker(
             LOGGER.exception('something bad happened when doing raster worker')
             services.update_job_status(job_id, f'ERROR: {str(e)}')
             db.session.commit()
-            return
             if target_raster_path:
                 # try to delete the local file in case it errored
                 try:
+                    LOGGER.warn(
+                        f'removing {target_raster_path} because of error')
                     os.remove(target_raster_path)
                 except OSError:
                     LOGGER.exception(f'unable to remove {target_raster_path}')
