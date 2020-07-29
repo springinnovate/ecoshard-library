@@ -24,10 +24,8 @@ def app():
         }
     )
     db.init_app(app)
-    print("init")
 
     with app.app_context():
-        print("createall")
         db.create_all()
 
         yield app

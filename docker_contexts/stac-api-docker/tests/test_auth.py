@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 
 import stac_api.auth.utils
 from freezegun import freeze_time
+from stac_api.auth import auth
 from stac_api.auth.auth import handle_error
 from stac_api.auth.models import db
 from stac_api.auth.queries import find_user_by_email
@@ -241,3 +242,77 @@ def test_handleerror(client):
     json, status_code = handle_error("an error")
     assert status_code == 500
     assert json == {}
+
+
+def test_reset_no_user(client):
+    result = client.post(
+        "/users/auth/reset",
+        content_type="application/json",
+        json={"email": "bad@example.com"},
+    )
+    assert result.status_code == 400
+
+
+def test_reset_failed_reset(client, user, monkeypatch):
+    db.session.add(user)
+    db.session.commit()
+    monkeypatch.setattr(auth.services, "request_password_reset", lambda x: False)
+
+    result = client.post(
+        "/users/auth/reset",
+        content_type="application/json",
+        json={"email": user.email},
+    )
+    assert result.status_code == 400
+
+
+def test_reset(client, user, monkeypatch):
+    db.session.add(user)
+    db.session.commit()
+    monkeypatch.setattr(auth.services, "request_password_reset", lambda x: True)
+
+    result = client.post(
+        "/users/auth/reset",
+        content_type="application/json",
+        json={"email": user.email},
+    )
+    assert result.status_code == 204
+
+
+def test_update_password_no_such_user(client):
+    result = client.put(
+        "/users/auth/update-password",
+        content_type="application/json",
+        json={
+            "email": "no@example.com",
+            "password": "a_password!",
+            "reset_token": "foo",
+        },
+    )
+    assert result.status_code == 400
+
+
+def test_update_password_bad_password(client, user):
+    user.reset_token = "foo"
+    db.session.add(user)
+    db.session.commit()
+
+    result = client.put(
+        "/users/auth/update-password",
+        content_type="application/json",
+        json={"email": user.email, "password": "short", "reset_token": "foo",},
+    )
+    assert result.status_code == 400
+
+
+def test_update_password(client, user):
+    user.reset_token = "foo"
+    db.session.add(user)
+    db.session.commit()
+
+    result = client.put(
+        "/users/auth/update-password",
+        content_type="application/json",
+        json={"email": user.email, "password": "a_password!", "reset_token": "foo",},
+    )
+    assert result.status_code == 200

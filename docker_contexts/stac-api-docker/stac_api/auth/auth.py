@@ -70,7 +70,7 @@ def verify_content_type_and_params(required_keys, optional_keys):
             if not required_set <= request_keys:
                 utils.log(
                     f"create: invalid payload keys {list(request.json.keys())}",
-                    logging.WARN
+                    logging.WARN,
                 )
                 return {}, 400
             if len(request_keys - required_set.union(optional_set)) > 0:
@@ -124,8 +124,8 @@ def create_user():
             schema:
               type: object
               properties:
-                id:
-                  type: integer
+                uuid:
+                  type: string
                 email:
                   type: string
                   format: email
@@ -158,7 +158,9 @@ def create_user():
         utils.log("user created")
 
         return jsonify(
-            uuid=user.uuid, email=user.email, token=utils.make_jwt(user).decode("utf-8"),
+            uuid=user.uuid,
+            email=user.email,
+            token=utils.make_jwt(user).decode("utf-8"),
         )
     except ValueError as value_error:
         utils.log(f"could not create user: {value_error}", logging.WARN)
@@ -195,8 +197,8 @@ def auth_user():
             schema:
               type: object
               properties:
-                id:
-                  type: integer
+                uuid:
+                  type: string
                 email:
                   type: string
                   format: email
@@ -264,6 +266,110 @@ def refresh():
             "utf-8"
         )
     )
+
+
+@auth_bp.route("/auth/reset", methods=["POST"])
+@verify_content_type_and_params(["email"], [])
+def reset():
+    """ Send user a password reset email.
+    ---
+
+    requestBody:
+      description: "An email."
+      required: true
+      content:
+        application/json:
+          schema:
+            type: "object"
+            required:
+              - email
+            properties:
+              email:
+                type: "string"
+                format: email
+    responses:
+      "204":
+        description: "Created"
+      "400":
+        description: "Bad request"
+    """
+    email = request.json["email"]
+    user = queries.find_user_by_email(email)
+    if not user:
+        utils.log("reset: user does not exist", logging.WARN)
+        return {}, 400
+
+    if not services.request_password_reset(user):
+        utils.log("reset: unable to send request_password_reset", logging.WARN)
+        return {}, 400
+
+    utils.log("reset_token sent")
+    return {}, 204
+
+
+@auth_bp.route("/auth/update-password", methods=["PUT"])
+@verify_content_type_and_params(["email", "reset_token", "password"], [])
+def update_password():
+    """ Update a user's password.
+    ---
+
+    requestBody:
+      description: "An email, new password, and reset_token."
+      required: true
+      content:
+        application/json:
+          schema:
+            type: "object"
+            required:
+              - email
+              - password
+              - reset_token
+            properties:
+              email:
+                type: "string"
+                format: email
+              password:
+                type: "string"
+              reset_token:
+                type: "string"
+    responses:
+      "200":
+        description: "Updated"
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                uuid:
+                  type: string
+                email:
+                  type: string
+                  format: email
+                token:
+                  type: string
+                  format: JWT
+      "400":
+        description: "Bad request"
+    """
+    email = request.json["email"]
+    password = request.json["password"]
+    reset_token = request.json["reset_token"]
+    user = queries.find_user_by_email(email)
+    if not user:
+        utils.log("update_password: user does not exist", logging.WARN)
+        return {}, 400
+
+    try:
+        services.update_password(user, password, reset_token)
+        utils.log("update_password: updated password")
+        return jsonify(
+            uuid=user.uuid,
+            email=user.email,
+            token=utils.make_jwt(user).decode("utf-8"),
+        )
+    except ValueError as value_error:
+        utils.log(value_error, logging.ERROR)
+        return {}, 400
 
 
 @auth_bp.errorhandler(500)

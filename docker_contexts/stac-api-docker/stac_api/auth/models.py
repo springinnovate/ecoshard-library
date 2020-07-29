@@ -16,6 +16,10 @@ class User(db.Model):
     email = db.Column(db.String(255), nullable=False)
     password_hash = db.Column(db.String(127), nullable=False)
     password_salt = db.Column(db.String(127), nullable=False)
+    reset_token = db.Column(db.String(32), nullable=True)
+    reset_token_expires_at = db.Column(
+        db.DateTime, nullable=True, default=lambda: datetime.utcnow()
+    )
     created_at = db.Column(
         db.DateTime, nullable=False, default=lambda: datetime.utcnow()
     )
