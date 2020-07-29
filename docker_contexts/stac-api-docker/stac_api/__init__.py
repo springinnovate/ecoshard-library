@@ -79,9 +79,6 @@ def create_app(config=None):
     
     # add custom config options (typically for testing)
     if config is not None:
-        app.config.update(config)
-
-    if config is not None:
         app.config.from_mapping(config)
 
     flask_cors.CORS(app)
