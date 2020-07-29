@@ -106,19 +106,19 @@ def pixel_pick():
                 val = int(val)
             else:
                 val = float(val)
+                
+            # create the response
+            response_dict = {
+                'val': val,
+                'x': x_coord,
+                'y': y_coord
+            }
+            
+            # and replace with no-data if set
             nodata = b.GetNoDataValue()
-            if numpy.isclose(val, nodata):
-                response_dict = {
-                    'val': 'nodata',
-                    'x': x_coord,
-                    'y': y_coord
-                }
-            else:
-                response_dict = {
-                    'val': val,
-                    'x': x_coord,
-                    'y': y_coord
-                }
+            if nodata is not None:
+                if numpy.isclose(val, nodata):
+                    response_dict['val'] =  'nodata'
 
         response = flask.jsonify(response_dict)
         response.headers.add('Access-Control-Allow-Origin', '*')
