@@ -19,8 +19,13 @@ SIGN_URL_PUBLIC_KEYFILE=./cfo-public-auth.json
 BUCKET_READ_SERVICE_ACCOUNT_KEYFILE=./bucket-read-keyfile-project-name.json
 ROOT_API_KEY=sample_root_api_key
 PUBLIC_CATALOGS=cfo
+SECRET_KEY=sample_secret_key
+SYSTEM_EMAIL=admin@example.com
+EMAIL_DRIVER=sendgrid
+SENDGRID_API_KEY=sample_api_key
+SENDGRID_RESET_TEMPLATE_ID=sample_reset_template_id
 
-# Databse environment
+# Database environment
 DB_USER=replace_with_real_db_user
 DB_PASSWORD=replace_with_real_db_password
 DATABASE_NAME=stac_api_db

@@ -70,7 +70,10 @@ def create_app(config=None):
             'ROOT_API_KEY', None),
         MAP_SERVER_HOST=os.environ.get(
             'MAP_SERVER_HOST', None),
-        PUBLIC_CATALOGS=public_catalog_list
+        PUBLIC_CATALOGS=public_catalog_list,
+        EMAIL_DRIVER=os.environ.get('EMAIL_DRIVER', 'null'),
+        SENDGRID_API_KEY=os.environ.get('SENDGRID_API_KEY', None),
+        SENDGRID_RESET_TEMPLATE_ID=os.environ.get('SENDGRID_RESET_TEMPLATE_ID', None),
     )
     LOGGER.debug(os.environ.get('INTER_GEOSERVER_DATA_DIR'))
 

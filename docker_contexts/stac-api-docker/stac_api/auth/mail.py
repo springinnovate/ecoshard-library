@@ -2,7 +2,7 @@ import logging
 import os
 
 from abc import ABC, abstractmethod
-from python_http_client.exceptions import BadRequestsError
+from python_http_client.exceptions import HTTPError
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail
 
@@ -37,7 +37,7 @@ class SendGridDriver(MailDriver):
             sendgrid_client = SendGridAPIClient(os.environ.get("SENDGRID_API_KEY"))
             sendgrid_client.send(message)
             return True
-        except BadRequestsError as request_error:
+        except HTTPError as request_error:
             log(request_error, logging.ERROR)
 
         return False
