@@ -48,6 +48,10 @@ services:
       - DISK_RESIZE_SERVICE_HOST=expand_drive_service:${DISK_RESIZE_SERVICE_PORT}
       - ROOT_API_KEY=${ROOT_API_KEY}
       - PUBLIC_CATALOGS=${PUBLIC_CATALOGS}
+      - SYSTEM_EMAIL=${SYSTEM_EMAIL}
+      - EMAIL_DRIVER=${EMAIL_DRIVER}
+      - SENDGRID_API_KEY=${SENDGRID_API_KEY}
+      - SENDGRID_RESET_TEMPLATE_ID=${SENDGRID_RESET_TEMPLATE_ID}
 
     secrets:
       - bucket_read_service_account_key
