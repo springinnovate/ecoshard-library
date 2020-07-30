@@ -30,6 +30,7 @@ services:
     depends_on:
       - geoserver
       - db
+      - nginx
     environment:
       - BUCKET_READ_SERVICE_ACCOUNT_KEYFILE=/run/secrets/bucket_read_service_account_key
       - SIGN_URL_PUBLIC_KEY_PATH=/run/secrets/sign_url_public_key
@@ -45,13 +46,15 @@ services:
       - FLASK_ENV=development
       - FLASK_RUN_HOST=0.0.0.0
       - SECRET_KEY=${API_FLASK_SECRET_KEY}
-      - DISK_RESIZE_SERVICE_HOST=expand_drive_service:${DISK_RESIZE_SERVICE_PORT}
+      - DISK_RESIZE_SERVICE_HOST=expand_drive_service:8080
       - ROOT_API_KEY=${ROOT_API_KEY}
       - PUBLIC_CATALOGS=${PUBLIC_CATALOGS}
       - SYSTEM_EMAIL=${SYSTEM_EMAIL}
       - EMAIL_DRIVER=${EMAIL_DRIVER}
       - SENDGRID_API_KEY=${SENDGRID_API_KEY}
       - SENDGRID_RESET_TEMPLATE_ID=${SENDGRID_RESET_TEMPLATE_ID}
+      - MAPBOX_BASEMAP_URL=${MAPBOX_BASEMAP_URL}
+      - MAPBOX_ACCESS_TOKEN=${MAPBOX_ACCESS_TOKEN}
 
     secrets:
       - bucket_read_service_account_key
@@ -78,7 +81,7 @@ services:
     devices:
       - ${DISK_RESIZE_SERVICE_DEVICE_NAME}:${DISK_RESIZE_SERVICE_DEVICE_NAME}
     command: [
-      '--app_port', '${DISK_RESIZE_SERVICE_PORT}',
+      '--app_port', '8080',
       '--disk_name', '${DISK_RESIZE_SERVICE_DISK_NAME}',
       '--device_name', '${DISK_RESIZE_SERVICE_DEVICE_NAME}',
       '--zone', '${DISK_RESIZE_SERVICE_ZONE}',
@@ -104,9 +107,6 @@ services:
       - NGINX_HOST=${API_SERVER_HOST}
     networks:
       - api_stac_nw
-    depends_on:
-      - stac_manager
-      - geoserver
 
   pgadmin:
     container_name: pgadmin

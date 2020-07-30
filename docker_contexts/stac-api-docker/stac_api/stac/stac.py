@@ -106,14 +106,14 @@ def pixel_pick():
                 val = int(val)
             else:
                 val = float(val)
-                
+
             # create the response
             response_dict = {
                 'val': val,
                 'x': x_coord,
                 'y': y_coord
             }
-            
+
             # and replace with no-data if set
             nodata = b.GetNoDataValue()
             if nodata is not None:
@@ -356,6 +356,8 @@ def viewer():
         'max_lng': catalog_entry.bb_xmax,
         'geoserver_style_url': flask.url_for('stac.styles', _external=True),
         'nodata': nodata,
+        'mapbox_basemap_url': current_app.config['MAPBOX_BASEMAP_URL'],
+        'mapbox_access_token': current_app.config['MAPBOX_ACCESS_TOKEN'],
     }, _external=True)
 
 

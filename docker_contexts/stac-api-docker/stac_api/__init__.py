@@ -73,10 +73,13 @@ def create_app(config=None):
         PUBLIC_CATALOGS=public_catalog_list,
         EMAIL_DRIVER=os.environ.get('EMAIL_DRIVER', 'null'),
         SENDGRID_API_KEY=os.environ.get('SENDGRID_API_KEY', None),
-        SENDGRID_RESET_TEMPLATE_ID=os.environ.get('SENDGRID_RESET_TEMPLATE_ID', None),
+        SENDGRID_RESET_TEMPLATE_ID=os.environ.get(
+            'SENDGRID_RESET_TEMPLATE_ID', None),
+        MAPBOX_BASEMAP_URL=os.environ.get('MAPBOX_BASEMAP_URL', None),
+        MAPBOX_ACCESS_TOKEN=os.environ.get('MAPBOX_ACCESS_TOKEN', None),
     )
     LOGGER.debug(os.environ.get('INTER_GEOSERVER_DATA_DIR'))
-    
+
     # add custom config options (typically for testing)
     if config is not None:
         app.config.from_mapping(config)
