@@ -149,13 +149,8 @@ def initalize_geoserver(app):
             LOGGER.info(f'password already set {geoserver_password}')
             return
 
-        try:
-            os.makedirs(os.path.dirname(app.config['GEOSERVER_PASSWORD_FILE']))
-        except OSError:
-            pass
-        with open(app.config['GEOSERVER_PASSWORD_FILE'], 'w') as password_file:
-            geoserver_password = secrets.token_urlsafe(16)
-            password_file.write(geoserver_password)
+        # otherwise make a new password and set it
+        geoserver_password = secrets.token_urlsafe(16)
 
         session = requests.Session()
         # 'geoserver' is the default geoserver password, we'll need to be
@@ -172,6 +167,14 @@ def initalize_geoserver(app):
             raise RuntimeError(
                 'could not reset admin password: ' +
                 password_update_request.text)
+
+        # it got set on the server so save it to a password file
+        try:
+            os.makedirs(os.path.dirname(app.config['GEOSERVER_PASSWORD_FILE']))
+        except OSError:
+            pass
+        with open(app.config['GEOSERVER_PASSWORD_FILE'], 'w') as password_file:
+            password_file.write(geoserver_password)
 
         # there's a bug in GeoServer 2.17 that requires a reload of the
         # configuration before the new password is used
