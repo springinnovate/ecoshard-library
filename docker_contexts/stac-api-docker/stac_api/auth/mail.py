@@ -30,6 +30,7 @@ class SendGridDriver(MailDriver):
             "FirstName": user.first_name,
             "LastName": user.last_name,
             "ResetToken": user.reset_token,
+            "Email": user.email,
         }
         message.template_id = os.environ.get("SENDGRID_RESET_TEMPLATE_ID")
         try:
