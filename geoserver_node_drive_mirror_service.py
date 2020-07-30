@@ -201,7 +201,8 @@ def new_disk_monitor_docker_manager(
                 STATUS_STRING = f'starting docker container'
                 LOGGER.info(STATUS_STRING)
                 subprocess.run(
-                    "docker-compose -f docker-compose-geoserver-node.yml up -d",
+                    "docker-compose -f docker-compose-geoserver-node.yml "
+                    "up -d feature/separate_gesoerver_api",
                     shell=True)
                 container_running = True
                 HEALTHY = True
