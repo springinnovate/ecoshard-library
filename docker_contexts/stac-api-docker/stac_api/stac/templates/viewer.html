@@ -126,7 +126,7 @@
 
     var basemap = L.tileLayer('{{ mapbox_basemap_url }}/tiles/256/{z}/{x}/{y}?access_token={{ mapbox_access_token }}');
 
-    topomap.addTo(basemap);
+    basemap.addTo(map);
 
     var wms_layer = L.tileLayer.wms(
       "{{ geoserver_url }}", {
