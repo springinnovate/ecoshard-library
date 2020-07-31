@@ -1224,7 +1224,7 @@ def validate_api(api_key, permission):
     api_allowed_permissions = queries.get_allowed_permissions_map(api_key)
     LOGGER.debug(
         f'these are the allowed permissions: {api_allowed_permissions}')
-    if not allowed_permissions:
+    if not api_allowed_permissions:
         LOGGER.warn(f'{api_key} is invalid')
     else:
         allowed_permissions.update(api_allowed_permissions)
