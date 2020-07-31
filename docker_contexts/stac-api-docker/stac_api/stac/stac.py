@@ -1216,7 +1216,7 @@ def validate_api(api_key, permission):
     # Add the public catalogss
     with current_app.app_context():
         public_catalog_list = current_app.config['PUBLIC_CATALOGS']
-        allowed_permissions.extend({
+        allowed_permissions.update({
             permission: catalog
             for permission, catalog in itertools.product([
                 'READ', 'WRITE'], public_catalog_list)})
@@ -1227,7 +1227,7 @@ def validate_api(api_key, permission):
     if not allowed_permissions:
         LOGGER.warn(f'{api_key} is invalid')
     else:
-        allowed_permissions.extend(api_allowed_permissions)
+        allowed_permissions.update(api_allowed_permissions)
 
     permission_type, catalog_id = permission.split(':')
 
