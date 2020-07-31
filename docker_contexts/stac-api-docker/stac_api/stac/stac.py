@@ -1,6 +1,7 @@
 """Flask APP to manage the GeoServer."""
 import datetime
 import hashlib
+import itertools
 import json
 import logging
 import math
@@ -536,7 +537,7 @@ def publish():
 
     """
     try:
-        api_key = flask.request.args['api_key']
+        api_key = flask.request.args.get('api_key', None)
         asset_args = json.loads(flask.request.json)
 
         if 'utc_datetime' in asset_args:
@@ -1211,10 +1212,22 @@ def validate_api(api_key, permission):
     if not re.match(r"^(READ:|WRITE:)([a-z0-9]+|\*)$", permission):
         return f'invalid permission: "{permission}"', 401
 
-    allowed_permissions = queries.get_allowed_permissions_map(api_key)
-    LOGGER.debug(f'these are the allowed permissions: {allowed_permissions}')
+    allowed_permissions = dict()
+    # Add the public catalogss
+    with current_app.app_context():
+        public_catalog_list = current_app.config['PUBLIC_CATALOGS']
+        allowed_permissions.extend({
+            permission: catalog
+            for permission, catalog in itertools.product([
+                'READ', 'WRITE'], public_catalog_list)})
+    LOGGER.debug(f'these are allowed public catalogs: {allowed_permissions}')
+    api_allowed_permissions = queries.get_allowed_permissions_map(api_key)
+    LOGGER.debug(
+        f'these are the allowed permissions: {api_allowed_permissions}')
     if not allowed_permissions:
-        return 'invalid api key', 400
+        LOGGER.warn(f'{api_key} is invalid')
+    else:
+        allowed_permissions.extend(api_allowed_permissions)
 
     permission_type, catalog_id = permission.split(':')
 

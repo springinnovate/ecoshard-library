@@ -30,7 +30,7 @@ def get_allowed_permissions_map(api_key):
     """Get allowed permissions for the given api key.
 
     Args:
-        api_key (str): arbitrary api key string
+        api_key (str): arbitrary api key string or None
 
     Returns:
         dictionary with 'READ' and 'WRITE' keys mapping to a set of catalog
@@ -38,6 +38,9 @@ def get_allowed_permissions_map(api_key):
         the api key is not found. Form is [READ|WRITE]:{catalog_id}
 
     """
+    if api_key is None:
+        return None
+
     result = APIKey.query.filter(
         APIKey.api_key == api_key).one_or_none()
 
