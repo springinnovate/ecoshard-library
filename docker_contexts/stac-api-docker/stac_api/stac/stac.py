@@ -130,7 +130,6 @@ def pixel_pick():
 
 
 @stac_bp.route('/fetch', methods=["POST"])
-@jwt_required('api_key')
 def fetch():
     """Search the catalog using STAC format.
 
@@ -175,10 +174,7 @@ def fetch():
             fetch_data = flask.request.json
 
         if 'jwt' not in flask.g:
-            if 'api_key' not in flask.request.args:
-                return {'_error': 'no api key provided'}, 401
-
-            api_key = flask.request.args['api_key']
+            api_key = flask.request.get('api_key', None)
             valid_check = validate_api(
                 api_key, f'READ:{fetch_data["catalog"]}')
             if valid_check != 'valid':
@@ -306,7 +302,7 @@ def styles():
 def render_list():
     """Render a listing webpage."""
     try:
-        api_key = flask.request.args.get('api_key', 'public')
+        api_key = flask.request.args.get('api_key', None)
         return flask.render_template('list.html', **{
             'search_url': flask.url_for(
                 'stac.search', api_key=api_key, _external=True),
@@ -416,16 +412,17 @@ def search():
             search_data = flask.request.json
 
         if 'jwt' not in flask.g:
-            if 'api_key' not in flask.request.args:
-                return {}, 401
-            api_key = flask.request.args['api_key']
+            api_key = flask.request.get('api_key', None)
             allowed_permissions = queries.get_allowed_permissions_map(api_key)
+            public_catalog_list = current_app.config['PUBLIC_CATALOGS']
+            allowed_permissions.update({
+                permission: catalog
+                for permission, catalog in itertools.product([
+                    'READ', 'WRITE'], public_catalog_list)})
+
             LOGGER.debug(
                 f'got these allowed permissions on a search '
                 f'{allowed_permissions}')
-
-            if not allowed_permissions:
-                return {'_error': 'invalid api key'}, 400
 
             if not allowed_permissions['READ']:
                 # No allowed catalogs so no results.
