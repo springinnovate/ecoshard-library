@@ -359,7 +359,6 @@ def viewer():
 
 
 @stac_bp.route('/search', methods=["POST"])
-@jwt_required('api_key')
 def search():
     """Search the catalog using STAC format.
 
