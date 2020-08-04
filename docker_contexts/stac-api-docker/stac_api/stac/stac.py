@@ -542,9 +542,11 @@ def publish():
         else:
             utc_datetime = utc_now()
 
-        if asset_args['catalog'] in current_app.config['PUBLIC_CATALOGS']:
+        if (asset_args['catalog'] in current_app.config['PUBLIC_CATALOGS'] and
+                'PUBLIC_EXPIRE_DAYS' in current_app.config):
             expiration_utc_datetime = str(datetime.datetime.now(
-                datetime.timezone.utc)+datetime.timedelta(minutes=1))
+                datetime.timezone.utc)+datetime.timedelta(
+                    days=float(current_app.config['PUBLIC_EXPIRE_DAYS'])))
             LOGGER.info(
                 f"{asset_args['catalog']} is a public catalog, setting "
                 f"expiration to {expiration_utc_datetime}")

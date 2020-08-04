@@ -77,6 +77,7 @@ def create_app(config=None):
             'SENDGRID_RESET_TEMPLATE_ID', None),
         MAPBOX_BASEMAP_URL=os.environ.get('MAPBOX_BASEMAP_URL', None),
         MAPBOX_ACCESS_TOKEN=os.environ.get('MAPBOX_ACCESS_TOKEN', None),
+        PUBLIC_EXPIRE_DAYS=os.environ.get('PUBLIC_EXPIRE_DAYS', None)
     )
     LOGGER.debug(os.environ.get('INTER_GEOSERVER_DATA_DIR'))
 
