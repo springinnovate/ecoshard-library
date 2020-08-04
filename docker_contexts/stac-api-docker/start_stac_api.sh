@@ -9,4 +9,4 @@ flask db upgrade
 
 echo "launching app"
 export FLASK_INITALIZE_ONLY=0
-waitress-serve --expose-tracebacks --listen=0.0.0.0:8888 --call stac_api:create_app 2>&1
+waitress-serve --threads=`nproc --all` --expose-tracebacks --listen=0.0.0.0:8888 --call stac_api:create_app 2>&1

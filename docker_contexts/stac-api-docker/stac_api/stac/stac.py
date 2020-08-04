@@ -5,6 +5,7 @@ import itertools
 import json
 import logging
 import math
+import multiprocessing
 import os
 import re
 import subprocess
@@ -535,6 +536,13 @@ def publish():
 
     """
     try:
+        active_jobs = queries.get_running_jobs()
+        if active_jobs > 2*multiprocessing.cpu_count():
+            return {
+                'error': (
+                    f'cannot process, {active_jobs} currently running, try '
+                    'again later')
+                }, 500
         api_key = flask.request.args.get('api_key', None)
         asset_args = json.loads(flask.request.json)
 
@@ -602,7 +610,7 @@ def publish():
                 f'until finished before sending new uri', 400)
 
         # new job
-        _ = services.create_job(job_id, asset_args['uri'], 'scheduled')
+        _ = services.create_job(job_id, asset_args['uri'], 'ACTIVE: scheduled')
         models.db.session.commit()
 
         if 'attribute_dict' in asset_args:
@@ -626,7 +634,8 @@ def publish():
         return callback_payload
     except Exception:
         LOGGER.exception('something bad happened on publish')
-        services.update_job_status(job_id, traceback.format_exc())
+        services.update_job_status(
+            job_id, f'ERROR:\n{traceback.format_exc()}')
         models.db.session.commit()
         raise
 
@@ -1040,7 +1049,7 @@ def add_raster_worker(
             except OSError:
                 pass
 
-            services.update_job_status(job_id, 'copying local')
+            services.update_job_status(job_id, 'ACTIVE: copying local')
             db.session.commit()
 
             LOGGER.debug('copy %s to %s', uri_path, target_raster_path)
@@ -1126,7 +1135,7 @@ def add_raster_worker(
             if compression_alg in [None, 'ZSTD']:
                 services.update_job_status(
                     job_id,
-                    f'(re)compressing image from {compression_alg}, '
+                    f'ACTIVE: (re)compressing image from {compression_alg}, '
                     'this can take some time')
                 db.session.commit()
                 needs_compression_tmp_file = os.path.join(
@@ -1139,7 +1148,7 @@ def add_raster_worker(
                 os.remove(needs_compression_tmp_file)
 
             services.update_job_status(
-                job_id, 'building overviews (can take some time)')
+                job_id, 'ACTIVE: building overviews (can take some time)')
             db.session.commit()
 
             LOGGER.debug(f'building overviews for {target_raster_path}')
@@ -1147,7 +1156,8 @@ def add_raster_worker(
                 target_raster_path, interpolation_method='average',
                 overview_type='internal', rebuild_if_exists=False)
 
-            services.update_job_status(job_id, 'publishing to geoserver')
+            services.update_job_status(
+                job_id, 'ACTIVE: publishing to geoserver')
             db.session.commit()
 
             LOGGER.debug(
@@ -1163,7 +1173,7 @@ def add_raster_worker(
             LOGGER.debug('update job_table with complete')
 
             services.update_job_status(
-                job_id, 'update catlog database geoserver')
+                job_id, 'ACTIVE: update catlog database geoserver')
             db.session.commit()
             LOGGER.debug('update catalog_table with final values')
             lat_lng_bounding_box = get_lat_lng_bounding_box(target_raster_path)
@@ -1186,7 +1196,7 @@ def add_raster_worker(
                 services.update_attributes(asset_id, catalog, attribute_dict)
                 db.session.commit()
 
-            services.update_job_status(job_id, 'complete')
+            services.update_job_status(job_id, 'COMPLETE')
             db.session.commit()
             LOGGER.debug(f'successful publish of {catalog}:{asset_id}')
 

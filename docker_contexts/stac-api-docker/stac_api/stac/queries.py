@@ -6,6 +6,7 @@ from .models import Attribute
 from .models import CatalogEntry
 from .models import Job
 from sqlalchemy import and_
+from sqlalchemy import func
 
 LOGGER = logging.getLogger('stac')
 
@@ -170,3 +171,9 @@ def get_expired_catalog_entries(current_time):
             CatalogEntry.expiration_utc_datetime <= current_time,
             CatalogEntry.expiration_utc_datetime != '',
             CatalogEntry.expiration_utc_datetime.isnot(None)))
+
+
+def get_running_jobs():
+    """Return the number of active (not error or complete) jobs."""
+    return Job.query.filter(Job.job_status.ilike('ACTIVE%')).with_entities(
+        func.count())
