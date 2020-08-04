@@ -413,12 +413,6 @@ def search():
         if 'jwt' not in flask.g:
             api_key = search_data.get('api_key', None)
             allowed_permissions = queries.get_allowed_permissions_map(api_key)
-            public_catalog_list = current_app.config['PUBLIC_CATALOGS']
-            allowed_permissions.update({
-                permission: catalog
-                for permission, catalog in itertools.product([
-                    'READ', 'WRITE'], public_catalog_list)})
-
             LOGGER.debug(
                 f'got these allowed permissions on a search '
                 f'{allowed_permissions}')
