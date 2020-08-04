@@ -50,6 +50,7 @@
       <div><label for="max">style max (original {{ p100 }})</label></div>
       <div><select id="style" oninput="style_changed()"></select></div>
       <div><label for="style">style id (original {{ original_style }})</label></div>
+      <div><a id="download_button" href="{{ download_url }}">Download {{ catalog }}:{{ asset_id }}</a></div>
     </div>
   </div>
   <div id="mapid"></div>
@@ -61,6 +62,7 @@
     $("#min").val({{ p0 }});
     $("#max").val({{ p100 }});
     $("#style").val("{{ original_style }}");
+    #("#download_button").button();
 
     function style_changed() {
       if (edit_timeout != null) {

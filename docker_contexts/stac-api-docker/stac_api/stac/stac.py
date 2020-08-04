@@ -336,6 +336,9 @@ def viewer():
     return flask.render_template('viewer.html', **{
         'catalog': catalog,
         'asset_id': asset_id,
+        'download_url': os.path.join(
+            'https://storage.cloud.google.com',
+            catalog_entry.uri.split('gs://')[1]),
         'geoserver_url': (
             f'{proxy_scheme}://'
             f"{current_app.config['API_SERVER_HOST']}/"
