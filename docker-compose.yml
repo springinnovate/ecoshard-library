@@ -55,6 +55,7 @@ services:
       - SENDGRID_RESET_TEMPLATE_ID=${SENDGRID_RESET_TEMPLATE_ID}
       - MAPBOX_BASEMAP_URL=${MAPBOX_BASEMAP_URL}
       - MAPBOX_ACCESS_TOKEN=${MAPBOX_ACCESS_TOKEN}
+      - PUBLIC_EXPIRE_DAYS=${PUBLIC_EXPIRE_DAYS}
 
     secrets:
       - bucket_read_service_account_key
