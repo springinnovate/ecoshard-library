@@ -173,12 +173,11 @@ def fetch():
         else:
             fetch_data = flask.request.json
 
-        if 'jwt' not in flask.g:
-            api_key = fetch_data.get('api_key', None)
-            valid_check = validate_api(
-                api_key, f'READ:{fetch_data["catalog"]}')
-            if valid_check != 'valid':
-                return valid_check
+        api_key = flask.request.args.get('api_key', None)
+        valid_check = validate_api(
+            api_key, f'READ:{fetch_data["catalog"]}')
+        if valid_check != 'valid':
+            return valid_check
 
         fetch_catalog = queries.find_catalog_by_id(
             fetch_data['catalog'], fetch_data['asset_id'])
@@ -420,7 +419,7 @@ def search():
                     'READ', 'WRITE'], public_catalog_list)})
         LOGGER.debug(
             f'these are allowed public catalogs: {allowed_permissions}')
-        api_key = search_data.get('api_key', None)
+        api_key = flask.request.args.get('api_key', None)
         api_allowed_permissions = queries.get_allowed_permissions_map(api_key)
         if api_allowed_permissions:
             allowed_permissions.update(api_allowed_permissions)
@@ -647,7 +646,7 @@ def delete():
 
     """
     try:
-        api_key = flask.request.args['api_key']
+        api_key = flask.request.args.get(['api_key'], None)
         asset_args = json.loads(flask.request.json)
         LOGGER.debug(f"asset args: {str(asset_args)}")
         valid_check = validate_api(
