@@ -38,6 +38,14 @@
       grid-gap: 5px;
     }
 
+    #download-control {
+      position: absolute;
+      height: auto;
+      right: 0;
+      bottom: 0;
+      z-index: 1;
+    }
+
    </style>
 </head>
 <body>
@@ -50,10 +58,13 @@
       <div><label for="max">style max (original {{ p100 }})</label></div>
       <div><select id="style" oninput="style_changed()"></select></div>
       <div><label for="style">style id (original {{ original_style }})</label></div>
-      <div><a id="download_button" href="{{ download_url }}">Download {{ catalog }}:{{ asset_id }}</a></div>
     </div>
   </div>
   <div id="mapid"></div>
+
+  <div id="download-control">
+    <a id="download_button" href="{{ download_url }}">Download {{ catalog }}:{{ asset_id }}</a>
+  </div>
 
   <script>
 
