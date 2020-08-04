@@ -175,5 +175,4 @@ def get_expired_catalog_entries(current_time):
 
 def get_running_jobs():
     """Return the number of active (not error or complete) jobs."""
-    return Job.query.filter(Job.job_status.ilike('ACTIVE%')).with_entities(
-        func.count())
+    return Job.query.filter(Job.job_status.ilike('ACTIVE%')).count()
