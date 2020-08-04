@@ -543,8 +543,16 @@ def publish():
         else:
             utc_datetime = utc_now()
 
-        expiration_utc_datetime = asset_args.get(
-            'expiration_utc_datetime', None)
+        if asset_args['catalog'] in current_app.config['PUBLIC_CATALOGS']:
+            expiration_utc_datetime = str(datetime.datetime.now(
+                datetime.timezone.utc)+datetime.timedelta(minutes=1))
+            LOGGER.info(
+                f"{asset_args['catalog']} is a public catalog, setting "
+                f"expiration to {expiration_utc_datetime}")
+        else:
+            expiration_utc_datetime = asset_args.get(
+                'expiration_utc_datetime', None)
+            LOGGER.info(f'expiration set to {expiration_utc_datetime}')
 
         default_style = asset_args.get(
             'default_style', current_app.config['DEFAULT_STYLE'])
