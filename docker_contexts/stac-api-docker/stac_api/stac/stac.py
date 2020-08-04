@@ -603,7 +603,7 @@ def publish():
 
         # see if job already running and hasn't previously errored
         job_status = queries.get_job_status(job_id)
-        if job_status and 'ACTIVE' not in job_status.job_status:
+        if job_status and 'ACTIVE' in job_status.job_status:
             return (
                 f'{asset_args["catalog"]}:{asset_args["asset_id"]} '
                 f'actively processing from {callback_url}, wait '
