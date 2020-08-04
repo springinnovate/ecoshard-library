@@ -439,8 +439,9 @@ def search():
             search_catalogs = set(
                 search_data['catalog_list'].split(','))
         else:
-            search_catalogs = allowed_permissions['READ'].intersection(
-                set(search_data['catalog_list'].split(',')))
+            search_catalogs = set(
+                allowed_permissions['READ'].split(',')).intersection(
+                    set(search_data['catalog_list'].split(',')))
 
         LOGGER.debug(f'searching catalogs: {search_catalogs}')
 
