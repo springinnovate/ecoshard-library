@@ -174,7 +174,7 @@ def fetch():
             fetch_data = flask.request.json
 
         if 'jwt' not in flask.g:
-            api_key = flask.request.get('api_key', None)
+            api_key = fetch_data.get('api_key', None)
             valid_check = validate_api(
                 api_key, f'READ:{fetch_data["catalog"]}')
             if valid_check != 'valid':
