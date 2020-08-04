@@ -410,24 +410,29 @@ def search():
         else:
             search_data = flask.request.json
 
-        if 'jwt' not in flask.g:
-            api_key = search_data.get('api_key', None)
-            allowed_permissions = queries.get_allowed_permissions_map(api_key)
-            LOGGER.debug(
-                f'got these allowed permissions on a search '
-                f'{allowed_permissions}')
+        allowed_permissions = dict()
+        # Add the public catalogss
+        with current_app.app_context():
+            public_catalog_list = current_app.config['PUBLIC_CATALOGS']
+            allowed_permissions.update({
+                permission: catalog
+                for permission, catalog in itertools.product([
+                    'READ', 'WRITE'], public_catalog_list)})
+        LOGGER.debug(
+            f'these are allowed public catalogs: {allowed_permissions}')
+        api_key = search_data.get('api_key', None)
+        api_allowed_permissions = queries.get_allowed_permissions_map(api_key)
+        if api_allowed_permissions:
+            allowed_permissions.update(api_allowed_permissions)
 
-            if not allowed_permissions['READ']:
-                # No allowed catalogs so no results.
-                return {
-                    'features': [],
-                    'utc_now': utc_now()}
-        # only allow jwt access to specific catalogs
-        else:
-            for catalog in search_data["catalog_list"]:
-                if catalog.lower() not in current_app.config[
-                        'PUBLIC_CATALOGS']:
-                    return {'_error': 'invalid catalog request'}, 401
+        LOGGER.debug(
+            f'got these allowed permissions on a search '
+            f'{allowed_permissions}')
+        if not allowed_permissions['READ']:
+            # No allowed catalogs so no results.
+            return {
+                'features': [],
+                'utc_now': utc_now()}
 
         LOGGER.debug(f'incoming search data: {search_data}')
         if '*' in allowed_permissions['READ']:
