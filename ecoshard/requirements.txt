@@ -1,0 +1,10 @@
+# requirements.txt
+# --------------------
+
+gdal
+pygeoprocessing
+numpy
+requests
+retrying
+scipy
+taskgraph

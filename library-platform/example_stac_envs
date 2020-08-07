@@ -21,6 +21,7 @@ SENDGRID_API_KEY=sample_api_key
 SENDGRID_RESET_TEMPLATE_ID=sample_reset_template_id
 MAPBOX_BASEMAP_URL=https://api.mapbox.com/styles/v1/richpsharp/ckd99g0l51hne1imv5ui4lk3e
 MAPBOX_ACCESS_TOKEN=pk.eyJ1IjoicmljaHBzaGFycCIsImEiOiJjanJzdHlib2oyZWRsNDNuM3Rndmh4YnRyIn0.Rs9F-GWbQzllbJAYSJVY1g
+PUBLIC_EXPIRE_DAYS=30
 
 # Database environment
 DB_USER=replace_with_real_db_user

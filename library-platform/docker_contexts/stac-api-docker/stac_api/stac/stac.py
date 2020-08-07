@@ -1,9 +1,11 @@
 """Flask APP to manage the GeoServer."""
 import datetime
 import hashlib
+import itertools
 import json
 import logging
 import math
+import multiprocessing
 import os
 import re
 import subprocess
@@ -129,7 +131,6 @@ def pixel_pick():
 
 
 @stac_bp.route('/fetch', methods=["POST"])
-@jwt_required('api_key')
 def fetch():
     """Search the catalog using STAC format.
 
@@ -173,15 +174,11 @@ def fetch():
         else:
             fetch_data = flask.request.json
 
-        if 'jwt' not in flask.g:
-            if 'api_key' not in flask.request.args:
-                return {'_error': 'no api key provided'}, 401
-
-            api_key = flask.request.args['api_key']
-            valid_check = validate_api(
-                api_key, f'READ:{fetch_data["catalog"]}')
-            if valid_check != 'valid':
-                return valid_check
+        api_key = flask.request.args.get('api_key', None)
+        valid_check = validate_api(
+            api_key, f'READ:{fetch_data["catalog"]}')
+        if valid_check != 'valid':
+            return valid_check
 
         fetch_catalog = queries.find_catalog_by_id(
             fetch_data['catalog'], fetch_data['asset_id'])
@@ -305,7 +302,7 @@ def styles():
 def render_list():
     """Render a listing webpage."""
     try:
-        api_key = flask.request.args.get('api_key', 'public')
+        api_key = flask.request.args.get('api_key', None)
         return flask.render_template('list.html', **{
             'search_url': flask.url_for(
                 'stac.search', api_key=api_key, _external=True),
@@ -340,6 +337,9 @@ def viewer():
     return flask.render_template('viewer.html', **{
         'catalog': catalog,
         'asset_id': asset_id,
+        'download_url': os.path.join(
+            'https://storage.cloud.google.com',
+            catalog_entry.uri.split('gs://')[1]),
         'geoserver_url': (
             f'{proxy_scheme}://'
             f"{current_app.config['API_SERVER_HOST']}/"
@@ -362,7 +362,6 @@ def viewer():
 
 
 @stac_bp.route('/search', methods=["POST"])
-@jwt_required('api_key')
 def search():
     """Search the catalog using STAC format.
 
@@ -414,37 +413,38 @@ def search():
         else:
             search_data = flask.request.json
 
-        if 'jwt' not in flask.g:
-            if 'api_key' not in flask.request.args:
-                return {}, 401
-            api_key = flask.request.args['api_key']
-            allowed_permissions = queries.get_allowed_permissions_map(api_key)
-            LOGGER.debug(
-                f'got these allowed permissions on a search '
-                f'{allowed_permissions}')
+        allowed_permissions = dict()
+        # Add the public catalogss
+        with current_app.app_context():
+            public_catalog_list = current_app.config['PUBLIC_CATALOGS']
+            allowed_permissions.update({
+                permission: catalog
+                for permission, catalog in itertools.product([
+                    'READ', 'WRITE'], public_catalog_list)})
+        LOGGER.debug(
+            f'these are allowed public catalogs: {allowed_permissions}')
+        api_key = flask.request.args.get('api_key', None)
+        api_allowed_permissions = queries.get_allowed_permissions_map(api_key)
+        if api_allowed_permissions:
+            allowed_permissions.update(api_allowed_permissions)
 
-            if not allowed_permissions:
-                return {'_error': 'invalid api key'}, 400
-
-            if not allowed_permissions['READ']:
-                # No allowed catalogs so no results.
-                return {
-                    'features': [],
-                    'utc_now': utc_now()}
-        # only allow jwt access to specific catalogs
-        else:
-            for catalog in search_data["catalog_list"]:
-                if catalog.lower() not in current_app.config[
-                        'PUBLIC_CATALOGS']:
-                    return {'_error': 'invalid catalog request'}, 401
+        LOGGER.debug(
+            f'got these allowed permissions on a search '
+            f'{allowed_permissions}')
+        if not allowed_permissions['READ']:
+            # No allowed catalogs so no results.
+            return {
+                'features': [],
+                'utc_now': utc_now()}
 
         LOGGER.debug(f'incoming search data: {search_data}')
         if '*' in allowed_permissions['READ']:
             search_catalogs = set(
                 search_data['catalog_list'].split(','))
         else:
-            search_catalogs = allowed_permissions['READ'].intersection(
-                set(search_data['catalog_list'].split(',')))
+            search_catalogs = set(
+                allowed_permissions['READ'].split(',')).intersection(
+                    set(search_data['catalog_list'].split(',')))
 
         LOGGER.debug(f'searching catalogs: {search_catalogs}')
 
@@ -536,7 +536,14 @@ def publish():
 
     """
     try:
-        api_key = flask.request.args['api_key']
+        active_jobs = queries.get_running_jobs()
+        if active_jobs > 2*multiprocessing.cpu_count():
+            return {
+                'error': (
+                    f'cannot process, {active_jobs} currently running, try '
+                    'again later')
+                }, 500
+        api_key = flask.request.args.get('api_key', None)
         asset_args = json.loads(flask.request.json)
 
         if 'utc_datetime' in asset_args:
@@ -545,8 +552,18 @@ def publish():
         else:
             utc_datetime = utc_now()
 
-        expiration_utc_datetime = asset_args.get(
-            'expiration_utc_datetime', None)
+        if (asset_args['catalog'] in current_app.config['PUBLIC_CATALOGS'] and
+                'PUBLIC_EXPIRE_DAYS' in current_app.config):
+            expiration_utc_datetime = str(datetime.datetime.now(
+                datetime.timezone.utc)+datetime.timedelta(
+                    days=float(current_app.config['PUBLIC_EXPIRE_DAYS'])))
+            LOGGER.info(
+                f"{asset_args['catalog']} is a public catalog, setting "
+                f"expiration to {expiration_utc_datetime}")
+        else:
+            expiration_utc_datetime = asset_args.get(
+                'expiration_utc_datetime', None)
+            LOGGER.info(f'expiration set to {expiration_utc_datetime}')
 
         default_style = asset_args.get(
             'default_style', current_app.config['DEFAULT_STYLE'])
@@ -586,14 +603,14 @@ def publish():
 
         # see if job already running and hasn't previously errored
         job_status = queries.get_job_status(job_id)
-        if job_status and 'ERROR' not in job_status.job_status:
+        if job_status and 'ACTIVE' in job_status.job_status:
             return (
                 f'{asset_args["catalog"]}:{asset_args["asset_id"]} '
                 f'actively processing from {callback_url}, wait '
                 f'until finished before sending new uri', 400)
 
         # new job
-        _ = services.create_job(job_id, asset_args['uri'], 'scheduled')
+        _ = services.create_job(job_id, asset_args['uri'], 'ACTIVE: scheduled')
         models.db.session.commit()
 
         if 'attribute_dict' in asset_args:
@@ -617,7 +634,8 @@ def publish():
         return callback_payload
     except Exception:
         LOGGER.exception('something bad happened on publish')
-        services.update_job_status(job_id, traceback.format_exc())
+        services.update_job_status(
+            job_id, f'ERROR:\n{traceback.format_exc()}')
         models.db.session.commit()
         raise
 
@@ -640,7 +658,7 @@ def delete():
 
     """
     try:
-        api_key = flask.request.args['api_key']
+        api_key = flask.request.args.get(['api_key'], None)
         asset_args = json.loads(flask.request.json)
         LOGGER.debug(f"asset args: {str(asset_args)}")
         valid_check = validate_api(
@@ -1031,7 +1049,7 @@ def add_raster_worker(
             except OSError:
                 pass
 
-            services.update_job_status(job_id, 'copying local')
+            services.update_job_status(job_id, 'ACTIVE: copying local')
             db.session.commit()
 
             LOGGER.debug('copy %s to %s', uri_path, target_raster_path)
@@ -1117,7 +1135,7 @@ def add_raster_worker(
             if compression_alg in [None, 'ZSTD']:
                 services.update_job_status(
                     job_id,
-                    f'(re)compressing image from {compression_alg}, '
+                    f'ACTIVE: (re)compressing image from {compression_alg}, '
                     'this can take some time')
                 db.session.commit()
                 needs_compression_tmp_file = os.path.join(
@@ -1130,7 +1148,7 @@ def add_raster_worker(
                 os.remove(needs_compression_tmp_file)
 
             services.update_job_status(
-                job_id, 'building overviews (can take some time)')
+                job_id, 'ACTIVE: building overviews (can take some time)')
             db.session.commit()
 
             LOGGER.debug(f'building overviews for {target_raster_path}')
@@ -1138,7 +1156,8 @@ def add_raster_worker(
                 target_raster_path, interpolation_method='average',
                 overview_type='internal', rebuild_if_exists=False)
 
-            services.update_job_status(job_id, 'publishing to geoserver')
+            services.update_job_status(
+                job_id, 'ACTIVE: publishing to geoserver')
             db.session.commit()
 
             LOGGER.debug(
@@ -1154,7 +1173,7 @@ def add_raster_worker(
             LOGGER.debug('update job_table with complete')
 
             services.update_job_status(
-                job_id, 'update catlog database geoserver')
+                job_id, 'ACTIVE: update catlog database geoserver')
             db.session.commit()
             LOGGER.debug('update catalog_table with final values')
             lat_lng_bounding_box = get_lat_lng_bounding_box(target_raster_path)
@@ -1177,7 +1196,7 @@ def add_raster_worker(
                 services.update_attributes(asset_id, catalog, attribute_dict)
                 db.session.commit()
 
-            services.update_job_status(job_id, 'complete')
+            services.update_job_status(job_id, 'COMPLETE')
             db.session.commit()
             LOGGER.debug(f'successful publish of {catalog}:{asset_id}')
 
@@ -1211,10 +1230,22 @@ def validate_api(api_key, permission):
     if not re.match(r"^(READ:|WRITE:)([a-z0-9]+|\*)$", permission):
         return f'invalid permission: "{permission}"', 401
 
-    allowed_permissions = queries.get_allowed_permissions_map(api_key)
-    LOGGER.debug(f'these are the allowed permissions: {allowed_permissions}')
-    if not allowed_permissions:
-        return 'invalid api key', 400
+    allowed_permissions = dict()
+    # Add the public catalogss
+    with current_app.app_context():
+        public_catalog_list = current_app.config['PUBLIC_CATALOGS']
+        allowed_permissions.update({
+            permission: catalog
+            for permission, catalog in itertools.product([
+                'READ', 'WRITE'], public_catalog_list)})
+    LOGGER.debug(f'these are allowed public catalogs: {allowed_permissions}')
+    api_allowed_permissions = queries.get_allowed_permissions_map(api_key)
+    LOGGER.debug(
+        f'these are the allowed permissions: {api_allowed_permissions}')
+    if not api_allowed_permissions:
+        LOGGER.warn(f'{api_key} is invalid')
+    else:
+        allowed_permissions.update(api_allowed_permissions)
 
     permission_type, catalog_id = permission.split(':')
 

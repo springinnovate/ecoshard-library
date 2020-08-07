@@ -38,6 +38,16 @@
       grid-gap: 5px;
     }
 
+    #download-control {
+      position: absolute;
+      height: auto;
+      right: 0;
+      bottom: 10;
+      z-index: 1;
+      font-weight: normal;
+      font-size: 1em;
+    }
+
    </style>
 </head>
 <body>
@@ -54,6 +64,10 @@
   </div>
   <div id="mapid"></div>
 
+  <div class="ui-priority-secondary" id="download-control">
+    <a id="download_button" href="{{ download_url }}">Download {{ catalog }}:{{ asset_id }}</a>
+  </div>
+
   <script>
 
     var edit_timeout = null;
@@ -61,6 +75,7 @@
     $("#min").val({{ p0 }});
     $("#max").val({{ p100 }});
     $("#style").val("{{ original_style }}");
+    $("#download_button").button();
 
     function style_changed() {
       if (edit_timeout != null) {
@@ -126,7 +141,7 @@
 
     var basemap = L.tileLayer('{{ mapbox_basemap_url }}/tiles/256/{z}/{x}/{y}?access_token={{ mapbox_access_token }}');
 
-    topomap.addTo(basemap);
+    basemap.addTo(map);
 
     var wms_layer = L.tileLayer.wms(
       "{{ geoserver_url }}", {
