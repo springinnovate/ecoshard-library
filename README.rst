@@ -45,8 +45,7 @@ In Code
 
 Start by instantiating a EcoshardLibrary object:
 
-``ecoshard_library = ecoshard.EcoshardLibrary(
-  'https://public.ecoshard.org', 'PUT YOUR REAL API KEY HERE', cache_dir)``
+``ecoshard_library = ecoshard.EcoshardLibrary('https://public.ecoshard.org', 'PUT YOUR REAL API KEY HERE', cache_dir)``
 
 The first argument is a URL to the Ecoshard library. This is an online service that must already exist. The second is an API key that is provided to you by the administrator of the Ecoshard library. This argument can be ``None`` in cases where you only want to publish/search/fetch from a public catalog on the library. The ``cache_dir`` points to a writable path where Ecoshard will locally cache any fetched files. This is useful in cases where Ecoshard is used to provide data to many applications. When "fetched" Ecoshard will only download the file if it is not in its cache, download it if so, then hardlink the file to the desired path. This allows Ecoshard to service many similar heavy data needs without duplicating data on the client machine.
 
