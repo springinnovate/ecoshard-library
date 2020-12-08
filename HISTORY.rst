@@ -1,11 +1,9 @@
 Release History
 ===============
 
-Unreleased Changes
+0.4.1 (2020/12/07)
 ------------------
-* Added functionality to publish a local file directly to an EcoShard server.
-  This is available in the command line publish command whose arguments have
-  been redefined from the previous version.
+* Fixed issue with "``hash_val`` is not defined".
 
 0.4.0 (2019/04/13)
 ------------------
