@@ -1,6 +1,12 @@
 Release History
 ===============
 
+0.5.0 (2021/03/29)
+------------------
+* Changed functionality of "``--reduce_factor``" to operate on wildcard file
+  list and modified the last argument to be a file suffix rather than a
+  target file name.
+
 0.4.1 (2020/12/07)
 ------------------
 * Fixed issue with "``hash_val`` is not defined".
