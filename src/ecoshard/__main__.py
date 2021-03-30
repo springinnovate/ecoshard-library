@@ -184,7 +184,8 @@ def main():
             'The new hash will be appended to the filename.'))
     process_subparser.add_argument(
         '--reduce_factor', help=(
-            "Reduce size by [factor] to with [method] to [target]. "
+            "Reduce size by [factor] with [method] to the same path but "
+            "[target_suffix] appended. "
             "[method] must be one of 'max', 'min', 'sum', 'average', 'mode'"),
         nargs=3)
 
@@ -218,10 +219,24 @@ def main():
                     LOGGER.error(
                         '--reduce_method must be one of %s' % valid_methods)
                     sys.exit(-1)
+                target_reduced_raster_path = (
+                    f'%s{args.reduce_factor[2]}%s') % os.path.splitext(
+                    file_path)
+                if os.path.exists(target_reduced_raster_path):
+                    if args.force:
+                        LOGGER.warn(
+                            f'{target_reduced_raster_path} exists, but '
+                            f'overwriting because of --force')
+                    else:
+                        raise ValueError(
+                            f'reducing {file_path} to '
+                            f'{target_reduced_raster_path} but that file '
+                            f'already exists. Remove or use --force to '
+                            f'overwrite')
                 ecoshard.convolve_layer(
                     file_path, int(args.reduce_factor[0]),
                     args.reduce_factor[1],
-                    args.reduce_factor[2])
+                    target_reduced_raster_path)
                 continue
 
             if args.compress:
