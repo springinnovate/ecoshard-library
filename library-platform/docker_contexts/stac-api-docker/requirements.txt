@@ -2,9 +2,9 @@
 # --------------------
 Cython==0.29.19
 ecoshard==0.4.0
-Flask-Cors==3.0.8
+Flask-Cors==3.0.9
 Flask==1.1.2
-Flask-Cors==3.0.8
+Flask-Cors==3.0.9
 GDAL==3.0.4
 matplotlib==3.2.1
 pygeoprocessing==2.0.0
